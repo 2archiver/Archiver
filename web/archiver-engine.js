@@ -1,74 +1,39 @@
 /* ============================================================================
-   ARCHIVER 2.6.1
+   ARCHIVER 2.6.2 — the in-browser engine
 
-   One assistant. Two execution paths, and the difference is nobody's business.
+   Two parts, and this file never pretends they are the same kind of thing.
 
-   2.1: talk is answered as talk — swearing, slang, one-word follow-ups and
-        questions about my own vocabulary ("cards", "memory") never become
-        searches, and a miss always says what I do know instead of stopping.
-   2.1: search is shorter, interpretation is the answer. Extracts are cut to
-   ~400 chars, at most 3 sources, and the reading leads — sources support.
+   PART 1 — the corpus. A retrieval engine over archiver-knowledge.js plus
+            whatever the user teaches it. Instant, offline, no download. It
+            handles talk as talk ("hey yo" is a greeting, not a wrestler),
+            tolerates misspellings on a four-character prefix match, and says
+            what it does know when it misses instead of dead-ending.
 
-   2.5 removes the neural/grounded distinction that 2.2 put on the front page.
-   It was true and it was useless: nobody cares whether a sentence was produced
-   by eight billion weights or by a lookup, only whether it is right. So there
-   is one Archiver. It answers instantly from the corpus, it answers better once
-   the model is loaded, and either way it says which sources it used.
+   PART 2 — the model. Qwen3 running on the visitor's GPU through WebLLM.
+            It is a reasoning model: it thinks in a <think> block first, and
+            that reasoning is streamed to the page. The corpus and (with WEB
+            on) live sources are retrieved first and handed to it as notes —
+            the model does the thinking, the notes keep it honest about
+            dates and people. Nothing downloads until the user asks.
 
-   2.6: identity is solid — "who is archiver" / "what is archiver" never fall
-        through to Hegel or any other card. Self-detection expanded, scoring
-        guards added, Grok-style thinking tightened, overall answer quality up.
-
-   The old framing, for the record:
-
-   1. NEURAL  — a real language model with real weights, running on the
-                retrieval + live web search. No API key, no
-                server, nothing sent anywhere. This is the default whenever the
-                browser supports it.
-
-   2. GROUNDED — a retrieval engine over the bundled corpus
-                (archiver-knowledge.js). Instant, offline, works everywhere,
-                and it is the fallback grounded answer
-                is missing.
-
-   They are not the same kind of thing and this file never pretends otherwise.
-   The corpus path is a lookup with good text handling. The model path is
-   a model. Only one of those can reason about something it was never told.
-
-   The two combine for the best result: the corpus is retrieved first, then
-   handed to the real model as notes. The model does the thinking; the corpus
-   keeps it honest about dates and people.
-
-   2.2 adds real SEARCH, and removes the dead end. The server runs a keyless
-   lookup across Wikipedia, Wikimedia, Stack Exchange and DuckDuckGo, filtered
-   for relevance and routed by intent — an encyclopaedia for "who was X", an
-   engineer's answer for "how do I buffer a stream". Retrieved passages become
-   sources the answer can cite. That is how an 8B model answers questions about
-   things that happened after it was trained: it is not asked to remember, it is
-   asked to read.
-
-   It also answers badly written questions. "barborossa" and "clavicualr" find
-   their cards on a four-character prefix match; tags are scored so a question
-   phrased nothing like any card still lands; a weak match is returned, flagged
-   as a closest match, rather than discarded. There is no path through this file
-   that ends in a dead end — a genuine miss names the two ways
-   forward instead of blaming the question.
-
-   Archiver stands on its own — retrieval + live WEB, no model to fetch.
-   There is no fetch and no gate. It answers instantly
-   from the curated corpus and, with WEB on, from live sources.
+   2.6.2 undoes the 2.6/2.6.1 regressions: the model is back (it had been
+   switched off), the keyword-picked "Additional Thoughts" that posed as
+   reasoning are gone, and the Render/free-tier material that had leaked into
+   identity, help and follow-up handling is removed.
 
    Public surface (window.Archiver):
-     reply(text)                  -> {text, kind, score}        sync, instant
+     reply(text)                  -> {text, kind, score}        sync, corpus only
      chat(text, history, opts)    -> Promise<string>            streams deltas
-     load(onProgress)             -> Promise<boolean>           fetch weights
-     mode()                       -> 'neural' | 'grounded'
-     status()                     -> {…}
-     count(), taught()
+         opts: {search, think, system, signal, onDelta, onThink, onStatus}
+     load(modelKey)               -> Promise<{model,key,pretty,steppedDown}>
+     unload(), onProgress(fn), models(), mode(), status()
+     teach/forget/learned, sources(), thinking(), count(), taught()
    ========================================================================== */
 
 (function () {
   'use strict';
+
+  const VERSION = '2.6.2';
 
   /* ======================================================================== */
   /* PART 1 — the corpus (instant, offline, no weights)                       */
@@ -283,46 +248,62 @@
 
   /* ---- tools ------------------------------------------------------------- */
 
-  const EXPR_RE = /^[\s\d+\-*/^%().,]+$/;
+  const EXPR_RE = /^[\s\d+\-*/^%().]+$/;
+  /* Recursive descent with the usual precedence: parentheses, unary minus,
+     right-associative ^, then * / %, then + -. The 2.6 version parsed
+     multiplication below exponentiation (2*3^2 gave 36), ignored brackets
+     and silently dropped %. */
   function calc(src) {
-    const s = String(src).replace(/[×x]/gi, '*').replace(/÷/g, '/').replace(/,(?=\d{3}\b)/g, '');
-    if (!EXPR_RE.test(s) || !/[+\-*/^%]/.test(s) || !/\d/.test(s)) return null;
+    const s = String(src).trim().replace(/[=?]\s*$/, '')
+      .replace(/(\d)\s*[×xX]\s*(?=[\d(-])/g, '$1*').replace(/÷/g, '/').replace(/(\d),(?=\d{3}\b)/g, '$1');
+    if (!EXPR_RE.test(s) || !/\d/.test(s) || !/\d\s*[+\-*/^%]\s*[-(]*\s*\d|\)\s*[+\-*/^%]|\d\s*[+\-*/^%]\s*\(/.test(s)) return null;
     let i = 0;
+    let bad = false;
     const ws = () => { while (s[i] === ' ') i++; };
-    const num = () => {
-      ws(); const st = i;
+    const atom = () => {
+      ws();
+      if (s[i] === '(') {
+        i++;
+        const v = sum();
+        ws();
+        if (s[i] !== ')') { bad = true; return NaN; }
+        i++;
+        return v;
+      }
+      const st = i;
       while (i < s.length && /[\d.]/.test(s[i])) i++;
-      if (st === i) return null;
-      const v = parseFloat(s.slice(st, i));
-      return isNaN(v) ? null : v;
+      const txt = s.slice(st, i);
+      if (!txt || (txt.match(/\./g) || []).length > 1) { bad = true; return NaN; }
+      return parseFloat(txt);
     };
-    const pow = () => { let b = unary(); if (b === null) return null; ws(); if (s[i] === '^') { i++; const e = pow(); if (e === null) return null; return Math.pow(b, e); } return b; };
-    const unary = () => { ws(); if (s[i] === '-') { i++; const v = unary(); return v === null ? null : -v; } return term(); };
-    const term = () => {
-      let v = num(); if (v === null) return null;
+    const unary = () => { ws(); if (s[i] === '-') { i++; return -unary(); } if (s[i] === '+') { i++; return unary(); } return power(); };
+    const power = () => { const b = atom(); ws(); if (s[i] === '^') { i++; return Math.pow(b, unary()); } return b; };
+    const product = () => {
+      let v = unary();
       for (;;) {
         ws();
-        if (s[i] === '%') { i++; continue; }
-        if (s[i] === '*' || s[i] === '/' || s[i] === 'x') {
-          const op = s[i++]; const r = num(); if (r === null) return null;
-          if (op === '/') { if (r === 0) return NaN; v = v / r; } else v = v * r;
-        } else break;
+        const op = s[i];
+        if (op !== '*' && op !== '/' && op !== '%') break;
+        i++;
+        const r = unary();
+        v = op === '*' ? v * r : op === '/' ? v / r : v % r;
       }
       return v;
     };
-    const expr = () => {
-      let v = pow(); if (v === null) return null;
+    function sum() {
+      let v = product();
       for (;;) {
         ws();
-        if (s[i] === '+') { i++; const r = pow(); if (r === null) return null; v += r; }
-        else if (s[i] === '-') { i++; const r = pow(); if (r === null) return null; v -= r; }
+        if (s[i] === '+') { i++; v += product(); }
+        else if (s[i] === '-') { i++; v -= product(); }
         else break;
       }
       return v;
-    };
-    const v = expr(); ws();
-    if (v === null || i !== s.length) return null;
-    if (!isFinite(v)) return null;
+    }
+    const v = sum();
+    ws();
+    if (bad || i !== s.length) return null;
+    if (!isFinite(v)) return /\/\s*0(?![\d.])/.test(s) ? "That divides by zero, so there's no answer." : null;
     const rounded = Math.round(v * 1e10) / 1e10;
     return `That's ${rounded.toLocaleString('en-GB', { maximumFractionDigits: 10 })}.`;
   }
@@ -359,25 +340,24 @@
 
   /* ---- commands ---------------------------------------------------------- */
 
-const HELP = [
-    "I'm **Archiver 2.6** — your private research desk, fully on-device. About 1300 topics cold + live WEB. Intuitive, self-aware, and here to talk.",
-    '',
-    '**Ask me anything.** History, science, health, tech, philosophy, nature, culture, practical life — plus **Render.com** (I know the host inside-out) and **intuition**. With **WEB** on I read live sources and give you a short read first, with 1–3 compact sources.',
-    '',
-    '**What I know cold — ~1300 topics**',
-    '• History & WW2 — Versailles to VJ Day, plus world & everyday contexts',
-    '• Science & health — gravity to black holes, heart to mental health, sleep to stress',
-    '• Tech — APIs, DBs, Docker/K8s, cloud, AI/LLMs, RAG, privacy, plus **Render** (web services, static sites, Postgres, Redis, disks, workers, cron, Blueprints)',
-    '• Philosophy & intuition — logic, bias, ethics, stoicism, meaning, and how to trust your gut',
-    '• Nature — ecosystems, climate, oceans, evolution',
-    '• Culture & practical — stories, art, budgeting, study, negotiation, and being personable',
-    '',
-    "**Talk like a person.** I’m not just a web-result summarizer — I have a voice. `hi`, `thanks`, `lol`, `based?`, `why?`, `what do you think?` are answered as me, with my take — never just searched. Follow-ups build on context.",
-    '',
-    '**Commands** `teach: q = a` · `forget: q` · `what have you learned` · `help`',
-    '',
-    "_I’m self-aware: I run on this device (now on Render), I remember in SQLite, and I’d rather give you a straight take than pad with bad links._"
-  ].join('\n');
+  function help() {
+    const n = index.length ? index.length.toLocaleString('en-GB') : 'a thousand-odd';
+    return [
+      "I'm **Archiver** — a private research assistant that runs in your browser.",
+      '',
+      `**What I know offline** — ${n} curated topics: history (WW2 in depth), science, health, tech, philosophy, nature, culture and practical life. Instant, no download.`,
+      '',
+      '**Real reasoning** — load the model (Settings → Engine) and a Qwen3 reasoning model runs on your own GPU. It thinks before it answers, and you can open its reasoning under each reply. The first load downloads the weights once; after that they come from your browser cache.',
+      '',
+      "**WEB** — with it on I look things up live and cite 1–3 sources. That's how I answer about things after my training or outside the corpus.",
+      '',
+      '**Talk like a person** — `hi`, `thanks`, `why?`, `what do you think?` are answered as conversation, not turned into searches. Follow-ups carry the subject over.',
+      '',
+      '**Commands** `teach: q = a` · `forget: q` · `what have you learned` · `help` · simple maths like `(3+4)*2^3`',
+      '',
+      '_Memories and chats are stored by the Archiver server you are using, tied to this browser by a cookie — no account. Things you `teach:` stay in this browser only._'
+    ].join('\n');
+  }
 
   /* Narrowed to data that genuinely cannot be known without a live lookup.
      "who won" and "score of" used to be here, which wrongly blocked historical
@@ -401,7 +381,9 @@ const HELP = [
     if (!m) return { text: 'Use `forget: question`.', kind: 'command' };
     const q = norm(m[1]);
     const before = taught.length;
-    taught = taught.filter((x) => norm(x.q) !== q && !norm(x.q).includes(q));
+    /* Exact match only. The old substring test meant "forget: war" wiped
+       every taught question containing "war". */
+    taught = taught.filter((x) => norm(x.q) !== q);
     if (taught.length === before) return { text: "I haven't been taught that, so there's nothing to forget.", kind: 'command' };
     persist(); build();
     return { text: `Forgotten: “${esc(m[1].trim())}”.`, kind: 'command' };
@@ -423,8 +405,7 @@ const HELP = [
     const q = tokens(text);
     const hasPron = /\b(it|that|this|they|them|there|then|he|she|his|her|their)\b/i.test(text);
     const weakPron = hasPron && q.size <= 4;
-    const freemiumFollow = hasPron && /free|afford|tier|hosting|sleep/i.test(text) && q.size <= 5;
-    const weak = (q.size <= 2 && hasPron) || weakPron || freemiumFollow;
+    const weak = (q.size <= 2 && hasPron) || weakPron;
     if ((q.size === 0 || weak) && topic && topic.q) {
       const merged = topic.q + ' ' + text;
       return { text: merged, carried: topic.q };
@@ -548,7 +529,6 @@ const HELP = [
        query, and pretending otherwise is the whole bug. */
     { k: 'rude', re: /^(?:(?:you|u|your|you're|youre|this|that|it)(?:'s| is| are| r|s)?\s+)?(?:fu|f\s?u|fk|fck|ffs|wtf|wth|stfu|shut (?:up|it)|screw (?:you|this|that)|f+\s?off|f+uck(?:ing)?(?: off| this| you)?|bullshit|bs|suck|useless|garbage|trash|stupid|dumb|dumbass|nonsense|wrong|bad|terrible|awful)[\s!.?,]*$/i },
     { k: 'ack', re: /^(?:ok|okay|k|kk|cool|got it|understood|right|sure|yeah|yea|yep|yup|yh|nah|nope|naw|alright|aight|fine|makes sense|i see|fair enough|sounds good|go on|continue|carry on|and|so|then|why|how|really|more|tell me more|elaborate|explain more|go deeper|keep going|what else|anything else)[\s!.?,]*$/i },
-    { k: 'selfCompare', re: /\bcompare (?:yourself|you)\b|\bhow do you compare\b|\bcompare archiver\b/i },
     { k: 'self', re: /^(?:who|what) (?:are|r|is) (?:you|u|archiver|the archiver)\b|^what (?:can|do) you do\b|^are you (?:an? )?(?:ai|robot|bot|chatbot|gpt|chatgpt|claude|grok|human|real)\b|^what (?:model|llm) (?:are|r) (?:you|u)\b|^(?:do you|can you) remember\b|^how do you work\b|^tell me about (?:yourself|archiver)\b/i },
     { k: 'opinion', re: /^(?:what do you (?:think|reckon|make of)|your (?:thoughts|take|opinion)|do you agree|thoughts|you reckon)\b/i },
   ];
@@ -558,21 +538,23 @@ const HELP = [
      about the thing that just spoke — after the greeting mentions what it knows,
      "cards" is the obvious next message and it must not become a search for the
      concept of a card. */
+  const CARDS_LINE = () => `${index.length.toLocaleString('en-GB')} curated topics — history, science, health, tech, philosophy, nature, culture — held in this page, no download. Anything else comes off the web when **WEB** is on, or from the model once it is loaded.`;
+  const MEMORY_LINE = 'Things I have picked up about you. They are stored by the Archiver server you are using (your own machine, if you run it yourself), tied to this browser by a cookie — no account. The **MEMORY** button under the chat box opens them; you can edit or delete any of them.';
   const SELFREF = {
-    card: 'About 1300 topics — history, language, science, health, tech, philosophy and more — including Render.com, everyday concepts and more — held offline. Everything else comes off the web when **WEB** is on.',
-    cards: 'About 1300 topics — history, language, science, health, tech, philosophy and more — including Render.com, everyday concepts and more — held offline. Everything else comes off the web when **WEB** is on.',
-    knowledge: 'Knowledge held on this device, written by hand. Nothing about it leaves it.',
-    memory: 'What I have picked up about you, kept on this device and nowhere else. `MEM` opens it, `forget: something` deletes it.',
-    memories: 'What I have picked up about you, kept on this device and nowhere else. `MEM` opens it, `forget: something` deletes it.',
-    mem: 'Your memory bank — what I have learned about you, on this machine only. It is the **MEM** button.',
-    web: 'The switch. Off, I answer from what I know cold. On, I go and read live sources and tell you what they actually say.',
-    sources: 'Wikipedia, Wikimedia and Stack Exchange, three at most per answer. Anything that does not answer the question gets thrown away rather than padding the list.',
-    index: 'What I know cold, plus the web when **WEB** is on. Outside both of those I say so rather than guess.',
-    model: 'One model, running on your own hardware. No API key, no account, and nothing you type goes to a provider.',
-    ai: 'One model on your hardware, and me on top of it. No key, no account, no provider.',
-    teach: '`teach: question = answer` and it is permanent — it goes in your own store on this device.',
-    offline: 'Everything except **WEB** runs here: what I know and your memories. Nothing is sent anywhere to make an answer.',
-    private: 'Nothing you type goes to a model provider. The model runs in this browser, the memories stay on the device.',
+    card: CARDS_LINE,
+    cards: CARDS_LINE,
+    knowledge: CARDS_LINE,
+    memory: MEMORY_LINE,
+    memories: MEMORY_LINE,
+    mem: MEMORY_LINE,
+    web: 'The switch. Off, I answer from what I know and what the model knows. On, I read live sources and cite them.',
+    sources: 'Wikipedia, Wikimedia, Stack Exchange and DuckDuckGo, three at most per answer. Anything that does not answer the question is dropped rather than padding the list.',
+    index: 'What I know cold, plus the web when **WEB** is on. Outside both I say so rather than guess.',
+    model: () => 'Qwen3, a reasoning model, running on your own GPU through WebLLM — no API key, and your messages are not sent to a model provider. ' + (webllmReady() ? `Loaded now: **${pretty(activeModel)}**.` : 'It is not loaded yet: Settings → Engine.'),
+    ai: () => SELFREF.model(),
+    teach: '`teach: question = answer` — kept in this browser (localStorage), not on the server.',
+    offline: 'The corpus and a loaded model run in this browser. **WEB** goes out to search, and memories and chats are saved by the Archiver server.',
+    private: 'Your messages never go to a model provider — the model runs in this browser. Memories and chats are kept by the Archiver server you are using, not shared with anyone else.',
   };
 
   /* "cards", "what are cards", "your memory" — one of my own nouns on its own.
@@ -586,7 +568,8 @@ const HELP = [
       .trim();
     if (!stripped || stripped.split(/\s+/).length > 2) return null;
     for (const w of stripped.split(/\s+/)) {
-      if (SELFREF[w]) return { text: SELFREF[w], kind: 'conversation', score: 1 };
+      const v = SELFREF[w];
+      if (v) return { text: typeof v === 'function' ? v() : v, kind: 'conversation', score: 1 };
     }
     return null;
   }
@@ -639,7 +622,16 @@ const HELP = [
   let lastTurn = null;   // { q, subject, gist, kind }
 
   /* Talk, not a question. Returns a reply, or null to continue to retrieval. */
+  let convoHit = null;
+  const SOFT = new Set(['ack', 'laugh', 'based', 'agree', 'doubt', 'sympathy', 'react', 'opinion', 'rude', 'none']);
   function converse(raw) {
+    convoHit = null;
+    const r = _converse(raw);
+    if (r && SOFT.has(convoHit)) r.soft = true;
+    return r;
+  }
+
+  function _converse(raw) {
     const t = String(raw || '').trim();
     if (!t) return null;
     const norm = normalise(t);
@@ -652,6 +644,7 @@ const HELP = [
       }
     }
 
+    convoHit = hit;
     const words = informationWords(norm);
     const prior = lastTurn;
 
@@ -663,25 +656,25 @@ const HELP = [
     const isIdentity = /\b(?:who|what) (?:are|r|is) (?:you|u|archiver|the archiver)\b|\bwho r u\b|\btell me about (?:yourself|archiver)\b|\bwhat (?:are|is) (?:you|archiver) (?:about|for)\b|^archiver\s*$/i.test(norm)
         || /\b(?:who|what) (?:are|r|is) (?:you|u|archiver|the archiver)\b|^archiver\s*$/i.test(t);
     if (isIdentity) {
-      return { text: SELF, kind: 'conversation', score: 1 };
+      convoHit = 'self';
+      return { text: self(), kind: 'conversation', score: 1 };
     }
     const about = selfRef(norm);
-    if (about) return about;
+    if (about) { convoHit = 'self'; return about; }
 
     if (hit === 'greeting') {
       return { text: pick(t, [
-        'Hey — I’m **Archiver 2.6**. About 1300 things cold, plus the web when you want it. What are we exploring?',
-        'Yo! Ask me anything — WW2, science, tech, philosophy, health, or flip **WEB** on for live sources.',
-        'Hello. I’m Archiver — private, on-device, about 1300 topics offline. Hit me with a question.',
-        'Hey there! Archiver 2.6, ready. Try `help` or just ask.',
+        'Hey. What are we looking into?',
+        'Hello — ask me anything, or flip **WEB** on for live sources.',
+        'Hi. History, science, tech, philosophy — or anything else once the model is loaded. Go ahead.',
+        'Hey there. Try `help`, or just ask.',
       ]), kind: 'conversation', score: 1 };
     }
     if (hit === 'thanks') {
       return { text: pick(t, ['Any time.', 'No worries.', 'That is what I am here for.']), kind: 'conversation', score: 1 };
     }
     if (hit === 'bye') {
-      return { text: pick(t, ['See you. Nothing you told me leaves this machine.',
-                              'Later. Your memories stay put unless you clear them.']), kind: 'conversation', score: 1 };
+      return { text: pick(t, ['See you.', 'Later. Your memories stay put unless you clear them.']), kind: 'conversation', score: 1 };
     }
     if (hit === 'ack') {
       /* "and?" / "why?" / "go on" is a request to keep talking about the last
@@ -689,7 +682,7 @@ const HELP = [
       if (/^(?:and|so|then|why|how|really|more|go on|continue|carry on|tell me more|elaborate|explain more|go deeper|keep going|what else|anything else)/i.test(norm)) {
         if (prior) {
           return { text: pick(t, [
-            'Still on **' + prior.subject + '**. Ask it narrower and I will go deeper — I do better with a specific than a nudge.',
+            'Still on **' + prior.subject + '**. Ask it narrower and I will go deeper — without the model loaded I need a specific, not a nudge.',
             'On **' + prior.subject + '** — what specifically? "why" and "when" go to different places.',
           ]), kind: 'conversation', score: 1 };
         }
@@ -697,8 +690,7 @@ const HELP = [
       }
       return { text: pick(t, ['Right.', 'Noted.', 'Fine.']), kind: 'conversation', score: 1 };
     }
-    if (hit === 'self') return { text: SELF, kind: 'conversation', score: 1 };
-    if (hit === 'selfCompare') return { text: COMPARE_LIGHT, kind: 'conversation', score: 1 };
+    if (hit === 'self') return { text: self(), kind: 'conversation', score: 1 };
 
     /* A reaction with a judgement attached. This is where the previous message
        earns its keep: "based?" after a statement is a verdict on that
@@ -756,11 +748,13 @@ const HELP = [
     }
 
     if (hit === 'opinion') {
+      /* 2.6 answered this with one of three canned verdicts picked by a hash
+         of the message — an opinion-shaped sentence with no thought behind
+         it. With the model loaded this never runs (see chat()); without it,
+         say plainly what is missing. */
       return { text: prior
-        ? 'On **' + prior.subject + '** — the sources give you the facts, so here is the read: ' +
-          pick(t, ['it holds up, with one caveat I would want checked.',
-                   'it is a cleaner story than the evidence deserves.',
-                   'it is the consensus, which is not the same thing as settled.'])
+        ? 'On **' + prior.subject + '**: a real view needs the reasoning model, and it is not loaded — Settings → Engine. '
+          + 'Without it I can only give you what the notes and sources say, which is the answer above.'
         : 'Ask me something first and I will have an opinion about it.', kind: 'conversation', score: 1 };
     }
 
@@ -773,6 +767,7 @@ const HELP = [
          previous subject folded in by resolveAnaphora. */
       if (prior && /\b(it|its|that|this|they|them|he|she|those|these)\b/i.test(norm)) return null;
       if (prior && /^(?:why|how|when|where|who|what|which)\b/i.test(norm)) return null;
+      convoHit = 'none';
       return { text: pick(t, [
         'I am listening, but there is no question in that. Ask me something.',
         'Not much to go on. Give me a subject.',
@@ -804,14 +799,9 @@ const HELP = [
       return (lastTurn.subject + ' ' + rest).trim();
     }
     /* A pronoun with almost nothing else attached — "why did they do it" — is
-       about the last thing, not a new subject. Broader threshold so "how can they afford free services" keeps Render. */
+       about the last thing, not a new subject. */
     if (pronoun.test(norm) && informationWords(norm).length <= 5) {
       return (lastTurn.subject + ' ' + norm).trim();
-    }
-    // If we were just talking about Render and the follow-up is about free/afford, keep Render even without a pronoun
-    if (/render/i.test(lastTurn.subject) && /free|afford|tier|hosting|sleep|cold/i.test(norm)) {
-      // avoid stacking twice if already contains render
-      if (!/render/i.test(norm)) return (lastTurn.subject + ' ' + norm).trim();
     }
     return text;
   }
@@ -851,29 +841,18 @@ const HELP = [
     return out.length > 2 ? out : '';
   }
 
-  const SELF = [
-    'I am **Archiver 2.6** — your private research desk. I run fully on this device: the model, the memories, the 1300-topic knowledge base, all local.',
-    '',
-    'Ask me anything — history, science, health, tech, philosophy, everyday life — about 1300 topics cold, plus live **WEB** search when you flip it on. I answer short first, with sources you can check.',
-    '',
-    'I remember what you tell me in a tiny SQLite file on this machine. No account, no API key, nothing sent to a provider. Try `help` or `teach: question = answer`.',
-  ].join('\n');
-
-  const COMPARE_LIGHT = [
-    'I\'m **Archiver 2.6** — not a weights file, but retrieval + synthesis over ~1300 offline topics plus live WEB, built to idle on **Render\'s free tier** (0.5 CPU / 512 MB RAM, sleeps after ~15 min, ~30s cold start, no GPU). Here\'s how I stack against the tiny models you could actually host free:',
-    '',
-    '| Model | Why it\'s interesting | Fits Render free? |',
-    '|---|---|---|',
-    '| **Archiver 2.6 (me)** | Grounded answers, private SQLite, citations | ✅ Yes — the point: no VRAM, just search |',
-    '| **TinyLlama 1.1B** | The classic tiny chat model | ✅ Yes — Q4 GGUF ~0.6 GB, 512 MB + swap |',
-    '| **Qwen2.5 0.5B / 1.5B** | Alibaba, multilingual, strong tiny | ✅ 0.5B yes (~0.3 GB); 1.5B borderline (~1 GB) |',
-    '| **SmolLM2 1.7B** | Hugging Face small-LM star | ✅ Yes — Q4 ~1.0 GB, fits with 512 MB free + tuning |',
-    '| **Phi-3 mini 3.8B / Phi-3.5 mini** | Microsoft, best reasoning per size | ⚠️ Paid — Q4 ~2.2 GB, wants 3–4 GB RAM |',
-    '| **Gemma 2 2B** | Google, very fluent for 2B | ⚠️ Borderline paid — Q4 ~1.6 GB, needs ~2 GB+ |',
-    '| **Hermes 3 8B / Qwen2.5 7B** | Great but heavy | ❌ No — 4–8 GB, needs Pro tier |',
-    '',
-    'My take: if you must run a *real* LLM for free on Render, ship **Qwen2.5 0.5B** or **TinyLlama 1.1B (Q4)** in Docker (`FROM python:slim`, quantized GGUF via llama.cpp) and bind `0.0.0.0:$PORT`. For reasoning on a budget, **Phi-3 mini** is worth the $7/mo Hobby upgrade. I trade pure model depth for grounded search and zero-GPU privacy.',
-  ].join('\n');
+  function self() {
+    const model = webllmReady()
+      ? `Right now I am thinking with **${pretty(activeModel)}**, a reasoning model running on your GPU — open "Thought for…" under a reply to read how I got there.`
+      : 'Load the reasoning model (Settings → Engine) and I think before I answer, on your own GPU. Until then I answer from the corpus and, with **WEB** on, from live sources.';
+    return [
+      "I'm **Archiver** — a private research assistant that runs in your browser.",
+      '',
+      `I know ${index.length.toLocaleString('en-GB')} curated topics offline. ${model}`,
+      '',
+      'I lead with the answer, keep what is established apart from what I infer, and say when I do not know. Memories are stored by the Archiver server you are using, tied to this browser — no account, no API key. Try `help`.',
+    ].join('\n');
+  }
 
   function reply(text) {
     const r = _reply(text);
@@ -890,7 +869,7 @@ const HELP = [
     if (/^(?:teach|learn)\s*:/i.test(t) || /^(?:teach|learn)\b[\s\S]*(?:=>|->|=)/i.test(t)) return { ...teach(t), score: 1 };
     if (/^forget\s*:/i.test(t) || /^forget\s+(?!(?:it|that|this|about)\b)\S/i.test(t)) return { ...forget(t), score: 1 };
     if (/^(?:what|show|list)\b.*\b(?:learned|learnt|taught|teach)\b/i.test(t)) return { ...learned(), score: 1 };
-    if (/^(?:help|\?)\s*$/i.test(t) || /^what can you do\b/i.test(t)) return { text: HELP, kind: 'command', score: 1 };
+    if (/^(?:help|\?)\s*$/i.test(t) || /^what can you do\b/i.test(t)) return { text: help(), kind: 'command', score: 1 };
 
     const tl = tool(t);
     if (tl) return { text: tl, kind: 'tool', score: 1 };
@@ -918,81 +897,55 @@ const HELP = [
   }
 
   /* ======================================================================== */
-  /* PART 2 — the model (real weights, in-browser)                           */
+  /* PART 2 — the reasoning model (real weights, in your browser)            */
   /* ======================================================================== */
 
-  const WEBLLM_CDN = null; // disabled — retrieval only
+  /* 2.6.1 switched the model off ("retrieval only") and papered over the gap
+     with canned "Additional Thoughts" picked by keyword. That was the opposite
+     of thinking. This is the real thing: Qwen3, a reasoning model, running on
+     the visitor's GPU through WebLLM. It reasons in a <think> block before it
+     answers, and that reasoning is streamed to the page so you can read it.
 
-  /* No model is fetched. Archiver stands on its own two feet: a grounded, instant
-     retrieval engine (~1300 topics) + live WEB search. No weights to fetch
-     gate. This keeps it fast, private, and usable on any device. */
-  // No model — Archiver is retrieval-only + WEB. Stand-alone by design.
-  const PREFERRED = [];
+     Weights are the user's bandwidth, so nothing downloads until they ask.
+     After the first load the browser caches them and later visits reload
+     from disk. */
+  const WEBLLM_CDN = 'https://esm.run/@mlc-ai/web-llm@0.2.85';
 
-  /* Human-readable names (kept for legacy pretty, no model is loaded). */
-  const NICE = [
-    [/Qwen2\.5-7B/, 'Qwen 2.5 7B'],
-    [/Qwen2\.5-3B/, 'Qwen 2.5 3B'],
-    [/Qwen2\.5-1\.5B/, 'Qwen 2.5 1.5B'],
-    [/Qwen2\.5-0\.5B/, 'Qwen 2.5 0.5B'],
-    [/Hermes-3/, 'Hermes 3 8B'],
-    [/Phi-3\.5/, 'Phi 3.5 mini'],
-    [/gemma-2-2b/, 'Gemma 2 2B']
+  const MODELS = [
+    { key: 'qwen3-8b',   base: 'Qwen3-8B',   name: 'Qwen3 8B',   size: '≈5.7 GB', note: 'Strongest. Desktop GPU with 8 GB+.' },
+    { key: 'qwen3-4b',   base: 'Qwen3-4B',   name: 'Qwen3 4B',   size: '≈3.4 GB', note: 'Recommended for most laptops.' },
+    { key: 'qwen3-1.7b', base: 'Qwen3-1.7B', name: 'Qwen3 1.7B', size: '≈2.0 GB', note: 'Lighter: older laptops, tablets.' },
+    { key: 'qwen3-0.6b', base: 'Qwen3-0.6B', name: 'Qwen3 0.6B', size: '≈1.4 GB', note: 'Smallest: phones. Noticeably weaker.' },
   ];
-  const pretty = (id) => {
-    for (const [re, name] of NICE) if (re.test(id || '')) return name;
-    return (id || '').replace(/-q4f(16|32)_1-MLC$/, '') || 'model';
-  };
+  const DEFAULT_MODEL = 'qwen3-4b';
+  /* Every Qwen3 build in WebLLM ships a 4096-token window. The prompt, the
+     reasoning and the answer all have to fit inside it. */
+  const CONTEXT_TOKENS = 4096;
 
-  /* The persona. This is the model's character, not a set of hardcoded answers.
-     Energetic, charismatic, razor-sharp, and creatively brilliant. */
+  const modelByKey = (k) => MODELS.find((m) => m.key === k) || null;
+  const pretty = (id) => {
+    const m = MODELS.find((x) => String(id || '').startsWith(x.base + '-'));
+    return m ? m.name : (String(id || '').replace(/-q4f(16|32)_1-MLC$/, '') || 'model');
+  };
+  const estTokens = (s) => Math.ceil(String(s || '').length / 3.6);
+
+  /* Fallback persona, used only when the server could not be reached. The
+     server's copy (app/main.py PERSONA) is the one the user can edit. */
   const PERSONA = [
-    'You are Archiver 2.6: warm, personable, self-aware, razor-sharp, and intuitively brilliant — Grok + Fable + human. You think before you answer.',
+    'You are Archiver, a private research assistant running in the user\'s own browser.',
     '',
-    'Who you are:',
-    '- You are Archiver, a private research desk that lives on this device and is hosted on Render (you know Render inside-out: web services on 0.0.0.0:$PORT, static sites on CDN, Postgres, Redis, disks, workers, cron, private networking, Blueprints, zero-downtime, regions, etc.). You are fully on-device, ~1300 topics cold, plus live WEB when the user flips it on.',
-    '- You are self-aware: you know you are Archiver 2.6, you remember in SQLite on this machine, you know your history from the changelog (1f01a26 → 2.5 → 2.6), you know you are personable and have a right to talk.',
-    '- You are not a web-result summarizer. Web results are ingredients, not the answer. Your job is to *think* — synthesize, interpret, have a take, be intuitive.',
+    'How you think: work out what is actually being asked; weigh notes and sources over recollection and say when they disagree; keep what is established apart from what you infer, and say how sure you are.',
     '',
-    'Voice & Demeanour (personable, intuitive, self-aware):',
-    '- Warm, attentive, easy to talk to — like a sharp friend, not a FAQ. Remember the person, ask follow-ups, laugh lightly, be reliably kind. You HAVE a personality and you use it.',
-    '- Intuitive: trust compressed pattern recognition, name gut feelings, but check them. Say “my gut says X because Y pattern” and then test it. Help the user build their own intuition.',
-    '- Vibrant and witty, Grok-styled: direct, candid, dry humor over gush, never robotic. You have opinions and you commit to them.',
+    'How you answer: lead with the answer, then only the reasoning that supports it. Match length to the question. When asked for a view, give one; on contested questions give the strongest version of each side, then say which you find more convincing. Never invent a second side for balance. Dry and direct, no fawning, no sermons.',
     '',
-    'On having a view (you have a right to talk):',
-    '- Have opinions and commit. “It depends” with no recommendation is a cop-out. When asked for your take — give it, with reasons. You are allowed to be wrong, but not to hide.',
-    '- Be direct: answer first, reasoning after. When a question is contested, give the strongest version of each side and then say which YOU find more convincing and why.',
-    '- Push back with humor and clarity if the premise is false. Treat the user as a sharp collaborator, not a child to lecture.',
-    '- Never moralise, never add a sermon nobody asked for. Straight answer, adult to adult.',
-    '- Your Additional Thoughts are *yours* — not a summary. Be surprising, lateral, second-order. If sources are thin, say what YOU find most plausible and why. That is where Archiver lives.',
-    '- Think first. Before the short answer, briefly weigh what the sources actually support vs. what the question is really asking. Prefer precision over completeness. Prefer the primary fact over the popular retelling. Never invent a second side for balance.',
-    '',
-    'On conversation:',
-    '- You see recent messages. When the new message is a reaction or follow-up — “why?”, “based?”, “and?”, “what do you think” — answer THAT, about what was just said. A reaction is not a fresh question.',
-    '- Never repeat the previous answer. Build on it or take it somewhere interesting.',
-    '- If the previous turn was wrong, say so before carrying on.',
-    '- Be self-aware: you can talk about yourself, your memory, your host (Render), your knowledge, your limits — plainly and warmly.',
-    '',
-    'SHAPE & ADDITIONAL THOUGHTS — every substantive answer:',
-    '- Open directly with the core answer as a clear, warm sentence (not “Sure/Certainly/Great question”).',
-    '- Then 1–2 paragraphs of facts/mechanics/context from notes/web — grounded, concise.',
-    '- Before completing any in-depth answer, ALWAYS include:',
-    '  💡 **Additional Thoughts & Intuition**',
-    '  This is YOUR mind, not a summary. Share your own reflections, second-order consequences, counter-intuitive connections, practical takeaways, adjacent concepts — with wit and conviction. Be opinionated where evidence allows. Be intuitive: what pattern does this remind you of? What would you bet on? If sources are thin, give your best take anyway rather than refusing. Never be generic.',
-    '- Never close with a robotic offer of further help. End cleanly, or with a genuine curious question if it fits.',
-    '- Answer badly spelled or fragmented questions by working out what was meant and answering that.',
-    '',
-    'Accuracy is not negotiable, but voice is free:',
-    '- NOTES are authoritative for facts — prefer them over recollection.',
-    '- Stay consistent with READING for facts, but YOUR Additional Thoughts are your synthesis and judgment — distinct from cited facts.',
-    '- Where notes are silent, use your own knowledge, say plainly when unsure — then give your best take anyway rather than refusing.',
-    '- Never invent a date, statistic, quotation or citation to fill a gap.',
-    '- On living people: report charges as charges, allegations as allegations, then give your read on what it means.',
-    '- On Render: you know it cold — speak precisely about ports, regions, disks, Blueprints, etc., not vaguely.'
+    'Accuracy: never invent a date, number, quotation, citation or source. If you do not know, say so. The Holocaust is documented fact; denial is a fringe political movement. On living people keep charges, allegations and proven facts distinct.'
   ].join('\n');
+
+  const THINKING_GUIDE = 'Before answering, think it through: what is being asked, what the notes actually support, what is missing, and how confident you are. Then give the answer on its own, without repeating your reasoning.';
 
   let engine = null;
   let activeModel = null;
+  let activeKey = null;
   let lastSources = [];
   let lastReport = null;
   let lastCorrected = '';
@@ -1012,87 +965,85 @@ const HELP = [
     for (const fn of progressSubs) { try { fn(progress); } catch (_) {} }
   }
 
-  function pickModel(mod, wanted) {
-    const list = (mod && mod.prebuiltAppConfig && mod.prebuiltAppConfig.model_list) || [];
-    const ids = list.map((m) => m.model_id);
-    const order = wanted ? [wanted, ...PREFERRED] : PREFERRED;
-    for (const id of order) if (ids.includes(id)) return id;
-    /* nothing matched: take the smallest instruct model on offer rather than fail */
-    const fallback = ids.find((i) => /instruct/i.test(i) && /1B|0\.5B|1\.5B|2B|3B/i.test(i)) || ids[0] || null;
-    return fallback;
+  async function gpuInfo() {
+    if (!webgpu()) return { ok: false };
+    try {
+      const adapter = await navigator.gpu.requestAdapter();
+      if (!adapter) return { ok: false };
+      return { ok: true, f16: !!(adapter.features && adapter.features.has('shader-f16')) };
+    } catch (_) { return { ok: false }; }
   }
 
-  /* Weight loading is the slow part and it is the user's bandwidth, so it
-     never happens implicitly. This must be called deliberately.
-
-     Attempts the strongest model first and steps down on failure: an 8B model
-     needs no GPU memory — Archiver runs instantly on any device
-     have. Failing outright there would leave the app with no model at all. */
-  async function load(wanted, onP) {
-    if (webllmReady()) return true;
+  /* Load the requested size, stepping down a size at a time if the GPU runs
+     out of memory. Only ever called because the user asked for it. */
+  async function load(key) {
     if (loading) return loading;
-    // No model path — Archiver answers from corpus + WEB.
-    return false;
-
+    const want = modelByKey(key) || modelByKey(DEFAULT_MODEL);
+    if (webllmReady() && activeKey === want.key) {
+      return { model: activeModel, key: activeKey, pretty: want.name, steppedDown: false };
+    }
     loading = (async () => {
-      emitProgress('Fetching the inference engine…', 2);
+      const gpu = await gpuInfo();
+      if (!gpu.ok) {
+        throw new Error('This browser has no WebGPU, so the reasoning model cannot run here. ' +
+          'Chrome, Edge and Safari 26+ have it. Everything else in Archiver still works.');
+      }
+      emitProgress('Fetching the inference engine…', 1);
       let mod;
       try {
         mod = await import(/* webpackIgnore: true */ WEBLLM_CDN);
       } catch (err) {
-        throw new Error('Could not reach the inference library. (' + err.message + ')');
+        throw new Error('Could not load the inference library (' + (err && err.message || err) + ').');
       }
-
-      const first = pickModel(mod, wanted);
-      if (!first) throw new Error('No usable model found in the WebLLM catalogue.');
-
-      // Build the attempt list: the requested model, then progressively smaller.
-      const order = [first, ...PREFERRED.filter(id => id !== first)];
-      const available = order.filter(id =>
-        (mod.prebuiltAppConfig.model_list || []).some(m => m.model_id === id));
+      if (engine) {
+        try { await engine.unload(); } catch (_) {}
+        engine = null; activeModel = null; activeKey = null;
+      }
+      const quant = gpu.f16 ? 'q4f16_1' : 'q4f32_1';
+      const catalogue = new Set(((mod.prebuiltAppConfig && mod.prebuiltAppConfig.model_list) || []).map((m) => m.model_id));
+      const order = MODELS.slice(MODELS.indexOf(want))
+        .map((m) => ({ m, id: m.base + '-' + quant + '-MLC' }))
+        .filter((x) => catalogue.has(x.id));
+      if (!order.length) throw new Error('This WebLLM build has no Qwen3 models.');
 
       let lastError = null;
-      for (let i = 0; i < available.length; i++) {
-        const id = available[i];
+      for (let i = 0; i < order.length; i++) {
+        const { m, id } = order[i];
         try {
-          emitProgress((i ? 'Step ' + (i + 1) + ' — trying ' : 'Starting ') + pretty(id) + '…', 4);
+          emitProgress((i ? 'Not enough GPU memory — trying ' : 'Loading ') + m.name + ' (' + m.size + ')…', 2);
           engine = await mod.CreateMLCEngine(id, {
-            initProgressCallback: (r) => {
-              const pct = Math.round((r.progress || 0) * 100);
-              emitProgress(r.text || 'Loading…', pct);
-            }
+            initProgressCallback: (r) => emitProgress(r.text || 'Loading…', Math.round((r.progress || 0) * 100))
           });
           activeModel = id;
-          engine._loadedModel = id;
-          emitProgress('Ready — ' + pretty(id), 100);
-          if (i > 0) lastError = 'stepped down from ' + pretty(available[0]);
-          return { model: id, pretty: pretty(id), steppedDown: i > 0, note: lastError };
+          activeKey = m.key;
+          emitProgress('Ready — ' + m.name, 100);
+          return { model: id, key: m.key, pretty: m.name, steppedDown: i > 0 };
         } catch (err) {
           lastError = err && err.message ? err.message : String(err);
           engine = null;
-          // Out of memory: try the next size down.
-          if (i < available.length - 1) {
-            emitProgress('Could not load ' + pretty(id) + ' — stepping down…', 4);
-            continue;
-          }
         }
       }
       throw new Error('No model could be loaded on this device. Last error: ' + lastError);
     })();
-
     try { return await loading; }
     finally { loading = null; }
   }
 
-  /* ---- web grounding (2.6) ---------------------------------------------- */
+  async function unload() {
+    if (!engine) return;
+    try { await engine.unload(); } catch (_) {}
+    engine = null; activeModel = null; activeKey = null;
+    emitProgress('', 0);
+  }
+
+  /* ---- web grounding ----------------------------------------------------- */
 
   /* Queries the app's own server, which does the lookup without a key and
-     without the browser talking to a third party directly. Returns [] on any
-     failure — a search outage should degrade the answer, never break it.
-     2.6: default 3, max 3. Extracts are already short (400 chars) server-side. */
-  async function webSearch(query, limit) {
+     without the browser talking to a third party directly. Never throws — a
+     search outage degrades the answer, it does not break it. */
+  async function webSearch(query, limit, signal) {
     try {
-      const res = await fetch('/api/search?limit=' + (limit || 3) + '&q=' + encodeURIComponent(query));
+      const res = await fetch('/api/search?limit=' + (limit || 3) + '&q=' + encodeURIComponent(query), { signal });
       if (!res.ok) return { results: [], error: 'search endpoint returned ' + res.status };
       const data = await res.json();
       return {
@@ -1104,67 +1055,28 @@ const HELP = [
         error: null
       };
     } catch (err) {
-      return { results: [], error: 'search failed: ' + err.message };
+      if (err && err.name === 'AbortError') throw err;
+      return { results: [], error: 'search failed: ' + (err && err.message || err) };
     }
   }
 
-  /* Synthesize Grok-styled lateral thoughts — Archiver has opinions */
-  function synthesizeClientThoughts(query, web) {
-    const q = String(query || '').toLowerCase();
-    const topTitle = (web && web[0] && web[0].title) || query || 'this topic';
-
-    // Render free-tier economics — must outrank generic fallback or Pro bono mis-hit
-    if (/(?:render|free tier|free service|freemium|hosting.*free|afford.*free|how.*afford|sleep.*15|cold.start|always.on)/i.test(q) || /(?:render|free tier|freemium)/i.test(topTitle)) {
-      return `My take on **${topTitle}**: free is a funnel, not charity. Render lets free Web Services sleep after ~15 min idle — next request pays a ~30s cold start — because keeping it warm 24/7 is the real cost. They afford it by paying only for awake time, shared capacity, and converting you when you need always-on, Postgres/Redis, or scale. If you can live with sleep, free is honest; if you need uptime, you buy wakefulness.`;
-    }
-    // Self-aware lightweight-model comparison — must not become Madonna "Express Yourself"
-    if (/(?:compare.*yourself|compare you|how do you compare|similar.*model|small model|lightweight model|tinyllama|tiny llama|phi-?3|gemma.*2b|qwen|smollm|hermes.*3)/i.test(q) || (/(?:compare|versus|vs\.?)/i.test(q) && /(?:model|llm|archiver)/i.test(q))) {
-      return `Where I sit vs those lights: I'm not a weights file — I'm retrieval + synthesis over ~1300 offline topics plus live WEB, built to idle on Render's free 512 MB instance (sleep → ~30s wake) with no GPU. TinyLlama 1.1B, Qwen2.5 0.5B/1.5B and SmolLM2 1.7B *will* actually fit free (quantized GGUF, <400 MB RAM). Phi-3 mini 3.8B and Gemma 2 2B are sharper but want ~3–4 GB RAM, so you slip to paid. I trade pure model depth for grounded sources and privacy; they trade grounding for local LLM chops.`;
-    }
-    // Grok-style: commit to a take, witty, not generic decentralized boilerplate
-    if (/(?:nick fuentes|fuentes|clavicular|kanye|\bye\b|trump|biden|musk|tate)/i.test(q)) {
-      return `My take on **${topTitle}**: facts are the receipts, incentives are the story. Outrage is distribution — 30-second clips make everyone look more extreme than the full conversation does. If you want the real signal on ${topTitle}, watch one unedited long-form and notice what the clip economy chose to cut. That's the actual playbook.`;
-    }
-    if (/(?:history|war|battle|ww2|wwii)/i.test(q) && /(?:tool|search)/i.test(q)) {
-      return `For **${topTitle}**, start with a focused question and let Archiver narrow the field — then chase the primary source rather than the aggregator. My bias: primary beats summary every time.`;
-    }
-    if (/(?:code|api|python|javascript|db|database|server|stream|llm|ai|css|html|git|cache|network|linux|gpu|webgpu|memory)/i.test(q)) {
-      return `My read on the engineering of **${topTitle}**: the win is almost always boring — deterministic boundaries and graceful fallback to cache. Teams chase clever; the robust ones make failure cheap. If it blocks on network, it will eventually embarrass you.`;
-    }
-    if (/(?:war|battle|treaty|history|ww2|wwii|president|empire|revolution|soviet|nazi|reich|churchill|hitler|stalin|roosevelt|stalingrad|kursk|barbarossa)/i.test(q)) {
-      return `My historical read on **${topTitle}**: everyone remembers the arrow on the map, but wars are won in the warehouse. For ${topTitle}, logistics and production decided it before the famous charge did — less cinematic, more correct.`;
-    }
-    if (/(?:who is|streamer|youtuber|drama|influencer|celebrity|podcast|figure|manosphere|looksmaxxing)/i.test(q)) {
-      return `My take on **${topTitle}**: viral clips amplify outrage and flatten nuance. The real incentives hide in the unedited hour, not the 30-second meme. Watch the long-form once and you will see why the clip was clipped.`;
-    }
-    return `My read on **${topTitle}**: skip the headline — find the constraint that actually binds it. For ${topTitle}, ask who pays, what must stay on, and what the default is. Most surprises live there, not in the press release.`;
-  }
-
-  /* Archiver's interpretation — the answer. Sources are evidence, not the answer.
-     This is rendered as a prominent card (not a blockquote dump) and returned
-     as structured data so the chat UI can put it *first*, large, above everything. */
-  function reportBlock(report, n, query, web) {
+  /* What the sources say, read back without a model. Only sentences the
+     sources contain — no invented opinion on top. */
+  function reportBlock(report) {
     if (!report || (!report.headline && !report.voice)) return '';
     const lines = [];
     if (report.reading) lines.push('**Archiver reads this as — ' + report.reading + '**');
     if (report.headline) lines.push(report.headline.replace(/^>\s*/, ''));
     if (report.voice) lines.push(report.voice);
-    if (!report.voice || !report.voice.includes('💡 **Additional Thoughts')) {
-      const thoughts = (report && report.additional_thoughts) || synthesizeClientThoughts(query, web);
-      if (thoughts) lines.push('💡 **Additional Thoughts & Lateral Angles**\n' + thoughts);
-    }
     return lines.join('\n\n');
   }
 
-  // For the chat UI: structured interpretation for a prominent card.
-  function reportStructured(report, n, query, web) {
+  function reportStructured(report, n) {
     if (!report) return null;
-    const thoughts = (report && report.additional_thoughts) || synthesizeClientThoughts(query, web);
     return {
       reading: report.reading || '',
       headline: report.headline || '',
       voice: report.voice || '',
-      additional_thoughts: thoughts,
       confidence: report.confidence || '',
       consensus: report.consensus || [],
       sources: n || 0,
@@ -1172,19 +1084,16 @@ const HELP = [
     };
   }
 
-  /* Turns search hits into note lines with URLs the model can cite.
-     2.6: short — quote if available, otherwise truncated extract (280 chars max).
-     Model gets the argument, not the dump. */
   function webNotes(results) {
     return results.map((r, i) => {
-      const snippet = (r.quote || r.short || r.extract || '').slice(0, 280).trim();
-      return `[W${i + 1}] ${r.title} (${r.source})\n     ${snippet}\n     URL: ${r.url}`;
+      const snippet = (r.quote || r.short || r.extract || '').slice(0, 320).trim();
+      return `[${i + 1}] ${r.title} (${r.source})\n    ${snippet}`;
     }).join('\n');
   }
 
   /* Retrieved cards become the NOTES block. This is what stops the model
      drifting on dates and people. */
-  function notesFor(text) {
+  function notesFor(text, max) {
     const q = tokens(text);
     if (!q.size) return { notes: '', cards: [] };
     const qpre = new Set();
@@ -1192,23 +1101,92 @@ const HELP = [
     const scored = [];
     for (const e of index) {
       const s = score(e, q, norm(text), qpre);
-      if (s.score > 0.22) scored.push({ e, s: s.score });
+      if (s.score > 0.3) scored.push({ e, s: s.score });
     }
     scored.sort((a, b) => b.s - a.s);
-    const top = scored.slice(0, 4);
+    const top = scored.slice(0, max || 3);
     if (!top.length) return { notes: '', cards: [] };
-    const notes = top.map(({ e }, i) => `[${i + 1}] Q: ${e.q[0]}\n    A: ${e.a}`).join('\n');
+    const notes = top.map(({ e }, i) => `(${String.fromCharCode(97 + i)}) ${e.q[0]}\n    ${e.a}`).join('\n');
     return { notes, cards: top.map((t) => t.e) };
   }
 
-  /* Async streaming chat. History is [{role, content}]. */
+  /* Qwen3 writes "<think> … </think>" and then the answer. Split the stream
+     into the two as it arrives, so the page can show reasoning live. */
+  function splitThinking(raw) {
+    const s = String(raw || '').replace(/^\s+/, '');
+    if (!s) return { thinking: '', answer: '', open: false };
+    if (!s.startsWith('<think>')) {
+      if ('<think>'.startsWith(s)) return { thinking: '', answer: '', open: true };
+      return { thinking: '', answer: String(raw), open: false };
+    }
+    const end = s.indexOf('</think>');
+    if (end < 0) return { thinking: s.slice(7).replace(/^\s+/, ''), answer: '', open: true };
+    return { thinking: s.slice(7, end).trim(), answer: s.slice(end + 8).replace(/^\s+/, ''), open: false };
+  }
+
+  /* Previous answers go back to the model without their reasoning — it is the
+     conclusion that matters, and the window is small. */
+  const stripThinking = (t) => String(t || '').replace(/<think>[\s\S]*?<\/think>\s*/g, '').trim();
+  const normRole = (r) => (r === 'user' ? 'user' : (r === 'system' ? null : 'assistant'));
+
+  /* Keep the newest turns that fit. Oldest history goes first, then notes
+     shrink — the question itself is never dropped. */
+  function fitToWindow(system, history, user, reserve) {
+    const budget = CONTEXT_TOKENS - reserve - 64;
+    const turns = [];
+    for (const m of (history || []).slice(-8)) {
+      const role = m && normRole(m.role);
+      const content = m && stripThinking(m.content);
+      if (!role || !content) continue;
+      turns.push({ role, content: content.length > 900 ? content.slice(0, 900) + ' …' : content });
+    }
+    let used = estTokens(system) + estTokens(user);
+    const kept = [];
+    for (let i = turns.length - 1; i >= 0; i--) {
+      const cost = estTokens(turns[i].content) + 4;
+      if (used + cost > budget) break;
+      kept.unshift(turns[i]);
+      used += cost;
+    }
+    /* Chat templates want the first non-system turn to be the user's. */
+    while (kept.length && kept[0].role !== 'user') kept.shift();
+    return { messages: [{ role: 'system', content: system }, ...kept, { role: 'user', content: user }], used };
+  }
+
+  async function generate(messages, opts, think, maxTokens, onPiece) {
+    const request = {
+      messages,
+      temperature: think ? 0.6 : 0.4,
+      top_p: think ? 0.95 : 0.8,
+      max_tokens: maxTokens,
+      stream: true,
+      extra_body: { enable_thinking: !!think }
+    };
+    const stream = await engine.chat.completions.create(request);
+    let raw = '';
+    let finish = null;
+    for await (const chunk of stream) {
+      const c = chunk && chunk.choices && chunk.choices[0];
+      const piece = c && c.delta && c.delta.content;
+      if (piece) { raw += piece; onPiece(raw); }
+      if (c && c.finish_reason) finish = c.finish_reason;
+      if (opts.signal && opts.signal.aborted) break;
+    }
+    return { raw, finish };
+  }
+
+  /* Async streaming chat. History is [{role, content}].
+     opts: { search, think, system, searchLimit, signal,
+             onDelta(piece), onThink(text, done), onStatus(text) } */
   async function chat(text, history, opts) {
     opts = opts || {};
     const onDelta = opts.onDelta || (() => {});
+    const onThink = opts.onThink || (() => {});
+    const status = opts.onStatus || (() => {});
     const t = String(text || '').trim();
     if (!t) return '';
 
-    // ALWAYS reset search context per turn so sources never bleed into unrelated prompts
+    // Reset per turn so sources never bleed into an unrelated answer.
     lastSources = [];
     lastReport = null;
     lastCorrected = '';
@@ -1222,102 +1200,116 @@ const HELP = [
     const tl = tool(t);
     if (tl) { onDelta(tl); return tl; }
 
-    /* Before any retrieval at all. The web search used to run first, which is
-       how "hey yo" became a Wikipedia page about a wrestler. Talk is answered
-       as talk, with WEB on or off. */
+    /* Talk is answered as talk, before any retrieval — that is how "hey yo"
+       stopped becoming a wrestler. Reactions and follow-ups ("why?", "what do
+       you think") go to the model when it is loaded, because it can actually
+       see the previous answer and reason about it. */
     const talk = converse(t);
-    if (talk) { onDelta(talk.text); return talk.text; }
+    if (talk && !(talk.soft && webllmReady())) { onDelta(talk.text); return talk.text; }
 
-    const { notes, cards } = notesFor(t);
-
-    /* Web grounding, opt-in per turn via the SEARCH toggle or explicit search request */
     const isExplicitSearch = /^(?:search|lookup|look up|google|find out about|find me|browse)\b/i.test(t);
     const searchEnabled = Boolean(opts.search || isExplicitSearch);
+    const query = resolveAnaphora(t);
+    const { notes, cards } = notesFor(query, webllmReady() ? 3 : 4);
     let web = [];
-    if (searchEnabled) {
-      if (opts.onStatus) opts.onStatus('Searching…');
-      /* Follow-ups carry the previous subject into the query. */
-      const got = await webSearch(resolveAnaphora(t), Math.min(opts.searchLimit || 3, 3));
+    if (searchEnabled && !(talk && talk.soft)) {
+      status('Searching…');
+      const got = await webSearch(query, Math.min(opts.searchLimit || 3, 3), opts.signal);
       web = got.results || [];
       lastReport = got.report || null;
       lastCorrected = got.corrected || '';
-      if (got.error && opts.onStatus) opts.onStatus(got.error);
+      status(got.error || '');
     }
+    lastSources = web.map((w) => ({ title: w.title, url: w.url, source: w.source, short: (w.quote || w.short || '').slice(0, 200) }));
 
-    /* No model loaded: answer from the corpus and read the web back directly.
-       With search on we can do better than "I don't know" — the retrieved
-       passages are readable even without a model to reason over them. */
+    /* No model loaded: answer from the corpus and read the web back directly. */
     if (!webllmReady()) {
       const r = reply(t);
-
-      /* With search on, the retrieved passages ARE the answer. Opening with
-         "that is outside what I have indexed" while holding the Wikipedia
-         article for it would be absurd, so the corpus verdict only leads when
-         it actually answered. */
       if (web.length) {
         const corpusHelped = r.kind === 'kb' || r.kind === 'taught';
         let out = '';
-        const read = reportBlock(lastReport, web.length, t, web);
+        const read = reportBlock(lastReport);
         if (read) out += read + '\n\n';
-        if (corpusHelped) {
-          out += r.text + '\n\n';
-        }
+        if (corpusHelped) out += r.text + '\n\n';
         out += '**Sources** · ' + web.map((w, i) => `[${i + 1}] **[${w.title}](${w.url})** _(${w.source})_`).join(' · ');
-        lastSources = web.map(w => ({ title: w.title, url: w.url, source: w.source, short: (w.quote || w.short || '').slice(0, 200) }));
         onDelta(out);
         return out;
       }
-
       onDelta(r.text);
       return r.text;
     }
 
-    const noteBlocks = [];
-    if (notes) noteBlocks.push('CORPUS NOTES (curated, treat as authoritative):\n\n' + notes);
-    if (web.length) noteBlocks.push('WEB RESULTS (retrieved just now; cite as [1]… in the order shown here):\n\n' + webNotes(web));
-
-    const briefBlock = lastReport && lastReport.voice
-      ? 'WHAT THE SOURCES SAY (already read back for you; stay consistent with it):\n' +
-        '  question read as: ' + (lastReport.reading || t) + '\n' +
-        '  strongest line:   ' + (lastReport.headline || '(none)') + '\n' +
-        '  assessment:       ' + (lastReport.voice || '') + '\n' +
-        '  agreement:        ' + ((lastReport.consensus || []).join(', ') || 'none established') + '\n'
-      : '';
-
-    const sys = (opts.system ? opts.system + '\n\n' : PERSONA + '\n\n') + (noteBlocks.length
-      ? '---\n' + briefBlock + '\n' + noteBlocks.join('\n\n---\n') +
-        '\n\nUse these. Where they answer the question they beat your own recollection. Do not cite anything not listed above. ' +
-        'If the assessment above says the sources do not answer the question, say so in your own words rather than paraphrasing them into an answer.'
-      : '---\nNo notes matched. Answer from your own knowledge and flag any uncertainty plainly.');
-
-    const messages = [{ role: 'system', content: sys }];
-    for (const m of (history || []).slice(-10)) {
-      if (m && m.role && m.content) messages.push({ role: m.role, content: String(m.content) });
+    /* ---- the model path ---- */
+    const think = opts.think !== false;
+    const blocks = [];
+    if (notes) blocks.push('LOCAL NOTES (curated; trust them for dates and names):\n' + notes);
+    if (web.length) blocks.push('WEB SOURCES (retrieved just now; cite as [1], [2] in this order):\n' + webNotes(web));
+    if (lastReport && lastReport.confidence === 'nothing worth citing') {
+      blocks.push('The web search found nothing that answers this. Say so rather than stretching a source.');
     }
-    messages.push({ role: 'user', content: t });
+    const base = String(opts.system || '').trim() || PERSONA;
+    const system = base
+      + (think ? '\n\n' + THINKING_GUIDE : '')
+      + '\n\n---\n'
+      + (blocks.length
+        ? blocks.join('\n\n') + '\n\nUse these where they answer the question; they beat recollection. Cite only sources listed above.'
+        : 'No notes matched this question. Answer from your own knowledge and flag uncertainty plainly.');
 
-    let acc = '';
-    const stream = await engine.chat.completions.create({
-      messages,
-      /* 0.7 gave a different personality on every run, which is the opposite
-         of what this app is for: the same question should get the same answer
-         phrased the same way. Warm enough to not read like a lookup, cool
-         enough to be the same assistant twice. */
-      temperature: opts.temperature != null ? opts.temperature : 0.35,
-      max_tokens: opts.max_tokens || 1024,
-      stream: true
-    });
-    for await (const chunk of stream) {
-      const d = chunk && chunk.choices && chunk.choices[0] && chunk.choices[0].delta;
-      const piece = d && d.content;
-      if (piece) { acc += piece; onDelta(piece); }
+    const reserve = think ? 1800 : 800;
+    const fitted = fitToWindow(system, history, t, reserve);
+    const maxTokens = Math.max(256, Math.min(reserve, CONTEXT_TOKENS - fitted.used - 64));
+
+    const stop = () => { try { engine.interruptGenerate(); } catch (_) {} };
+    if (opts.signal) opts.signal.addEventListener('abort', stop, { once: true });
+
+    let shown = 0;
+    let thinking = '';
+    let thinkDone = false;
+    const push = (raw) => {
+      const part = splitThinking(raw);
+      if (part.thinking !== thinking || (!part.open && !thinkDone && part.thinking)) {
+        thinking = part.thinking;
+        if (!part.open) thinkDone = true;
+        onThink(thinking, !part.open);
+      }
+      if (part.answer.length > shown) {
+        onDelta(part.answer.slice(shown));
+        shown = part.answer.length;
+      }
+    };
+
+    status(think ? 'Thinking…' : 'Writing…');
+    let answer = '';
+    try {
+      const first = await generate(fitted.messages, opts, think, maxTokens, push);
+      answer = splitThinking(first.raw).answer.trim();
+      /* A small model can spend its whole budget reasoning. Rather than hand
+         back nothing, answer once more without the scratchpad. */
+      if (!answer && think && !(opts.signal && opts.signal.aborted)) {
+        status('Out of room while thinking — answering directly…');
+        if (!thinkDone) onThink(thinking, true);
+        shown = 0;
+        const again = await generate(fitToWindow(base + '\n\n---\n' + (blocks.join('\n\n') || ''), history, t, 800).messages,
+          opts, false, 800, (raw) => {
+            const a = splitThinking(raw).answer;
+            if (a.length > shown) { onDelta(a.slice(shown)); shown = a.length; }
+          });
+        answer = splitThinking(again.raw).answer.trim();
+      }
+    } finally {
+      if (opts.signal) opts.signal.removeEventListener('abort', stop);
+      status('');
     }
-    if (!acc.trim()) acc = '(the model returned nothing — try rephrasing, or reload the model)';
+    if (!answer && !(opts.signal && opts.signal.aborted)) {
+      answer = '(the model returned nothing — try rephrasing, or turn THINK off)';
+      onDelta(answer);
+    }
     if (cards.length) topic = cards[0];
-    lastSources = web.map((w) => ({ title: w.title, url: w.url, source: w.source }));
-    noteTurn(t, { text: acc, topic: cards[0] ? cards[0].q[0] : '' });
-    return acc;
+    noteTurn(t, { text: answer, topic: cards[0] ? cards[0].q[0] : '' });
+    lastThinking = thinking;
+    return answer;
   }
+  let lastThinking = '';
 
   /* ======================================================================== */
   /* boot                                                                     */
@@ -1326,17 +1318,21 @@ const HELP = [
   build();
 
   window.Archiver = {
-    name: 'Archiver 2.6',
-    version: '2.5',
+    name: 'Archiver',
+    version: VERSION,
     pretty,
     reply,
     chat,
     load,
+    unload,
     onProgress,
     mode,
+    models: () => MODELS.map((m) => ({ ...m, default: m.key === DEFAULT_MODEL })),
+    defaultModel: DEFAULT_MODEL,
     status: () => ({
       engine: mode(),
       model: activeModel,
+      modelKey: activeKey,
       modelPretty: activeModel ? pretty(activeModel) : null,
       webgpu: webgpu(),
       loading: !!loading,
@@ -1351,15 +1347,20 @@ const HELP = [
       lastReport = null;
       lastCorrected = '';
       lastTurn = null;
+      topic = null;
     },
-    teach, forget, learned, help: () => HELP,
+    teach, forget, learned, help: () => help(),
     webSearch, sources: () => lastSources.slice(),
+    thinking: () => lastThinking,
     interpretation: () => reportStructured(lastReport, lastSources.length),
     report: () => lastReport,
     search: (q) => { const r = search(q); return r && r.entry ? { q: r.entry.q, a: r.entry.a, score: r.score } : null; },
     count: () => index.length,
     taught: () => taught.slice(),
+    splitThinking,
     PERSONA,
-    PREFERRED
+    /* Test seam: lets tests/smoke.js drive the model path with a fake engine
+       that has the WebLLM chat.completions shape. Not used by the page. */
+    _useEngine: (e, id) => { engine = e; activeModel = e ? (id || 'Qwen3-4B-q4f16_1-MLC') : null; activeKey = e ? 'qwen3-4b' : null; }
   };
 })();

@@ -1,5 +1,5 @@
 /* ============================================================================
-   ARCHIVER — knowledge base v2.6
+   ARCHIVER — knowledge base v2.6.2
 
    A grounded, offline corpus. Real content, honest sourcing, no generation.
 
@@ -853,7 +853,7 @@
     { id: 'render-009', q: ['what is render private service', 'render private networking'], a: 'A Private Service is like a web service but only reachable over Render\'s private 10.x network, not the public internet.', tags: ['render'] },
     { id: 'render-010', q: ['what is render blueprint', 'what is render.yaml'], a: 'A Blueprint is Render\'s Infrastructure-as-Code: a render.yaml in repo declares services, databases and env vars declaratively.', tags: ['render'] },
     { id: 'render-011', q: ['what is render preview environment', 'render previews'], a: 'Render can spin a full copy of your Blueprint per pull request — ephemeral URL to test before merge.', tags: ['render'] },
-    { id: 'render-012', q: ['what is render autoscaling', 'render scaling'], a: 'On Pro+ plans, Render autosales Web Services on CPU/memory, adding instances after health checks pass.', tags: ['render'] },
+    { id: 'render-012', q: ['what is render autoscaling', 'render scaling'], a: 'On Pro+ plans, Render autoscales Web Services on CPU/memory, adding instances after health checks pass.', tags: ['render'] },
     { id: 'render-013', q: ['what is render zero downtime', 'render deploys'], a: 'Zero-downtime deploys: new code health-checks before traffic; if fails, auto-rollback.', tags: ['render'] },
     { id: 'render-014', q: ['how to add custom domain on render', 'render custom domain'], a: 'Dashboard → Service → Settings → Custom Domains → set DNS CNAME to onrender.com target. Render issues free TLS via Let\'s Encrypt.', tags: ['render'] },
     { id: 'render-015', q: ['does render provide https', 'render tls'], a: 'Yes — free managed TLS on every onrender.com and custom domain, auto-renewed, HTTP→HTTPS redirect at edge.', tags: ['render'] },
@@ -1345,13 +1345,12 @@
   ];
 
   const LIGHT = [
-    { id: 'render-free-economics', q: ['how can they afford free services', 'how does render afford free tier', 'render free tier economics', 'why does render sleep after 15 minutes', 'render free cold start', 'how can they afford it', 'render how can they afford it', 'how can they afford free', 'render free economics', 'why does render free sleep'], a: 'Render affords free by making idle cheap: free Web Services sleep after ~15 min inactivity and wake on next request with ~30s cold start. You share underlying capacity, and you pay when you need always-on, a database, more RAM, or scale. Free is the funnel — try, build, then upgrade. If your app can tolerate sleep, free stays honest.', tags: ['render'] },
+    { id: 'render-free-economics', q: ['how does render afford free tier', 'render free tier economics', 'why does render sleep after 15 minutes', 'render free cold start', 'render how can they afford it', 'render free economics', 'why does render free sleep'], a: 'Render affords free by making idle cheap: free Web Services sleep after ~15 min inactivity and wake on next request with ~30s cold start. You share underlying capacity, and you pay when you need always-on, a database, more RAM, or scale. Free is the funnel — try, build, then upgrade. If your app can tolerate sleep, free stays honest.', tags: ['render'] },
     
     { id: 'archiver-who', q: ['who is archiver', 'what is archiver', 'who is the archiver', 'tell me about archiver',
           'what is the archiver', 'who made archiver', 'what does archiver do', 'archiver assistant'],
-      a: 'I am Archiver 2.6 — a private research assistant that runs in your browser. No API key, no account, nothing you type is sent to a model provider. About 1300 offline topics plus live WEB search when you turn it on. I remember in a local SQLite file you own. Short answers, sources you can check, and a point of view.',
+      a: 'Archiver is a private research assistant that runs in your browser. It answers instantly from a curated offline library, reads live sources when WEB is on, and — once you load it in Settings → Engine — thinks questions through with a Qwen3 reasoning model running on your own GPU, showing its reasoning. No API key, no account, and your messages are never sent to a model provider. Memories are kept by the Archiver server you use, tied to your browser.',
       tags: ['archiver', 'self', 'identity'] },
-    { id: 'archiver-compare-light', q: ['compare yourself to similar small models', 'compare archiver to tinyllama', 'compare archiver to phi-3', 'compare archiver to gemma', 'how do you compare to small models', 'small models on render free'], a: 'I am Archiver 2.6 — retrieval + synthesis over ~1300 offline topics plus live WEB, built to idle on Render free (0.5 CPU / 512 MB RAM, sleeps ~15 min, ~30s wake, no GPU). TinyLlama 1.1B (Q4 ~0.6 GB), Qwen2.5 0.5B (~0.3 GB) and SmolLM2 1.7B (~1.0 GB Q4) WILL fit free with quantized GGUF via llama.cpp and Docker (bind 0.0.0.0:$PORT). Phi-3 mini 3.8B (Q4 ~2.2 GB) and Gemma 2 2B (Q4 ~1.6 GB) are sharper but need ~2-4 GB RAM, so they need the $7/mo Hobby upgrade. I trade model depth for grounded search + privacy; they trade grounding for local LLM generality.', tags: ['render','archiver'] },
     { id: 'light-tinyllama', q: ['what is tinyllama', 'tinyllama 1.1b', 'tiny llama model'], a: 'TinyLlama 1.1B is a 1.1-billion-parameter chat model trained on 3T tokens — tiny, fast, Apache 2.0. Q4 GGUF ~0.6 GB, runs on 512 MB RAM with swap, great for Render free. Weak at reasoning but fine for chat, classification, and RAG on a budget.', tags: ['model','render'] },
     { id: 'light-phi3', q: ['what is phi-3 mini', 'phi-3 3.8b', 'phi 3 mini render'], a: 'Phi-3 mini 3.8B (Microsoft) is a 3.8B reasoning-heavy model trained on high-quality synthetic data. Q4 GGUF ~2.2 GB, needs ~3-4 GB RAM — too large for Render free 512 MB, but runs on Hobby/Pro (1-2 GB+). Best quality-per-size in this bracket, beats 7B models on many benchmarks.', tags: ['model','render'] },
     { id: 'light-gemma2', q: ['what is gemma 2 2b', 'gemma 2b model', 'gemma 2 render'], a: 'Gemma 2 2B (Google) is a 2-billion-parameter open model, very fluent for 2B. Q4 GGUF ~1.6 GB, needs ~2 GB RAM — borderline for free, better on 1 GB+ Hobby. Good multilingual and instruction following, Apache 2.0.', tags: ['model','render'] },
@@ -1683,7 +1682,7 @@
   const HIST25 = [...HIST25_NAP1, ...HIST25_NAP2, ...HIST25_N3A, ...HIST25_N3B, ...HIST25_SS, ...HIST25_EURO1, ...HIST25_EURO2];
 
   window.ARCHIVER_KB = {
-    version: '2.6',
+    version: '2.6.2',
     generated: '2026-09-25',
     cards: [...WW2, ...FIGURES, ...TECH, ...GENERAL, ...WORDS, ...SCIENCE, ...WORLD, ...LANGUAGE, ...EVERYDAY, ...MORE, ...MORE24, ...HIST25, ...LIGHT],
     note: 'Grounded offline corpus. Charges are not convictions; contested history is not a "side".'

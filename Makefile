@@ -11,3 +11,4 @@ dev:
 
 test:
 	. .venv/bin/activate && python -m pytest tests/ -q
+	node tests/smoke.js
