@@ -1,5 +1,5 @@
 /* ============================================================================
-   ARCHIVER 2.6
+   ARCHIVER 2.6.1
 
    One assistant. Two execution paths, and the difference is nobody's business.
 
