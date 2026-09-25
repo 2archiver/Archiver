@@ -3,7 +3,7 @@
 Wikipedia's Action API returns 403 for whole datacentre IP ranges, which is
 exactly where this app gets deployed. A single-source search therefore works on
 a laptop and silently degrades to nothing in production, which is what happened
-in 2.2, and 2.5 turned retrieval into an opinion.
+in 2.2.
 
 So: several independent providers, tried in order, each one recorded. If any
 provider answers, the user gets results. The `diag` endpoint reports precisely
@@ -12,8 +12,11 @@ from production rather than guessed at.
 
 Nothing here generates prose about the world. It retrieves, it decides how much
 of what it found deserves to be shown, and it reads that back in plain words.
+(2.6.1 broke that rule: it appended canned "Additional Thoughts" picked by
+keyword — every history question got the same line about logistics. Opinions
+belong to the model, which can actually read the sources; they are gone here.)
 
-As of 2.9 the second part matters more than the first. A search panel that is
+The second part matters more than the first. A search panel that is
 always full is a panel nobody trusts — and a panel that dumps 1500-char
 extracts is one nobody reads. So most work below is about refusing to show
 things and shortening what remains: a confidence score, a word-order check
@@ -26,16 +29,20 @@ from __future__ import annotations
 
 import asyncio
 import html
+import json
 import re
 from typing import Any, Awaitable, Callable
+from urllib.parse import quote_plus
 
 import httpx
+
+from . import __version__
 
 TIMEOUT = httpx.Timeout(14.0, connect=6.0)
 
 # Wikimedia's policy requires "<client>/<version> (<contact>)"; a bare product
 # name is rejected outright.
-UA = "Archiver/2.5 (https://github.com/2archiver/Archiver; personal assistant) httpx/0.27"
+UA = f"Archiver/{__version__} (https://github.com/2archiver/Archiver; personal assistant) httpx/{httpx.__version__}"
 
 ENDPOINTS = {
     "wikipedia-action": "https://en.wikipedia.org/w/api.php",
@@ -349,15 +356,14 @@ async def p_allorigins_wikipedia(c: httpx.AsyncClient, q: str, n: int) -> list[d
     target = (
         "https://en.wikipedia.org/w/api.php?action=query&format=json"
         "&generator=search&gsrlimit=%d&prop=extracts|info&exintro=1"
-        "&explaintext=1&inprop=url&redirects=1&gsrsearch=%s" % (n, q.replace(" ", "+"))
+        "&explaintext=1&inprop=url&redirects=1&gsrsearch=%s" % (n, quote_plus(q))
     )
     r = await c.get(ENDPOINTS["allorigins"], params={"url": target},
                     headers={"User-Agent": UA})
     r.raise_for_status()
     data = r.json()
     if isinstance(data, dict) and "contents" in data:
-        import json as _json
-        data = _json.loads(data["contents"])
+        data = json.loads(data["contents"])
     pages = (data.get("query") or {}).get("pages") or {}
     out = []
     for p in sorted(pages.values(), key=lambda p: p.get("index", 999)):
@@ -936,60 +942,6 @@ def _gloss(result: dict[str, Any], first: bool) -> str:
     return "more detail"
 
 
-def _synthesize_thoughts(
-    query: str,
-    results: list[dict[str, Any]],
-    technical: bool,
-    interp: dict[str, Any],
-) -> str:
-    """Generate energetic, substantive, and creative lateral thoughts on the topic."""
-    if not results:
-        return ""
-    q_lower = query.lower()
-    titles = [r.get("title", "") for r in results]
-    first_title = titles[0] if titles else query
-
-    # General web search
-    if any(k in q_lower for k in ("tool", "search", "engine", "web search")):
-        return (
-            f"For **{first_title}**, the strongest results usually come from triangulating a focused question with primary sources — chase the original document or dataset rather than the aggregator that merely lists it."
-        )
-    # Technical, Engineering & AI
-    if technical or any(k in q_lower for k in ("code", "api", "python", "javascript", "db", "database", "server", "stream", "llm", "ai", "css", "html", "git", "cache", "network", "linux", "gpu", "webgpu", "memory")):
-        return (
-            f"From an engineering lens on **{first_title}**, the critical design lever is almost always state boundaries and deterministic fallbacks. Systems thrive when failure paths degrade gracefully to local offline caches rather than stalling the whole pipeline on upstream latency."
-        )
-    # History, Conflicts & Geopolitics
-    if any(k in q_lower for k in ("war", "battle", "treaty", "history", "ww2", "wwii", "president", "empire", "revolution", "soviet", "nazi", "reich", "churchill", "hitler", "stalin", "roosevelt", "stalingrad", "kursk", "barbarossa")):
-        return (
-            f"My historical read on **{first_title}**: everyone remembers the bold arrow on the map, but wars are won in the warehouse. For {first_title}, the boring truth is logistics and production — who could move fuel, shells, and food in winter — decided it before the famous charge did. That is less cinematic and more correct."
-        )
-    # Culture, Figures & Internet Lore
-    if any(k in q_lower for k in ("who is", "streamer", "youtuber", "drama", "influencer", "celebrity", "podcast", "figure", "manosphere", "looksmaxxing")):
-        return (
-            f"With figures and subcultures like **{first_title}**, modern discourse is heavily filtered through short-form clip economies and meme amplification. Digging into unedited long-form exchanges reveals far more about the real incentives than viral second-hand commentary."
-        )
-    # Figures & Controversial Public Figures — Grok has a take
-    if any(k in q_lower for k in ("nick fuentes", "fuentes", "clavicular", "kanye", "ye ", "trump", "biden", "musk", "tate")):
-        return (
-            f"My take on **{first_title}**: the facts above are the receipts, but the *why* is audience economics. Controversial figures scale by turning outrage into distribution — clips outrun context every time. If you only watch the 30-second cut, you will misjudge the person and the incentive. Watch one full long-form exchange and you will see the actual playbook, which is far more banal than the meme suggests."
-        )
-    # Render free-tier economics — must not fallback to generic Pro bono
-    if any(k in q_lower for k in ("render", "free tier", "free service", "freemium", "afford", "hosting", "sleep", "cold start")) or any(k in first_title.lower() for k in ("render", "free tier", "freemium")):
-        return (
-            f"My take on **{first_title}**: free is a funnel, not charity. Render lets free Web Services sleep after ~15 min idle — next request pays a ~30s cold start — because keeping it warm 24/7 is the real cost. They afford it by paying only for awake time, shared capacity, and converting you when you need always-on, Postgres/Redis, or scale. If you can live with sleep, free is honest; if you need uptime, you buy wakefulness."
-        )
-    # Self-aware lightweight-model comparison — avoid Madonna misfire
-    if any(k in q_lower for k in ("compare", "tinyllama", "tiny llama", "phi-3", "phi 3", "gemma", "qwen", "smollm", "lightweight", "small model")) and any(k in q_lower for k in ("you", "yourself", "archiver", "compare")):
-        return (
-            f"Where I sit vs those lights: I'm not a weights file — I'm retrieval + synthesis over ~1300 offline topics plus live WEB, built to idle on Render's free 512 MB instance (sleep -> ~30s wake) with no GPU. TinyLlama 1.1B, Qwen2.5 0.5B/1.5B and SmolLM2 1.7B *will* actually fit free (quantized GGUF, <400 MB RAM). Phi-3 mini 3.8B and Gemma 2 2B are sharper but want ~3-4 GB RAM, so you slip to paid. I trade pure model depth for grounded sources and privacy; they trade grounding for local LLM chops."
-        )
-    # Science, Philosophy & General Knowledge — Grok-styled, opinionated, not generic
-    return (
-        f"My read on **{first_title}**: skip the headline — find the constraint that actually binds it. For {first_title}, ask who pays, what must stay on, and what the default is. Most surprises live there, not in the press release."
-    )
-
-
 def brief(
     query: str,
     results: list[dict[str, Any]],
@@ -999,10 +951,9 @@ def brief(
     corrected: str = "",
     original: str = "",
 ) -> dict[str, Any]:
-    """Read the results back as a substantive, lively summary with grounding.
+    """Read the results back: the best line, a little support, and agreement.
 
-    Extracts key facts, background narrative, and technical details from the
-    retrieved sources into an informative synthesis with creative lateral thoughts.
+    Only ever quotes or recombines sentences the sources actually contain.
     """
     reading = interp.get("restatement", "")
     if corrected:
@@ -1013,8 +964,7 @@ def brief(
         return {
             "headline": "",
             "reading": reading,
-            "voice": "Nothing directly answering that found in live sources. Try rephrasing or asking more specifically.",
-            "additional_thoughts": "",
+            "voice": "Nothing in the live sources answers that directly. Try naming the person, place or thing more specifically.",
             "confidence": "nothing worth citing",
             "sources": 0,
             "consensus": [],
@@ -1047,10 +997,11 @@ def brief(
             ):
                 substantive_paras.append(s_clean)
 
-    # Group into cohesive paragraphs (2-3 sentences each)
+    # Two short paragraphs at most: the read-back supports the answer, it is
+    # not a second copy of the article.
     paras: list[str] = []
     chunk: list[str] = []
-    for s in substantive_paras[:8]:
+    for s in substantive_paras[:4]:
         chunk.append(s)
         if len(chunk) >= 2 or len(" ".join(chunk)) > 260:
             paras.append(" ".join(chunk))
@@ -1063,10 +1014,6 @@ def brief(
     if conflict:
         paras.append(conflict)
 
-    thoughts = _synthesize_thoughts(query, results, technical, interp)
-    if thoughts:
-        paras.append(f"💡 **Additional Thoughts & Lateral Angles**\n{thoughts}")
-
     voice = "\n\n".join(paras) if paras else ""
     label = {"high": "well supported", "single": "one source", "none": "nothing worth citing"}.get(level, "supported")
 
@@ -1074,7 +1021,6 @@ def brief(
         "headline": headline,
         "reading": reading,
         "voice": voice,
-        "additional_thoughts": thoughts,
         "confidence": label,
         "sources": n,
         "consensus": shared,

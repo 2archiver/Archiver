@@ -386,10 +386,12 @@ class MemoryStore:
         t = now()
         uid = user_id or ""
         with self._lock:
-            # Check if session id already exists with different owner - generate new id
+            # An id owned by anyone else (including a legacy unowned row) gets a
+            # fresh id. The old check let unowned ids through, but the upsert
+            # below never changes the owner, so get_session() then returned
+            # None and the chat turn crashed on sess["id"].
             existing = self._conn.execute("SELECT user_id FROM sessions WHERE id = ?", (sid,)).fetchone()
-            if existing and existing["user_id"] not in (None, "", uid):
-                # collision with another user's session - generate fresh
+            if existing and (existing["user_id"] or "") != uid:
                 sid = new_id("s_")
             self._conn.execute(
                 "INSERT INTO sessions(id, title, created_at, updated_at, user_id) VALUES(?,?,?,?,?) "
@@ -642,6 +644,9 @@ class MemoryStore:
                 "hits": mem["hits"],
                 "last_used": mem["last_used"],
             }
+            # INSERT OR REPLACE rewrites every column, so the owner and any
+            # supersession must be carried across explicitly. 2.6.1 dropped the
+            # owner here: editing a memory moved it out of the user's bank.
             self.add_memory(
                 fields["content"],
                 kind=mem["kind"],
@@ -651,14 +656,19 @@ class MemoryStore:
                 importance=mem["importance"],
                 pinned=mem["pinned"],
                 memory_id=mid,
+                user_id=mem.get("user_id") or "",
             )
             with self._lock:
                 self._conn.execute(
-                    "UPDATE memories SET created_at = ?, hits = ?, last_used = ? WHERE id = ?",
-                    (preserved["created_at"], preserved["hits"], preserved["last_used"], mid),
+                    "UPDATE memories SET created_at = ?, hits = ?, last_used = ?, superseded_by = ? "
+                    "WHERE id = ?",
+                    (preserved["created_at"], preserved["hits"], preserved["last_used"],
+                     mem.get("superseded_by"), mid),
                 )
+                if mem.get("superseded_by") and self.fts:
+                    self._conn.execute("DELETE FROM memories_fts WHERE memory_id = ?", (mid,))
                 self._conn.commit()
-            mem = self.get_memory(mid)
+            mem = self.get_memory(mid, user_id=user_id)
         return mem
 
     def delete_memory(self, mid: str, user_id: str | None = None) -> None:
@@ -749,10 +759,6 @@ class MemoryStore:
                 else:
                     where = f"WHERE {clause}"
                 params = (user_id or "",)
-                # include legacy unowned? No, only owned or empty for backward compat we include NULL as well for that user? For strict privacy, only owned.
-                # To handle legacy data that was global before migration, treat NULL as visible to that user if they are first? But for new private mode, hide NULL from everyone.
-                # We'll include NULL/'' as visible when user_id is set, to not orphan old data for existing single-user deploys, but filtered via WHERE user_id = ?
-                where = where.replace("user_id = ?", "user_id = ?")
             rows = self._conn.execute(
                 f"SELECT * FROM memories {where} ORDER BY created_at DESC", params
             ).fetchall()
@@ -951,11 +957,23 @@ class MemoryStore:
         expr = " OR ".join('"' + t.replace('"', '""') + '"' for t in toks)
         try:
             with self._lock:
-                rows = self._conn.execute(
-                    "SELECT memory_id, bm25(memories_fts) AS rank "
-                    "FROM memories_fts WHERE memories_fts MATCH ? ORDER BY rank LIMIT 60",
-                    (expr,),
-                ).fetchall()
+                # Scoped to the caller's bank. Unscoped, the top-60 cut and the
+                # normalisation below were computed over every user's memories,
+                # so one busy bank could push another's matches off the list.
+                if user_id is not None:
+                    rows = self._conn.execute(
+                        "SELECT memories_fts.memory_id AS memory_id, bm25(memories_fts) AS rank "
+                        "FROM memories_fts JOIN memories ON memories.id = memories_fts.memory_id "
+                        "WHERE memories_fts MATCH ? AND memories.user_id = ? "
+                        "ORDER BY rank LIMIT 60",
+                        (expr, user_id or ""),
+                    ).fetchall()
+                else:
+                    rows = self._conn.execute(
+                        "SELECT memory_id, bm25(memories_fts) AS rank "
+                        "FROM memories_fts WHERE memories_fts MATCH ? ORDER BY rank LIMIT 60",
+                        (expr,),
+                    ).fetchall()
         except sqlite3.OperationalError:
             return self._like_scores(query, user_id=user_id)
         if not rows:
@@ -984,6 +1002,8 @@ class MemoryStore:
             hits = sum(1 for t in toks if t in hay)
             if hits:
                 raw[r["id"]] = hits / len(toks)
+        if not raw:  # max() of nothing raised ValueError on every non-matching query
+            return {}
         top = max(raw.values()) or 1.0
         return {k: v / top for k, v in raw.items()}
 
@@ -1114,6 +1134,11 @@ class MemoryStore:
                         self._conn.execute("DELETE FROM memories_fts")
                 self._conn.commit()
         for m in blob.get("memories", []):
+            if not isinstance(m, dict) or not str(m.get("content") or "").strip():
+                continue
+            # Never let an import overwrite a memory that belongs to someone else.
+            if m.get("id") and self.get_memory(m["id"]) and not self.get_memory(m["id"], user_id=uid):
+                m = {**m, "id": None}
             self.add_memory(
                 m.get("content", ""),
                 kind=m.get("kind", "fact"),
@@ -1128,15 +1153,19 @@ class MemoryStore:
             added["memories"] += 1
         existing = {s["id"] for s in self.list_sessions()}
         for s in blob.get("sessions", []):
-            if s.get("id") in existing:
+            if not isinstance(s, dict):
                 continue
+            old_sid = s.get("id")
+            if old_sid in existing:
+                continue
+            s = {**s, "id": old_sid or new_id("s_")}
             t = now()
             with self._lock:
                 self._conn.execute(
                     "INSERT INTO sessions(id, title, created_at, updated_at, distilled_until, user_id) "
                     "VALUES(?,?,?,?,?,?)",
                     (
-                        s.get("id") or new_id("s_"),
+                        s["id"],
                         s.get("title", "Imported chat"),
                         s.get("created_at", t),
                         s.get("updated_at", t),
@@ -1146,7 +1175,9 @@ class MemoryStore:
                 )
                 self._conn.commit()
             added["sessions"] += 1
-            for msg in blob.get("messages", {}).get(s.get("id"), []):
+            for msg in (blob.get("messages") or {}).get(old_sid, []) if old_sid else []:
+                if not isinstance(msg, dict) or not str(msg.get("content") or "").strip():
+                    continue
                 self.add_message(
                     s["id"], msg.get("role", "user"), msg.get("content", ""),
                     msg.get("context"),

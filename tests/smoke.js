@@ -80,7 +80,7 @@ for (const q of ['cards', 'card', 'memory', 'web', 'sources', 'teach', 'what are
   const r = A.reply(q);
   say(r.kind === 'conversation', q, (r.text || '').replace(/\s+/g, ' ').slice(0, 52));
 }
-say(/300/.test(A.reply('cards').text), '"cards" says how many there are');
+say(new RegExp(A.count().toLocaleString('en-GB')).test(A.reply('cards').text), '"cards" says how many there are');
 say(/MEM/.test(A.reply('memory').text), '"memory" points at MEM');
 
 console.log('\n-- a miss always leaves a door open --');
@@ -126,6 +126,85 @@ console.log('\n-- chat with search, no model loaded --');
   const iRead = out.search(/Archiver reads this as|I read that as/);
   const iSrc = out.indexOf('**Sources**');
   say(iRead >= 0 && iSrc > iRead, 'interpretation precedes its sources', `read@${iRead} src@${iSrc}`);
+
+
+  console.log('\n-- 2.6.2: arithmetic, forget, honesty --');
+  const calcs = { '2*3^2': '18', '(3+4)*2': '14', '10 - 2 - 3': '5', '-2^2': '-4', '2^3^2': '512', '7 % 3': '1', '1,000 + 1': '1,001', '6 x 7': '42' };
+  for (const [q, want] of Object.entries(calcs)) {
+    const r = A.reply(q).text;
+    say(r === `That's ${want}.`, 'calc ' + q, r);
+  }
+  say(A.reply('(2+3').kind !== 'tool', 'unbalanced bracket is not maths');
+  say(/divides by zero/.test(A.reply('5/0').text), 'division by zero is named');
+  say(A.reply('1939').kind !== 'tool', 'a bare year is not arithmetic');
+
+  A.reply('teach: war poem = Dulce et Decorum Est');
+  A.reply('teach: war = conflict');
+  A.reply('forget: war');
+  const left = A.taught().map((x) => x.q);
+  say(left.includes('war poem') && !left.includes('war'), 'forget removes only the exact question', left.join('|'));
+  A.reply('forget: war poem');
+
+  const blob = [A.reply('help').text, A.reply('who are you').text, A.reply('cards').text, A.reply('hi').text].join('\n');
+  say(!/render/i.test(blob), 'no Render persona in identity or help');
+  say(!/on this machine|on this device only|SQLite file/i.test(blob), 'no false claim that memories are local');
+  say(!/2\.5|2\.6\b(?!\.2)/.test(blob), 'no stale version in the copy');
+  say(A.version === '2.6.2', 'engine version is 2.6.2');
+  say(!('synthesizeClientThoughts' in A) && !/Additional Thoughts/.test(blob), 'no canned thoughts');
+
+  console.log('\n-- 2.6.2: thinking split --');
+  const st1 = A.splitThinking('<think>weigh it</think>\n\nThe answer.');
+  say(st1.thinking === 'weigh it' && st1.answer === 'The answer.' && !st1.open, 'closed think block splits');
+  const st2 = A.splitThinking('<think>still going');
+  say(st2.open && st2.thinking === 'still going' && st2.answer === '', 'open think block streams as thinking');
+  say(A.splitThinking('<thi').open && A.splitThinking('<thi').answer === '', 'partial tag is not shown as answer');
+  say(A.splitThinking('Plain answer').answer === 'Plain answer', 'no think block is all answer');
+
+  console.log('\n-- 2.6.2: model path with a fake engine --');
+  const calls = [];
+  const fake = (script) => ({
+    interrupted: 0,
+    interruptGenerate() { this.interrupted++; },
+    chat: { completions: { create: async (req) => {
+      calls.push(req);
+      const parts = script(req);
+      return (async function* () { for (const p of parts) yield { choices: [{ delta: { content: p }, finish_reason: null }] }; })();
+    } } }
+  });
+  A.reset();
+  A._useEngine(fake(() => ['<think>', 'Kursk was 1943; ', 'the notes agree.', '</think>', '\n\nIn **1943**.']));
+  let thought = '', done = false, ans = '';
+  const out2 = await A.chat('when was the battle of kursk', [{ role: 'archiver', content: 'earlier' }, { role: 'user', content: 'hi' }], {
+    think: true, onDelta: (p) => { ans += p; }, onThink: (t, d) => { thought = t; if (d) done = true; }
+  });
+  say(out2 === 'In **1943**.' && ans === out2, 'answer excludes the reasoning', JSON.stringify(out2));
+  say(/notes agree/.test(thought) && done, 'reasoning streamed and closed', thought);
+  say(calls[0].extra_body && calls[0].extra_body.enable_thinking === true, 'thinking requested from the model');
+  say(calls[0].messages[0].role === 'system' && /LOCAL NOTES/.test(calls[0].messages[0].content), 'corpus notes reach the model');
+  say(calls[0].messages.every((m) => ['system', 'user', 'assistant'].includes(m.role)), 'roles are normalised for the template');
+  say(A.thinking() === thought, 'last reasoning is retrievable');
+
+  calls.length = 0;
+  A._useEngine(fake((req) => req.extra_body.enable_thinking ? ['<think>', 'endless…'] : ['Direct answer.']));
+  const out3 = await A.chat('explain entropy', [], { think: true, onDelta: () => {} });
+  say(out3 === 'Direct answer.' && calls.length === 2 && calls[1].extra_body.enable_thinking === false, 'reasoning that never concludes falls back to a direct answer');
+
+  calls.length = 0;
+  A._useEngine(fake(() => ['A real view on it.']));
+  A.reply('battle of stalingrad');
+  const talked = await A.chat('what do you think?', [], { think: false, onDelta: () => {} });
+  say(talked === 'A real view on it.' && calls.length === 1, 'opinion goes to the model when loaded, not a canned verdict');
+  say(calls[0].extra_body.enable_thinking === false, 'THINK off is honoured');
+  const greet = await A.chat('hey', [], { onDelta: () => {} });
+  say(calls.length === 1 && !/real view/.test(greet), 'greetings stay local even with the model');
+
+  const ac = new AbortController();
+  const eng = fake(() => { ac.abort(); return ['partial']; });
+  A._useEngine(eng);
+  await A.chat('explain gravity', [], { think: false, signal: ac.signal, onDelta: () => {} }).catch(() => {});
+  say(eng.interrupted >= 1, 'STOP interrupts generation');
+  A._useEngine(null);
+  say(A.mode() === 'grounded', 'unloading returns to the corpus');
 
   console.log(`\n${bad ? bad + ' FAILURES' : 'all checks passed'}\n`);
   process.exit(bad ? 1 : 0);
