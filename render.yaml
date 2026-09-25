@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: archiver
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: ./run.sh
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9

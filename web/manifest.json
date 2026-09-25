@@ -1,0 +1,39 @@
+{
+  "name": "Archiver — The private research desk",
+  "short_name": "Archiver",
+  "description": "A private research desk. Ask, inspect sources, keep what matters. About 1300 topics offline + live web.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "orientation": "any",
+  "categories": ["productivity", "utilities", "reference"],
+  "icons": [
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "New chat",
+      "url": "/#new",
+      "description": "Start a new conversation"
+    },
+    {
+      "name": "Memory bank",
+      "url": "/#mem",
+      "description": "Open your memory bank"
+    }
+  ]
+}
