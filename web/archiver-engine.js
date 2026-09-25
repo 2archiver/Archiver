@@ -658,10 +658,11 @@ const HELP = [
     /* My own vocabulary, asked about directly. Before the classes, so that a
        bare "cards" is never mistaken for a topic. */
     // Identity outranks greeting — "hi who are you" is a who-are-you, not a hello.
-    // 2.6: also catch "who is archiver", "what is archiver", "who is the archiver"
-    // so they never fall through to Hegel / random philosophy cards.
-    if (/\b(?:who|what) (?:are|r|is) (?:you|u|archiver|the archiver)\b|\bwho r u\b|\btell me about (?:yourself|archiver)\b|\bwhat (?:are|is) (?:you|archiver) (?:about|for)\b/i.test(norm)
-        || /\b(?:who|what) (?:are|r|is) (?:you|u|archiver|the archiver)\b/i.test(t)) {
+    // 2.6: catch "who is archiver", "what is archiver", bare "archiver", etc.
+    // so they never fall through to Hegel / empty / random cards.
+    const isIdentity = /\b(?:who|what) (?:are|r|is) (?:you|u|archiver|the archiver)\b|\bwho r u\b|\btell me about (?:yourself|archiver)\b|\bwhat (?:are|is) (?:you|archiver) (?:about|for)\b|^archiver\s*$/i.test(norm)
+        || /\b(?:who|what) (?:are|r|is) (?:you|u|archiver|the archiver)\b|^archiver\s*$/i.test(t);
+    if (isIdentity) {
       return { text: SELF, kind: 'conversation', score: 1 };
     }
     const about = selfRef(norm);
