@@ -45,8 +45,18 @@ export async function CreateWebWorkerMLCEngine(worker, model, config) {
     const errors = [];
     page.on('pageerror', e => errors.push(e.message));
     await page.goto(base);
-    assert.equal(await page.locator('#autoAI').isChecked(), true);
+    assert.equal(await page.locator('#autoAI').count(), 0, 'browser generation is not an optional setting');
+    assert.equal(await page.evaluate(() => window.Archiver.status().aiEnabled), true);
     assert.equal(await page.evaluate(() => globalThis.__modelLoads || 0), 0);
+    await page.waitForFunction(() => document.querySelector('#setPersona').value.length > 0);
+    await page.locator('#settingsBtn').click();
+    assert.equal(await page.locator('#settingsOverlay').evaluate(el => el.classList.contains('on')), true);
+    await page.locator('#closeSettings').click();
+    assert.equal(await page.locator('#settingsOverlay').evaluate(el => el.classList.contains('on')), false);
+    await page.locator('#settingsBtn').click();
+    await page.locator('#saveSettings').click();
+    await page.waitForFunction(() => document.querySelector('#toastBox').textContent.includes('Settings applied'));
+    assert.equal(await page.locator('#settingsOverlay').evaluate(el => el.classList.contains('on')), false);
     const send = async text => { await page.locator('#chatInput').fill(text); await page.locator('#sendBtn').click(); };
     await send('write a poem about rain');
     await page.waitForFunction(() => window.Archiver.status().loading);
@@ -71,12 +81,12 @@ export async function CreateWebWorkerMLCEngine(worker, model, config) {
     assert.match(await page.locator('.msg-row.ai .msg-body').last().textContent(), /stopped/);
     await page.evaluate(() => window.Archiver.setAIEnabled(false));
     await page.reload();
-    assert.equal(await page.evaluate(() => window.Archiver.status().aiEnabled), false);
+    assert.equal(await page.evaluate(() => window.Archiver.status().aiEnabled), true);
     await send('write a poem');
     await page.waitForFunction(() => document.querySelector('#sendBtn').dataset.stopping === 'false');
-    assert.match(await page.locator('.msg-row.ai .msg-body').last().textContent(), /Browser generation is off/);
-    assert.equal(await page.evaluate(() => globalThis.__modelLoads || 0), 0);
+    assert.match(await page.locator('.msg-row.ai .msg-body').last().textContent(), /Browser-generated answer/);
+    assert.equal(await page.evaluate(() => globalThis.__modelLoads), 1, 'the legacy toggle cannot turn generation off');
     assert.deepEqual(errors, []);
-    console.log('Browser-generation checks passed: real bundled-runtime import, first generation, engine reuse, startup progress, Stop/late-result protection, persisted instant-only preference (stub weights/inference).');
+    console.log('Browser-generation checks passed: real bundled-runtime import, settings controls, first generation, engine reuse, startup progress, Stop/late-result protection, always-on setting (stub weights/inference).');
   } finally { await browser.close(); }
 })().catch(e => { console.error(e); process.exit(1); });

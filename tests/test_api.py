@@ -18,7 +18,9 @@ def test_release_assets(client):
         assert client.get("/static/" + asset).status_code == 200
     page = client.get("/").text
     assert 'maximum-scale=1' not in page
-    assert 'id="autoAI"' in page
+    assert 'id="autoAI"' not in page
+    assert 'id="retryModel"' in page
+    assert 'Browser generation is always enabled' in page
 
 
 def test_completed_turn_is_visible_to_its_owner(client):

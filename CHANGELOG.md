@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.1.2 — 2026-09-26
+- Fixed mobile Settings dialog scrolling and tap targets; opening Settings refreshes the runtime status and close/backdrop actions work on touch devices.
+- Browser generation is now always enabled (no optional toggle); legacy instant-only preferences are migrated back to enabled. Settings continues to show live ready/loading/unavailable status and retry controls.
+- Improved mobile Safari WebGPU adapter selection, including a retry without power hints, and extended the first-load timeout to eight minutes for slower downloads and compilation.
+- Added task-specific response guidance for generated answers while keeping hidden chain-of-thought private.
+
+
 ## 3.1.1 — 2026-09-26
 
 ### Reliable controls, transparency & Safari polish

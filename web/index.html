@@ -509,6 +509,9 @@ a:hover { text-decoration-color: var(--ink); }
   background: rgba(32,37,33,0.38); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); padding: 20px;
 }
 .settings-overlay.on { display: flex; animation: fadeIn 140ms var(--ease); }
+.settings-overlay { overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.settings-body { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-y; }
+.settings-modal button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; cursor: pointer; }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 .settings-modal {
   width: 100%; max-width: 560px; max-height: 86vh; overflow: auto; background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--radius-lg);
@@ -730,9 +733,11 @@ a:hover { text-decoration-color: var(--ink); }
 .changelog-body::-webkit-scrollbar{ width:6px; }
 .changelog-body::-webkit-scrollbar-thumb{ background:var(--line-strong); border-radius:999px; }
 @media(max-width:560px){
-  .changelog-modal{ max-height:92vh; border-radius:14px; }
-  .settings-modal{ max-height:92vh; border-radius:14px; }
+  .settings-overlay { align-items:flex-start; padding: max(8px, env(safe-area-inset-top)) 10px max(8px, env(safe-area-inset-bottom)); }
+  .changelog-modal{ max-height:92vh; max-height:92dvh; border-radius:14px; }
+  .settings-modal{ max-height:92vh; max-height:92dvh; border-radius:14px; }
   .settings-modal > footer{ flex-wrap:wrap; }
+  .settings-modal > footer .btn{ min-height:42px; }
   .settings-modal > footer > span{ display:none; }
   .settings-modal > footer #restoreDefaults{ margin-right:auto; }
   .update-row{ flex-direction:column; align-items:stretch; }
@@ -1019,9 +1024,8 @@ button, a, input, textarea, select { touch-action: manipulation; }
             <span class="mark" aria-hidden="true">✓</span>
             <span><strong id="aiConfirmationTitle">Browser generation is enabled</strong><small id="aiConfirmationDetail">It will activate only for requests that need writing or explanations.</small></span>
           </div>
-          <label class="toggle"><input type="checkbox" id="autoAI" checked> Use browser generation for writing, explanations, coding &amp; plans</label>
-          <button class="btn" id="retryModel" type="button" hidden>Try browser generation again</button>
-          <p class="desc">The first use fetches a few hundred MB of model assets from their hosts; your browser caches them when permitted. It requires WebGPU and additional device memory. Data Saver, offline mode or an unsupported browser leave instant tools available. Turn this off for instant-only mode.</p>
+          <p class="desc">Browser generation is always enabled for writing, explanations, coding and plans. Its status is shown here and beside the chat box; it activates on demand. The first use downloads model assets and requires WebGPU. Keep this page open while it prepares. Offline mode or an unsupported browser may prevent generation.</p>
+          <button class="btn" id="retryModel" type="button" hidden>Retry browser generation</button>
           <div class="engine-bar" id="engineBar" style="display:none"><span id="engineBarFill"></span></div>
           <div class="engine-progress" id="engineProgress" style="display:none"></div>
         </div>
@@ -2086,7 +2090,7 @@ button, a, input, textarea, select { touch-action: manipulation; }
       ready: 'Browser generation · active',
       loading: 'Preparing browser generation…',
       error: 'Browser generation unavailable · instant tools ready',
-      paused: 'Instant tools only',
+      paused: 'Browser generation · waiting for support or connection',
       idle: 'Browser generation · enabled when needed'
     };
     const label = labels[st.aiState] || labels.idle;
@@ -2100,22 +2104,22 @@ button, a, input, textarea, select { touch-action: manipulation; }
     $('#engineModel').textContent = st.modelPretty ? st.modelPretty : '';
     $('#aiRuntimeStatus').textContent = label;
     $('#aiRuntimeStatus').title = st.aiReason || 'Browser generation is reserved for open-ended writing, explanations, coding and plans.';
-    $('#autoAI').checked = st.aiEnabled;
     if (confirm) {
       const active = st.aiState === 'ready' || (st.aiEnabled && st.aiState === 'idle');
       confirm.className = 'ai-confirmation ' + (st.aiState === 'error' || st.aiState === 'paused' ? 'warn' : active ? 'active' : '');
       confirmTitle.textContent = st.aiState === 'ready'
         ? 'Browser generation is active in this browser'
-        : st.aiEnabled ? 'Browser generation is enabled' : 'Browser generation is off';
+        : st.aiState === 'loading'
+          ? 'Browser generation is preparing'
+          : st.aiState === 'error' || st.aiState === 'paused'
+            ? 'Browser generation is currently unavailable'
+            : 'Browser generation is enabled';
       confirmDetail.textContent = st.aiState === 'ready'
         ? 'Writing and explanations can now run on-device; lookup and note tools remain instant.'
-        : st.aiEnabled
-          ? (st.aiReason || 'It will activate only for requests that need writing or explanations.')
-          : 'Instant lookup, calculations and note tools remain available.';
+        : (st.aiReason || 'It will activate only for requests that need writing or explanations.');
     }
-    /* Keep Retry available for a failed load and for a temporarily paused
-       device (offline/Data Saver/WebGPU becoming available after a browser
-       change). It is disabled only while an attempt is actually running. */
+    /* Keep Retry available for a failed load or a temporary offline/WebGPU
+       limitation. It is disabled only while an attempt is actually running. */
     const retryablePause = st.aiState === 'paused' && st.aiEnabled && /offline|Data Saver|WebGPU/i.test(st.aiReason || '');
     retry.hidden = !(st.aiState === 'error' || retryablePause);
     retry.disabled = st.loading;
@@ -2241,11 +2245,6 @@ button, a, input, textarea, select { touch-action: manipulation; }
   function bind() {
     const shell = $('#shell');
 
-    $('#autoAI').onchange = () => {
-      if (state.streaming) { $('#autoAI').checked = window.Archiver.status().aiEnabled; toast('Stop the current response before changing AI mode'); return; }
-      window.Archiver.setAIEnabled($('#autoAI').checked);
-      paintEngine();
-    };
     $('#retryModel').onclick = async () => {
       if (state.streaming || $('#retryModel').disabled) return;
       $('#retryModel').disabled = true;
@@ -2413,9 +2412,23 @@ button, a, input, textarea, select { touch-action: manipulation; }
       }
     });
 
-    $('#settingsBtn').onclick = () => { $('#settingsOverlay').classList.add('on'); };
-    $('#closeSettings').onclick = () => { $('#settingsOverlay').classList.remove('on'); };
-    $('#cancelSettings').onclick = () => { $('#settingsOverlay').classList.remove('on'); };
+    const settingsOverlay = $('#settingsOverlay');
+    const closeSettings = () => {
+      settingsOverlay.classList.remove('on');
+      try { $('#settingsBtn').focus({ preventScroll: true }); }
+      catch (_) { $('#settingsBtn').focus(); }
+    };
+    $('#settingsBtn').onclick = () => {
+      paintEngine();
+      settingsOverlay.classList.add('on');
+      const panel = $('.settings-modal', settingsOverlay);
+      if (panel) panel.scrollTop = 0;
+    };
+    $('#closeSettings').onclick = closeSettings;
+    $('#cancelSettings').onclick = closeSettings;
+    settingsOverlay.addEventListener('click', e => {
+      if (e.target === settingsOverlay) closeSettings();
+    });
     $('#saveSettings').onclick = saveSettings;
     $('#restoreDefaults').onclick = restoreDefaults;
 
