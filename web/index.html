@@ -2,16 +2,16 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <meta name="color-scheme" content="light dark">
-<meta name="theme-color" content="#000000">
+<meta name="theme-color" content="#F4F1EA">
 <meta name="description" content="Archiver — A private research desk. Ask, inspect the evidence, and keep what matters.">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Archiver">
 <meta name="format-detection" content="telephone=no">
 <meta name="mobile-web-app-capable" content="yes">
-<title>Archiver — The private research desk</title>
+<title>Archiver 3.1 — Your everyday assistant</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
@@ -20,7 +20,7 @@
 <style>
 
 /* ========================================================================
-   ARCHIVER — The Living Archive  (v2.6)
+   ARCHIVER — The Living Archive  (v3.1)
    A contemporary research desk + field journal, digital.
    Quiet, precise, tactile through spacing — not decoration.
    ======================================================================== */
@@ -28,15 +28,15 @@
 /* ---------- Design tokens ---------- */
 :root {
   /* Light is the default — warm paper, ink, archival green */
-  --canvas:        #000000;
-  --surface:       #0A0A0A;
-  --surface-2:     #141414;
-  --surface-3:     #1A1A1A;
-  --line:          #262626;
-  --line-strong:   #333333;
+  --canvas:        #F4F1EA;
+  --surface:       #FFFCF6;
+  --surface-2:     #ECE9E1;
+  --surface-3:     #E5E2D9;
+  --line:          #DDDCD4;
+  --line-strong:   #C9CEC5;
   --ink:           #202521;
   --ink-2:         #626B63;
-  --ink-3:         #8A9490;
+  --ink-3:         #657069;
   --ink-faint:     #B8C0BC;
   --accent:        #315D4D;   /* archival green */
   --accent-ink:    #FFFCF6;
@@ -84,10 +84,10 @@
 /* Dark — same ratios, verified contrast */
 @media (prefers-color-scheme: dark) {
   :root {
-    --canvas:      #000000;
-    --surface:     #0A0A0A;
-    --surface-2:   #141414;
-    --surface-3:   #1A1A1A;
+    --canvas:      #141917;
+    --surface:     #1B211E;
+    --surface-2:   #222A25;
+    --surface-3:   #2A332D;
     --line:        #262626;
     --line-strong: #333333;
     --ink:         #ECEDE5;
@@ -107,8 +107,52 @@
 }
 
 /* Manual override via data-theme */
-:root[data-theme="light"] { color-scheme: light; }
-:root[data-theme="dark"]  { color-scheme: dark; }
+:root[data-theme="light"] {
+  --canvas:        #F4F1EA;
+  --surface:       #FFFCF6;
+  --surface-2:     #ECE9E1;
+  --surface-3:     #E5E2D9;
+  --line:          #DDDCD4;
+  --line-strong:   #C9CEC5;
+  --ink:           #202521;
+  --ink-2:         #626B63;
+  --ink-3:         #657069;
+  --ink-faint:     #B8C0BC;
+  --accent:        #315D4D;   /* archival green */
+  --accent-ink:    #FFFCF6;
+  --accent-2:      #2A4E40;
+  --accent-soft:   #E3EDE7;
+  --brass:         #A67C3D;
+  --brass-soft:    #F6E8C8;
+  --brass-ink:     #3B2A12;
+  --good:          #2E7D5B;
+  --warn:          #8A6D1B;
+  --bad:           #9B3A2E;
+  --focus:         #315D4D;
+
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+    --canvas:      #141917;
+    --surface:     #1B211E;
+    --surface-2:   #222A25;
+    --surface-3:   #2A332D;
+    --line:        #262626;
+    --line-strong: #333333;
+    --ink:         #ECEDE5;
+    --ink-2:       #AAB6AC;
+    --ink-3:       #7E8C86;
+    --ink-faint:   #4E5C58;
+    --accent:      #9DC3AB;
+    --accent-ink:  #0F1A15;
+    --accent-2:    #B8D8C4;
+    --accent-soft: #1D2D26;
+    --brass:       #D9B26A;
+    --brass-soft:  #2A2212;
+    --brass-ink:   #F6E8C8;
+    --focus:       #9DC3AB;
+  color-scheme: dark;
+}
 
 /* ---------- Base ---------- */
 * { box-sizing: border-box; }
@@ -494,18 +538,6 @@ a:hover { text-decoration-color: var(--ink); }
 }
 
 
-/* OLED polish — true black needs stronger separation + archival green remains accent */
-.input-box { background: #101010; }
-.side-item.active { background: #141414; border-color: #333; }
-.prompt-card { background: #0A0A0A; }
-.prompt-card:hover { background: #141414; }
-.mem-item { background: #0F0F0F; }
-:root {
-  --shadow-1: 0 1px 2px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.4);
-  --shadow-2: 0 8px 32px rgba(0,0,0,0.7), 0 1px 3px rgba(0,0,0,0.6);
-}
-
-
 /* ---------- Discord — unintrusive floating invite (like Chatwave) ---------- */
 .discord-widget{
   position:fixed; right:16px; bottom:88px; z-index:42;
@@ -677,6 +709,61 @@ a:hover { text-decoration-color: var(--ink); }
   #chatContainer, #chatThread{ -webkit-user-select: text; user-select: text; }
 }
 
+
+/* 3.1 — compact conversation UI, touch-first without disabling browser zoom. */
+.app-shell { height: var(--viewport-height, 100dvh); min-height: 0; }
+.main, .chat-container, #chatThread, .msg-row { min-width: 0; min-height: 0; }
+.chat-container { overscroll-behavior: contain; scroll-padding-bottom: 24px; }
+.assistant-orb { width: 64px; height: 64px; margin: 24px 0; border-radius: 50%; background: conic-gradient(from 40deg, #4d8dff, #9873e8, #d1acfa, #63c6df, #4d8dff); box-shadow: inset 0 0 0 11px var(--canvas), 0 0 34px #8b7bd51f; }
+.start-greeting { font-size: clamp(30px, 5vw, 52px); letter-spacing: -.045em; text-align: center; }
+.start-sub { max-width: 510px; line-height: 1.7; }
+.start-badge { letter-spacing: .12em; font-size: 10px; }
+.prompt-card { border-radius: 18px; text-align: left; }
+.input-wrap { max-width: 760px; }
+.input-box { border-radius: 24px; box-shadow: 0 4px 24px #00000006; }
+.input-textarea { font-size: 16px; max-height: min(200px, 30dvh); }
+.msg-row.user .msg-body { background: var(--accent-soft); border-color: transparent; border-radius: 22px 22px 6px 22px; }
+.msg-row.ai .msg-body { font-size: 15px; }
+.msg-actions { opacity: 1; }
+.msg-body pre, .code-block { max-width: 100%; overflow-x: auto; }
+.msg-body table { display: block; max-width: 100%; overflow-x: auto; }
+.composer-hint { min-height: 18px; gap: 12px; }
+#composerStatus { text-align: right; }
+#sendBtn { border-radius: 50%; width: 44px; height: 44px; }
+#sendBtn[data-stopping="true"] svg { display: none; }
+#sendBtn[data-stopping="true"]::after { content: ''; width: 13px; height: 13px; background: currentColor; border-radius: 3px; }
+button, a, input, textarea, select { touch-action: manipulation; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+@media (pointer: coarse), (max-width: 600px) {
+  .art-icon-btn, .tool-btn, .ghost-btn, .mini-btn { min-width: 44px; min-height: 44px; }
+  .topbar { min-height: 60px; height: auto; gap: 8px; }
+  .tb-left, .tb-right { gap: 6px; }
+  .start-page { padding: 20px 16px; justify-content: flex-start; }
+  .assistant-orb { width: 52px; height: 52px; margin: 18px 0; }
+  .start-features { gap: 6px; }
+  .feat-pill { font-size: 10px; }
+  .ob-chips { grid-template-columns: 1fr; width: 100%; }
+  .prompt-card { padding: 14px; }
+  .pc-desc { display: none; }
+  .input-dock { padding: 8px 10px max(8px, env(safe-area-inset-bottom)); }
+  .input-textarea { padding: 14px 14px 6px; }
+  .composer-tools { padding: 4px 8px 8px; }
+  .composer-tools .left { gap: 2px; }
+  .ghost-btn { padding: 6px 8px; font-size: 10px; }
+  .composer-hint > span:first-child { display: none; }
+  .composer-hint { justify-content: flex-end; font-size: 10px; }
+  .msg-row.user .msg-body { max-width: 90%; }
+  #chatThread { padding: 18px 16px; }
+}
+@media (max-height: 500px) {
+  .start-features, .start-badge, .assistant-orb { display: none; }
+  .start-page { padding-top: 16px; }
+}
+
+.ai-disclosure { max-width: 520px; font-size: 12px; color: var(--ink-2); margin: 12px 0 0; line-height: 1.6; }
+.ai-runtime-status { font: 10px var(--mono); color: var(--ink-3); padding: 7px 4px 0; }
+#composerStatus { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+#engineBarFill { display: block; }
 </style>
 </head>
 <body>
@@ -692,7 +779,7 @@ a:hover { text-decoration-color: var(--ink); }
           <path d="M0 10 Q 10 0, 20 10 T 40 10 T 60 10 T 80 10" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round"/>
         </svg>
       </span>
-      <span class="side-label">Archiver <span class="version-tag">2.6</span></span>
+      <span class="side-label">Archiver <span class="version-tag">3.1</span></span>
       <button class="side-x" id="sideClose" aria-label="Close menu" title="Close">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
@@ -744,18 +831,18 @@ a:hover { text-decoration-color: var(--ink); }
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
         </button>
         <div class="model-badge-wrap">
-          <span class="model-name" id="modelLabel">Archiver <span class="version-tag">2.6</span></span>
+          <span class="model-name" id="modelLabel">Archiver <span class="version-tag">3.1</span></span>
           <div class="status-pill" id="topStatusPill" style="display:none !important;"><span class="dot"></span><span id="modelText">ready</span></div>
         </div>
       </div>
       <div class="tb-right">
-        <button class="tool-btn" id="toggleSearch" title="Ground answers with live web search">
+        <button class="tool-btn" id="toggleSearch" aria-pressed="false" title="Ground answers with live web search">
           <span class="led"></span>WEB
         </button>
         <button class="tool-btn on" id="toggleMem" title="Show the memory bank" style="display:none !important;">
           <span class="led"></span>MEM
         </button>
-        <button class="art-icon-btn" id="exportBtn" title="Download this session">
+        <button class="art-icon-btn" id="exportBtn" aria-label="Download this conversation" title="Download this session">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
         </button>
       </div>
@@ -763,28 +850,30 @@ a:hover { text-decoration-color: var(--ink); }
 
     <div class="chat-container grid-bg" id="chatContainer">
       <div id="startState" class="start-page">
-        <div class="start-badge">Private &amp; on-device — no account needed</div>
-        <div class="start-greeting">Archiver <em>2.5</em></div>
-        <div class="start-sub">About 1300 topics cold + live WEB. In depth: Napoleon, Napoleon III, Saint-Simonism, European history & philosophy. Ask, inspect sources, keep what matters — your archive stays on-device.</div>
+        <div class="start-badge">LOCAL ANSWERS. YOUR PACE.</div>
+        <div class="assistant-orb" aria-hidden="true"></div>
+        <div class="start-greeting">What’s on <em>your mind?</em></div>
+        <div class="start-sub">A quick question, a tricky concept, a page of notes. Start here.<br>Instant local tools, built-in on-device AI, and the web only when you ask.</div>
+        <p class="ai-disclosure">AI prepares automatically when needed. First use fetches a few hundred MB into your browser cache; Data Saver pauses downloads. No model runs on our server.</p>
         <div class="start-features">
-          <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Private by design</span>
+          <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> No model-provider key</span>
           <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Live web when you want it</span>
           <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg> Remembers you</span>
         </div>
         <div class="ob-chips" id="chips"></div>
-        <div style="margin-top:18px; font-size:11px; color:var(--fg-dim);">No API key · No signup · Instant answers</div>
+        <div style="margin-top:18px; font-size:11px; color:var(--fg-dim);">Archiver 3.1 · Chats can sync to this app’s server</div>
       </div>
-      <div id="chatThread" class="hidden"></div>
+      <div id="chatThread" class="hidden" role="log" aria-label="Conversation" aria-live="polite" aria-relevant="additions"></div>
     </div>
 
     <div class="input-dock">
       <div class="input-wrap">
         <div class="input-box">
-          <textarea id="chatInput" class="input-textarea" rows="1" placeholder="Ask Archiver, or type help"
+          <textarea id="chatInput" class="input-textarea" rows="1" aria-label="Message Archiver" placeholder="Ask, compare, or paste notes…"
             enterkeyhint="send" autocapitalize="sentences" autocomplete="off" spellcheck="false" maxlength="8000"></textarea>
           <div class="composer-tools">
             <div class="left">
-              <button class="ghost-btn" id="cbSearch"><span class="led"></span>SEARCH</button>
+              <button class="ghost-btn" id="cbSearch" aria-pressed="false"><span class="led"></span>SEARCH</button>
               <button class="ghost-btn" id="cbMemory">MEMORY</button>
               <button class="ghost-btn" id="cbStop" style="display:none">STOP</button>
             </div>
@@ -793,9 +882,10 @@ a:hover { text-decoration-color: var(--ink); }
             </button>
           </div>
         </div>
+        <div class="ai-runtime-status" id="aiRuntimeStatus" role="status" aria-live="polite">Automatic AI · ready when needed</div>
         <div class="composer-hint">
           <span>Enter to send · Shift+Enter for newline</span>
-          <span id="composerStatus"></span>
+          <span id="composerStatus" role="status" aria-live="polite"></span>
         </div>
       </div>
     </div>
@@ -854,7 +944,10 @@ a:hover { text-decoration-color: var(--ink); }
             <b id="engineMode">Archiver — ready instantly</b>
             <span class="mtag" id="engineModel"></span>
           </div>
-          <p id="engineBlurb">Answers instantly from curated knowledge and, with WEB on, live web search. No setup — just ask.</p>
+          <p id="engineBlurb">The website includes its own AI runtime. Questions that need writing or reasoning automatically prepare a compact model in a browser worker; local tools stay instant. No model runs on Render.</p>
+          <label class="toggle"><input type="checkbox" id="autoAI" checked> Automatically use on-device AI when needed</label>
+          <button class="btn" id="retryModel" hidden>Retry AI initialization</button>
+          <p class="desc">First use fetches a few hundred MB of model assets from their hosts; your browser caches them when permitted. Requires WebGPU and additional device memory. Data Saver and offline devices stay in instant mode. Turn this off for instant-only mode.</p>
           <div class="engine-bar" id="engineBar" style="display:none"><span id="engineBarFill"></span></div>
           <div class="engine-progress" id="engineProgress" style="display:none"></div>
         </div>
@@ -871,7 +964,7 @@ a:hover { text-decoration-color: var(--ink); }
 
       <fieldset>
         <legend>Memory Bank</legend>
-        <p style="margin-top:0;margin-bottom:10px;font-size:12px;color:var(--fg-muted)">Memory recall is <b>unlimited</b> across all your conversations.</p>
+        <p style="margin-top:0;margin-bottom:10px;font-size:12px;color:var(--fg-muted)">Memories are stored on this app’s server. Relevant cached memories can inform on-device AI.</p>
         <label class="toggle"><input type="checkbox" id="setAutoExtract"> Learn new memories automatically from chat</label>
         <label class="toggle"><input type="checkbox" id="setAutoDistill"> Auto-distill and consolidate long chats</label>
       </fieldset>
@@ -880,7 +973,7 @@ a:hover { text-decoration-color: var(--ink); }
         <legend>Persona & Prompt</legend>
         <div class="field">
           <textarea id="setPersona" spellcheck="false" placeholder="Custom instructions for Archiver..."></textarea>
-          <div class="desc">Custom prompt shaping how Archiver answers.</div>
+          <div class="desc">Instructions for on-device AI. Instant lookup and text tools are deterministic.</div>
         </div>
       </fieldset>
 
@@ -950,8 +1043,8 @@ a:hover { text-decoration-color: var(--ink); }
         <legend>Updates</legend>
         <div class="update-row">
           <div class="update-meta">
-            <b>2.5</b><span>2026-09-24 · latest</span>
-            <p>Deeper history: 1300 topics — Napoleon, Napoleon III, Saint-Simonism, Europe & philosophy. Cleaner top (more room for transcript download), 3 smarter prompts.</p>
+            <b>3.1</b><span>2026-09-26 · latest</span>
+            <p>Website-managed AI with browser caching, no manual setup, and no model server. Local tools stay instant; designed for Render Free.</p>
           </div>
           <button class="btn sm" id="openChangelog" style="white-space:nowrap; flex-shrink:0;">View changelog →</button>
         </div>
@@ -1003,7 +1096,7 @@ a:hover { text-decoration-color: var(--ink); }
     <div class="changelog-header">
       <div>
         <h2 id="clTitle">Changelog</h2>
-        <p>Archiver — from first commit to today · 43 releases · refined notes</p>
+        <p>Archiver — from first commit to today · release history</p>
       </div>
       <button class="art-icon-btn" id="closeChangelog" aria-label="Close changelog" style="width:30px;height:30px">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
@@ -1011,9 +1104,14 @@ a:hover { text-decoration-color: var(--ink); }
     </div>
     <div class="changelog-body">
       <div class="changelog-timeline">
+        <div class="cl-entry" style="border-color:var(--accent)">
+          <div class="cl-head"><span class="cl-ver">3.1</span><span class="cl-tag">Latest</span><span class="cl-date">2026-09-26</span></div>
+          <div class="cl-title">Built-in AI, without a model server</div>
+          <div class="cl-body"><ul><li>Local replies no longer wait for the server. Working Stop and smoother streaming.</li><li>Restored conversation context, local comparisons, formatting, text extraction, and corrected calculator precedence.</li><li>Built-in, self-hosted AI runtime. Complex requests automatically prepare a compact 0.5B model in a browser worker; no manual download or API key.</li><li>Browser-cached model assets, Data Saver/offline guards, bounded initialization, Stop during loading, and instant fallback. No weights, GPU inference, or model storage on Render.</li><li>Mobile keyboard sizing, larger touch targets, accessible zoom, and a calmer chat layout.</li></ul></div>
+        </div>
 
         <div class="cl-entry" style="border-color:var(--accent);">
-          <div class="cl-head"><span class="cl-ver">2.5</span><span class="cl-tag">Latest</span><span class="cl-date">2026-09-24</span></div>
+          <div class="cl-head"><span class="cl-ver">2.5</span><span class="cl-date">2026-09-24</span></div>
           <div class="cl-title">1300 topics — Napoleon, Saint-Simonism & Europe deep dive</div>
           <div class="cl-body">
             <p style="margin:0; font-size:12.5px; line-height:1.55; color:var(--ink-2);">Deeper, more philosophical: <b>Napoleon & Napoleon III, Saint-Simonism, and the ideas that built modern Europe</b> — plus cleaner top bar and smarter prompts.</p>
@@ -1166,6 +1264,7 @@ a:hover { text-decoration-color: var(--ink); }
 <div id="toasts"></div>
 
 <script src="/static/archiver-knowledge.js"></script>
+<script src="/static/archiver-comprehension.js"></script>
 <script src="/static/archiver-engine.js"></script>
 
 
@@ -1246,7 +1345,6 @@ a:hover { text-decoration-color: var(--ink); }
   const state = {
     sessionId: null, sessions: [], memories: [], settings: null,
     streaming: false, abort: null, search: false,
-    model: 'archiver-grounded'
   };
 
   /* ---------- helpers ---------- */
@@ -1320,6 +1418,7 @@ a:hover { text-decoration-color: var(--ink); }
     out = out.replace(/^\s*&gt;\s?(.*)$/gm, '<blockquote>$1</blockquote>');
     out = out.replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>').replace(/__([^_]+)__/g,'<b>$1</b>');
     out = out.replace(/(^|[\s(])\*([^*\n]+)\*/g,'$1<i>$2</i>');
+    out = out.replace(/(^|[\s(])_([^_\n]+)_/g,'$1<i>$2</i>');
 
     const links = [];
     out = out.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, (_m, label, url) => {
@@ -1363,7 +1462,7 @@ a:hover { text-decoration-color: var(--ink); }
       const serverSess = await api('/api/sessions');
       const map = new Map();
       // Local sessions take initial presence
-      localSess.forEach(s => map.set(s.id, s));
+      LocalStore.getSessions().forEach(s => map.set(s.id, s));
       // Server sessions update / add
       if (Array.isArray(serverSess)) {
         serverSess.forEach(s => map.set(s.id, { ...map.get(s.id), ...s }));
@@ -1372,18 +1471,6 @@ a:hover { text-decoration-color: var(--ink); }
       LocalStore.saveSessions(state.sessions);
       renderSessions();
 
-      // 3. If local has sessions server missed (e.g. server restarted on web service), sync them
-      if (localSess.length > 0) {
-        const missing = localSess.filter(ls => !serverSess.some(ss => ss.id === ls.id));
-        if (missing.length > 0) {
-          const payload = missing.map(m => ({
-            id: m.id,
-            title: m.title || 'New chat',
-            messages: LocalStore.getMessages(m.id)
-          }));
-          api('/api/sessions/sync', { method: 'POST', body: JSON.stringify({ sessions: payload }) }).catch(() => {});
-        }
-      }
     } catch (_) {
       // Offline / server cold-start: local sessions remain visible!
       if (!state.sessions.length && localSess.length) {
@@ -1419,6 +1506,7 @@ a:hover { text-decoration-color: var(--ink); }
   }
 
   async function openSession(id) {
+    if (state.streaming) { toast('Stop the response before switching chats'); return; }
     if (window.Archiver && window.Archiver.reset) window.Archiver.reset();
     state.sessionId = id;
     LocalStore.setActiveSessionId(id);
@@ -1440,7 +1528,8 @@ a:hover { text-decoration-color: var(--ink); }
     try {
       const sess = await api('/api/sessions/' + encodeURIComponent(id));
       const msgs = sess.messages || [];
-      if (msgs.length > localMsgs.length) {
+      if (state.sessionId !== id || state.streaming) return;
+      if (msgs.length > LocalStore.getMessages(id).length) {
         LocalStore.saveMessages(id, msgs);
         thread.innerHTML = '';
         msgs.forEach(m => appendMessage(m));
@@ -1535,6 +1624,19 @@ a:hover { text-decoration-color: var(--ink); }
   }
 
   /* ---------- chat execution ---------- */
+  const syncQueues = new Map();
+  function syncTurn(sid, message, answer, context) {
+    const next = (syncQueues.get(sid) || Promise.resolve()).catch(() => {}).then(async () => {
+      if (!LocalStore.getSessions().some(s => s.id === sid)) return;
+      await api('/api/chat/prepare', { method: 'POST', body: JSON.stringify({ session_id: sid, message }) });
+      await api('/api/chat/commit', { method: 'POST', body: JSON.stringify({ session_id: sid, message, answer, memory_ids: context.map(m => m.id) }) });
+      loadMemories(); loadStats();
+    }).catch(() => { toast('Saved in this browser. Server sync is unavailable.'); }).finally(() => {
+      if (syncQueues.get(sid) === next) syncQueues.delete(sid);
+    });
+    syncQueues.set(sid, next);
+  }
+
   async function send() {
     const ta = $('#chatInput');
     const text = ta.value.trim();
@@ -1557,12 +1659,12 @@ a:hover { text-decoration-color: var(--ink); }
       renderSessions();
     }
 
+    const sid = state.sessionId; // captured: never save into a different conversation
     const userMsg = { role: 'user', content: text, created_at: Date.now() / 1000 };
     appendMessage(userMsg);
     LocalStore.addMessage(state.sessionId, userMsg);
     scrollDown(true);
 
-    if (!loadingModel && window.Archiver && window.Archiver.mode() !== 'neural') loadModel();
 
     const aEl = appendMessage({ role: 'archiver', content: '', created_at: Date.now()/1000 });
     const body = $('.msg-body', aEl);
@@ -1570,30 +1672,31 @@ a:hover { text-decoration-color: var(--ink); }
 
     state.streaming = true; updateSend();
     state.abort = new AbortController();
+    const signal = state.abort.signal;
+    $('#composerStatus').textContent = state.search ? 'Searching…' : 'Working locally…';
     const A = window.Archiver;
-    let acc = '', ctx = [], started = false;
-
-    const onDelta = (piece) => {
-      if (!started) { body.innerHTML = ''; started = true; }
+    let acc = '', ctx = [], frame = null, usedModel = false;
+    const onDelta = piece => {
+      if (signal.aborted) return;
       acc += piece;
-      body.innerHTML = md(acc) + '<span class="cursor-blink"></span>';
-      scrollDown();
+      if (frame === null) frame = requestAnimationFrame(() => {
+        frame = null;
+        if (signal.aborted) return;
+        body.innerHTML = md(acc) + '<span class="cursor-blink"></span>';
+        scrollDown();
+      });
     };
 
     try {
       if (!A) throw new Error('The local engine did not load. Reload the page.');
 
-      let prep = null;
-      try {
-        prep = await api('/api/chat/prepare', {
-          method: 'POST', body: JSON.stringify({ session_id: state.sessionId, message: text })
-        });
-        if (prep && prep.session_id) state.sessionId = prep.session_id;
-        ctx = (prep && prep.memories) || [];
-      } catch (_) {
-        // Fallback offline / server asleep
-        prep = { message: text, history: LocalStore.getMessages(state.sessionId).slice(0, -1), system: '' };
-      }
+      const history = LocalStore.getMessages(sid).slice(0, -1);
+      const keys = new Set((text.toLowerCase().match(/\b[a-z]{4,}\b/g) || []));
+      ctx = (state.memories || []).filter(m => !m.superseded_by && (m.pinned || [...keys].some(k => String(m.content).toLowerCase().includes(k)))).slice(0, 6);
+      const prep = { message: text, history, system: [state.settings && state.settings.persona || '', ...ctx.map(m => 'Memory: ' + m.content)].join('\n') };
+      // Yield once so the browser paints the outgoing bubble and Stop control.
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      if (signal.aborted) throw new DOMException('Stopped', 'AbortError');
 
       if (!state.search && /\b(weather|forecast|price|stock|score|news today|today's|cost of|how much is|who won.*20(2[4-9]|3[0-9])|current|tonight|live |2026|2025)\b/i.test(text)) {
         setTimeout(() => toast('Tip: turn on WEB for live answers — tap WEB above', 'mem'), 350);
@@ -1601,11 +1704,13 @@ a:hover { text-decoration-color: var(--ink); }
 
       const searchLimit = Math.min(parseInt(localStorage.getItem('archiver.searchCount') || '3', 10) || 3, 3);
       const answer = await A.chat(prep.message, prep.history || [], {
-        system: prep.system, search: state.search,
+        system: prep.system, search: state.search, signal,
         searchLimit,
         onDelta,
+        onGeneration: () => { usedModel = true; },
         onStatus: (s) => {
           $('#composerStatus').textContent = s;
+          paintEngine();
           if (s && s.toLowerCase().includes('search')) {
             $('#toggleSearch').classList.add('searching'); $('#cbSearch').classList.add('searching');
           } else {
@@ -1614,6 +1719,8 @@ a:hover { text-decoration-color: var(--ink); }
         }
       });
 
+      if (frame !== null) { cancelAnimationFrame(frame); frame = null; }
+      if (signal.aborted) throw new DOMException('Stopped', 'AbortError');
       const sources = A.sources ? A.sources() : [];
 
       let cleanAnswer = answer;
@@ -1633,6 +1740,7 @@ a:hover { text-decoration-color: var(--ink); }
       }
       $('#toggleSearch').classList.remove('searching'); $('#cbSearch').classList.remove('searching');
 
+      if (!usedModel) ctx = [];
       if (ctx.length) {
         const rb = recallBox(ctx, false);
         const d = document.createElement('div'); d.innerHTML = rb;
@@ -1653,42 +1761,33 @@ a:hover { text-decoration-color: var(--ink); }
         created_at: Date.now() / 1000,
         context: ctx
       };
-      LocalStore.addMessage(state.sessionId, aiMsg);
+      LocalStore.addMessage(sid, aiMsg);
 
-      // Background commit to backend
-      api('/api/chat/commit', {
-        method: 'POST',
-        body: JSON.stringify({
-          session_id: state.sessionId, message: prep.message,
-          answer, memory_ids: ctx.map(m => m.id)
-        })
-      }).then(commit => {
-        if (commit && commit.memories_saved && commit.memories_saved.length) {
-          const n = commit.memories_saved.length;
-          toast('Learned ' + n + (n === 1 ? ' memory' : ' memories'), 'mem');
-          loadMemories();
-        }
-        if (commit && commit.memories_superseded && commit.memories_superseded.length) {
-          toast('Corrected ' + commit.memories_superseded.length + ' older memory', 'mem');
-        }
-        loadSessions(); loadMemories(); loadStats(); paintEngine();
-      }).catch(() => {});
+      // Serialize server writes per session without delaying local responses.
+      syncTurn(sid, text, answer, ctx);
 
     } catch (err) {
       if (err.name === 'AbortError') {
-        body.innerHTML = md(acc) + '<p style="color:var(--fg-dim);font-size:12px">— stopped —</p>';
+        body.innerHTML = md(acc) + '<p style="color:var(--ink-3);font-size:12px">— stopped —</p>';
+        LocalStore.addMessage(sid, { role: 'archiver', content: (acc || '') + '\n\n— stopped —', created_at: Date.now() / 1000 });
       } else {
         body.innerHTML = '<p style="color:var(--bad)">' + esc(err.message) + '</p>';
         toast(err.message, 'err');
       }
     } finally {
-      state.streaming = false; state.abort = null; updateSend(); scrollDown();
+      if (frame !== null) cancelAnimationFrame(frame);
+      $('#toggleSearch').classList.remove('searching'); $('#cbSearch').classList.remove('searching');
+      $('#composerStatus').textContent = signal.aborted ? 'Stopped' : '';
+      state.streaming = false; state.abort = null; updateSend(); paintEngine(); scrollDown();
     }
   }
 
   function updateSend() {
     const b = $('#sendBtn');
     b.disabled = state.streaming ? false : !$('#chatInput').value.trim();
+    b.dataset.stopping = String(state.streaming);
+    b.setAttribute('aria-label', state.streaming ? 'Stop response' : 'Send message');
+    $('#chatThread').setAttribute('aria-busy', String(state.streaming));
     $('#cbStop').style.display = state.streaming ? '' : 'none';
   }
 
@@ -1794,19 +1893,25 @@ a:hover { text-decoration-color: var(--ink); }
 
   function paintEngine() {
     const A = window.Archiver;
-    const gpu = !!(navigator.gpu);
-    let mode = 'grounded', cards = 300;
-    if (A) { try { const st = A.status(); mode = st.engine; cards = st.cards || 300; } catch (_) {} }
-
-    const loaded = mode === 'neural';
-    const state_text = loaded ? 'fully loaded' : 'ready';
-
-    if ($('#idxMeter')) $('#idxMeter').textContent = cards;
-    $('#engineDot').className = 'dot ' + (loaded ? 'on' : (gpu ? 'on' : 'warn'));
-    $('#engineMode').textContent = 'Archiver — ready instantly';
-    $('#healthDot').className = 'dot ' + (loaded ? 'on' : 'on');
-    $('#healthText').textContent = state_text;
-    $('#modelText').textContent = state_text;
+    if (!A) return;
+    const st = A.status();
+    const labels = { ready: 'On-device AI ready', loading: 'Preparing on-device AI…', error: 'AI unavailable · instant tools ready', paused: 'Instant mode', idle: 'Automatic AI · ready when needed' };
+    const label = labels[st.aiState] || labels.idle;
+    $('#idxMeter').textContent = st.cards;
+    $('#engineDot').className = 'dot ' + (st.aiState === 'error' ? 'warn' : 'on');
+    $('#engineMode').textContent = label;
+    $('#aiRuntimeStatus').textContent = label;
+    $('#aiRuntimeStatus').title = st.aiReason || 'Model assets load automatically for requests that need generation.';
+    $('#autoAI').checked = st.aiEnabled;
+    $('#retryModel').hidden = st.aiState !== 'error';
+    $('#retryModel').disabled = st.loading;
+    $('#engineProgress').style.display = st.loading || st.aiReason ? 'block' : 'none';
+    $('#engineProgress').textContent = st.aiReason || st.progressText || '';
+    $('#engineBar').style.display = st.loading ? 'block' : 'none';
+    $('#engineBarFill').style.width = st.progress + '%';
+    $('#healthDot').className = 'dot on';
+    $('#healthText').textContent = st.engine === 'neural' ? 'AI ready' : 'instant';
+    $('#modelText').textContent = st.engine === 'neural' ? 'AI ready' : 'instant';
   }
 
   function fillSettings(s) {
@@ -1885,18 +1990,31 @@ a:hover { text-decoration-color: var(--ink); }
     if (!window.visualViewport) return;
     const vv = window.visualViewport;
     const fit = () => {
+      if (vv.scale === 1) document.documentElement.style.setProperty('--viewport-height', vv.height + 'px');
       const open = window.innerHeight - vv.height > 120;
       if (open) {
         scrollDown();
       }
     };
     vv.addEventListener('resize', fit);
+    fit();
   }
 
   /* ---------- events binding ---------- */
   function bind() {
     const shell = $('#shell');
 
+    $('#autoAI').onchange = () => {
+      if (state.streaming) { $('#autoAI').checked = window.Archiver.status().aiEnabled; toast('Stop the current response before changing AI mode'); return; }
+      window.Archiver.setAIEnabled($('#autoAI').checked);
+      paintEngine();
+    };
+    $('#retryModel').onclick = async () => {
+      if (state.streaming) return;
+      try { await window.Archiver.retryAI(); }
+      catch (err) { toast(window.Archiver.status().aiReason || err.message, 'err'); }
+      finally { paintEngine(); }
+    };
     $('#sendBtn').onclick = () => {
       if (state.streaming) { if (state.abort) state.abort.abort(); }
       else send();
@@ -1914,6 +2032,8 @@ a:hover { text-decoration-color: var(--ink); }
       state.search = !state.search;
       $('#toggleSearch').classList.toggle('on', state.search);
       $('#cbSearch').classList.toggle('on', state.search);
+      $('#toggleSearch').setAttribute('aria-pressed', String(state.search));
+      $('#cbSearch').setAttribute('aria-pressed', String(state.search));
       toast(state.search ? 'Web search on — answers will cite live sources' : 'Web search off');
     };
     $('#toggleSearch').onclick = toggleSearch;
@@ -1950,6 +2070,7 @@ a:hover { text-decoration-color: var(--ink); }
     $('#memRefresh').onclick = () => loadMemories($('#memSearch').value.trim());
 
     $('#newChatBtn').onclick = () => {
+      if (state.streaming) { toast('Stop the response before starting a new chat'); return; }
       if (window.Archiver && window.Archiver.reset) window.Archiver.reset();
       state.sessionId = null;
       LocalStore.setActiveSessionId(null);
@@ -1966,8 +2087,10 @@ a:hover { text-decoration-color: var(--ink); }
     $('#historyList').addEventListener('click', async e => {
       const del = e.target.closest('[data-del]');
       if (del) {
+        if (state.streaming) return;
         e.stopPropagation();
         const id = del.dataset.del;
+        if (syncQueues.has(id)) { toast('Wait for this chat to finish syncing'); return; }
         if (!confirm('Delete this session?')) return;
         LocalStore.deleteSession(id);
         if (state.sessionId === id) {
@@ -2044,6 +2167,7 @@ a:hover { text-decoration-color: var(--ink); }
     $('#saveSettings').onclick = saveSettings;
 
     async function clearAllHistory() {
+      if (state.streaming || syncQueues.size) { toast('Wait for chat sync or the response to finish before clearing history'); return; }
       if (!confirm('Are you sure you want to delete all chat history? This cannot be undone.')) return;
       try {
         LocalStore.clearAllSessions();
@@ -2066,11 +2190,12 @@ a:hover { text-decoration-color: var(--ink); }
     if ($('#clearAllHistoryModalBtn')) $('#clearAllHistoryModalBtn').onclick = clearAllHistory;
 
     $('#exportBtn').onclick = () => {
-      if (state.sessionId) {
-        window.location.href = '/api/sessions/' + encodeURIComponent(state.sessionId) + '/export';
-      } else {
-        toast('No active session', 'err');
-      }
+      if (!state.sessionId) { toast('No active session', 'err'); return; }
+      const messages = LocalStore.getMessages(state.sessionId);
+      const text = '# Archiver 3.1 conversation\n\n' + messages.map(m => '## ' + (m.role === 'user' ? 'You' : 'Archiver') + '\n\n' + m.content).join('\n\n');
+      const url = URL.createObjectURL(new Blob([text], { type: 'text/markdown;charset=utf-8' }));
+      const link = document.createElement('a'); link.href = url; link.download = 'archiver-conversation.md'; link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
     };
     $('#exportArchive').onclick = () => { window.location.href = '/api/archive/export'; };
 
@@ -2093,47 +2218,18 @@ a:hover { text-decoration-color: var(--ink); }
     updateSideToggle();
   }
 
-  let loadingModel = false;
-  async function loadModel() {
-    const A = window.Archiver;
-    if (!A || loadingModel || !navigator.gpu || A.mode() === 'neural') return;
-    loadingModel = true;
-    $('#engineBar').style.display = 'block';
-    $('#engineProgress').style.display = 'block';
-
-    A.onProgress(p => {
-      $('#engineBarFill').style.width = p.pct + '%';
-      $('#engineProgress').textContent = (p.text || '').slice(0, 140);
-      const ht = $('#healthText');
-      if (ht) ht.textContent = 'loading · ' + Math.round(p.pct || 0) + '%';
-    });
-    try {
-      const res = await A.load(state.model);
-      if (res && res.steppedDown) {
-        toast('Running ' + res.pretty + ' (optimized for GPU memory)', 'ok');
-      } else {
-        toast('Model ready', 'ok');
-      }
-    } catch (e) {
-      $('#engineProgress').textContent = e.message;
-    } finally {
-      loadingModel = false;
-      paintEngine();
-    }
-  }
-
   /* ---------- boot ---------- */
   async function boot() {
     bind();
+    if (window.Archiver) window.Archiver.onProgress(() => paintEngine());
     initTouch();
     initKeyboard();
     grow();
 
-    // 2.5 — curated to 3, smarter (history depth + Saint-Simonism), not clutter
     $('#chips').innerHTML = [
-      ['NAPOLEON', 'Who was Napoleon Bonaparte and why does he still divide Europe?', 'From 18 Brumaire to the Code — revolution, empire, and legacy'],
-      ['NAPOLEON III · SAINT-SIMONISM', 'How did Napoleon III and Saint-Simonism build modern France?', 'Second Empire, Haussmann’s Paris, railways, and the Suez dream'],
-      ['EUROPE & IDEAS', 'What ideas actually built modern Europe?', 'Saint-Simonism, liberalism, nationalism — and the long 19th century']
+      ['UNDERSTAND', 'Compare Python and JavaScript', 'Two ideas, side by side. No web needed.'],
+      ['QUICK MATH', 'What is 18% of 250?', 'Percentages, parentheses, and powers.'],
+      ['READ MY NOTES', 'Summarize: Our release is Friday. We need to finish testing by Thursday. Alex will write the release notes. The team meets tomorrow.', 'Pull the key sentences out of your text.']
     ].map(([lbl, q, desc]) =>
       '<button class="prompt-card" data-say="' + esc(q) + '"><span class="pc-top"><span class="pc-lbl">' + lbl + '</span><span class="pc-arrow">↗</span></span><span class="pc-q">' + esc(q) + '</span><span class="pc-desc">' + esc(desc) + '</span></button>'
     ).join('');

@@ -80,7 +80,7 @@ for (const q of ['cards', 'card', 'memory', 'web', 'sources', 'teach', 'what are
   const r = A.reply(q);
   say(r.kind === 'conversation', q, (r.text || '').replace(/\s+/g, ' ').slice(0, 52));
 }
-say(/300/.test(A.reply('cards').text), '"cards" says how many there are');
+say(A.reply('cards').text.includes(String(A.count())), '"cards" says how many there are');
 say(/MEM/.test(A.reply('memory').text), '"memory" points at MEM');
 
 console.log('\n-- a miss always leaves a door open --');

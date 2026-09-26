@@ -1,13 +1,13 @@
 {
-  "name": "Archiver — The private research desk",
+  "name": "Archiver 3.1 — Your everyday assistant",
   "short_name": "Archiver",
-  "description": "A private research desk. Ask, inspect sources, keep what matters. About 1300 topics offline + live web.",
+  "description": "Instant local tools, automatic on-device AI, and live web when you ask. Chats can sync to the app server.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],
-  "background_color": "#000000",
-  "theme_color": "#000000",
+  "background_color": "#F4F1EA",
+  "theme_color": "#F4F1EA",
   "orientation": "any",
   "categories": ["productivity", "utilities", "reference"],
   "icons": [

@@ -8,7 +8,7 @@
 const fs = require('fs'), vm = require('vm'), path = require('path');
 const root = path.join(__dirname, '..', 'web');
 
-const ctx = { console, setTimeout, clearTimeout, URL };
+const ctx = { console, setTimeout, clearTimeout, URL, AbortController, DOMException };
 ctx.window = ctx; ctx.self = ctx; ctx.globalThis = ctx;
 ctx.document = {}; ctx.navigator = {}; ctx.location = {};
 ctx.__fetch = null;
@@ -17,7 +17,7 @@ ctx.fetch = (...args) => {
   return ctx.__fetch(...args);
 };
 vm.createContext(ctx);
-for (const f of ['archiver-knowledge.js', 'archiver-engine.js']) {
+for (const f of ['archiver-knowledge.js', 'archiver-comprehension.js', 'archiver-engine.js']) {
   vm.runInContext(fs.readFileSync(path.join(root, f), 'utf8'), ctx, { filename: f });
 }
 module.exports = ctx.Archiver;
