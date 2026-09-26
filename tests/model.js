@@ -99,9 +99,24 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
   pending.stats.resolveLoad(); await tick();
   assert.equal(pending.A.mode(), 'grounded', 'late completion cannot activate cancelled engine');
   assert.equal(await pending.A.chat('2+2', []), "That's 4.");
+
+  const togglePending = await fixture({ pending: true });
+  const firstToggle = togglePending.A.chat('write a poem', []);
+  while (!togglePending.stats.resolveLoad) await tick();
+  togglePending.A.setAIEnabled(false);
+  await firstToggle;
+  assert.equal(togglePending.A.status().aiState, 'paused');
+  assert.equal(togglePending.A.status().loading, false, 'disable detaches an in-flight load');
+  togglePending.A.setAIEnabled(true);
+  const secondToggle = togglePending.A.chat('write another poem', []);
+  while (togglePending.stats.attempts < 2 || !togglePending.stats.resolveLoad) await tick();
+  togglePending.stats.resolveLoad();
+  await secondToggle;
+  assert.equal(togglePending.A.mode(), 'neural', 're-enable starts a fresh load after disable');
+
   const timeout = await fixture({ timeout: true });
   const fallback = await timeout.A.chat('write a poem', []);
   assert.match(fallback, /timed out/); assert.equal(timeout.A.status().loading, false);
   assert.ok(timeout.stats.terminated > 0);
-  console.log('Automatic AI checks passed: same-origin runtime, cache config, small model, feature gating, pause/disable, retry, timeout, cancellation, late results, roles, and streaming (stub inference).');
+  console.log('Browser-generation checks passed: same-origin runtime, cache config, small model, feature gating, pause/disable, retry, timeout, cancellation, late results, roles, and streaming (stub inference).');
 })().catch(e => { console.error(e); process.exit(1); });

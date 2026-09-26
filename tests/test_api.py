@@ -72,6 +72,29 @@ def test_default_migration_preserves_custom_persona(client):
     assert store.get_setting("persona", user_id=uid) == main.PERSONA
 
 
+def test_restore_defaults_replaces_custom_settings(client):
+    client.put("/api/settings", json={"persona": "Custom", "auto_extract": "0", "api_key": "legacy-secret"})
+    restored = client.post("/api/settings/restore")
+    assert restored.status_code == 200
+    body = restored.json()
+    assert body["persona"] == main.PERSONA
+    assert body["auto_extract"] == "1"
+    assert body["has_api_key"] is False
+    assert "api_key" not in main.app.state.store.settings(secret=True, user_id=client.cookies.get(main.COOKIE_NAME))
+
+
+def test_retry_removes_trailing_turn_for_replacement(client):
+    prep = client.post("/api/chat/prepare", json={"session_id": "retry_session", "message": "Explain caching."}).json()
+    sid = prep["session_id"]
+    client.post("/api/chat/commit", json={"session_id": sid, "message": "Explain caching.", "answer": "Old answer."})
+    result = client.post(f"/api/sessions/{sid}/retry")
+    assert result.status_code == 200
+    assert result.json()["removed"] is True
+    messages = client.get(f"/api/sessions/{sid}").json()["messages"]
+    assert messages == []
+    assert client.post(f"/api/sessions/{sid}/retry").json()["removed"] is False
+
+
 def test_bundled_runtime_cache_and_integrity(client):
     from hashlib import sha256
     expected = "ef77cc550c47c441f0243d7d173864548164814a9565c1a9a0b8b57f82167199"

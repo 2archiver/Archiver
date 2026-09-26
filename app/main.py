@@ -702,6 +702,17 @@ async def create_session(request: Request, body: SessionIn):
     return await io(store(request).create_session, body.title, body.id, uid)
 
 
+@app.post("/api/sessions/{sid}/retry")
+async def retry_session(request: Request, sid: str):
+    """Remove the trailing turn so the browser can stage its replacement."""
+    s = store(request)
+    uid = get_user_id(request)
+    if not await io(s.get_session, sid, uid):
+        raise HTTPException(404, "session not found")
+    removed = await io(s.remove_last_turn, sid, uid)
+    return {"session_id": sid, "removed": removed}
+
+
 @app.get("/api/sessions/{sid}")
 async def get_session(request: Request, sid: str):
     s = store(request)
@@ -998,6 +1009,7 @@ class CommitIn(BaseModel):
     message: str
     answer: str
     memory_ids: list[str] = []
+    process: dict | None = None
     summary: str | None = None
     facts: list[str] = []
     open_threads: list[str] = []
@@ -1023,9 +1035,11 @@ async def chat_commit(request: Request, body: CommitIn):
         mem = await io(s.get_memory, r["id"], uid)
         if mem:
             r["content"] = mem["content"]
+    context = [{"id": r["id"], "content": r["content"]} for r in recalled]
+    if body.process:
+        context = {"memories": context, "process": body.process}
     msg = await io(
-        s.add_message, sid, "assistant", answer,
-        [{"id": r["id"], "content": r["content"]} for r in recalled], None, uid,
+        s.add_message, sid, "assistant", answer, context, None, uid,
     )
 
     if body.summary:
@@ -1074,7 +1088,6 @@ async def chat_commit(request: Request, body: CommitIn):
 async def get_settings(request: Request):
     s = store(request)
     uid = get_user_id(request)
-    uid = get_user_id(request)
     out = dict(DEFAULTS)
     out.update(s.settings(secret=False, user_id=uid))
     # Generation is local to the visitor's browser; the server holds no provider
@@ -1091,11 +1104,19 @@ async def get_settings(request: Request):
 async def put_settings(request: Request, body: SettingsIn):
     s = store(request)
     uid = get_user_id(request)
-    uid = get_user_id(request)
     for key, value in body.model_dump(exclude_none=True).items():
         if key == "api_key" and set(str(value)) == {"•"}:
             continue
         await io(s.set_setting, key, str(value), uid)
+    return await get_settings(request)
+
+
+@app.post("/api/settings/restore")
+async def restore_settings(request: Request):
+    """Explicitly restore this browser's server-backed settings to defaults."""
+    s = store(request)
+    uid = get_user_id(request)
+    await io(s.reset_settings, DEFAULTS, uid)
     return await get_settings(request)
 
 

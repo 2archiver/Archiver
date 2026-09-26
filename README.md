@@ -1,6 +1,6 @@
 # Archiver 3.1
 
-**An everyday assistant with instant local tools, automatically managed on-device AI, and live web search when you ask.**
+**An everyday assistant with instant local tools, browser generation for open-ended work, and live web search when you ask.**
 
 No account or model-provider API key. The inference runtime is bundled with the website; model assets are fetched and cached automatically in the browser when needed. No model server, deployment-time npm step, or model weights in Git.
 
@@ -9,8 +9,9 @@ No account or model-provider API key. The inference runtime is bundled with the 
 - **Local answers do not wait for the server.** Conversation history is read from the browser cache; server synchronization runs in the background, in turn order.
 - **Better offline handling:** comparisons between known topics, informal request cleanup, requested sentence/bullet formatting, extractive summaries and action items from pasted notes, and restored conversation context.
 - **Corrected calculator:** parentheses, operator precedence, right-associative powers, unary signs, and percentages. No `eval`.
-- **Built-in on-device generation:** requests that need writing or reasoning automatically initialize a compact 0.5B model. No Settings detour or manual installation. Inference runs in a browser worker, not on Render; local tools still answer immediately.
-- **Responsive chat:** frame-batched streaming, working Stop for search and generation, larger touch targets, keyboard-aware layout, accessible zoom, corrected light/dark themes, and local transcript download.
+- **Browser generation:** requests that need open-ended writing, explanations, coding or plans initialize a compact 0.5B model when the device supports WebGPU. No Settings detour or manual installation. Inference runs in a browser worker, not on Render; local tools still answer immediately.
+- **Transparent answer path:** every new answer can expose a concise “Thought process · answer path” showing which local tools, live sources, saved context and runtime were used. It is an audit trail, not a verbatim private reasoning transcript.
+- **Responsive chat:** frame-batched streaming, working Stop and Retry for search/generation, larger touch targets, keyboard-aware layout, accessible zoom, corrected light/dark themes, and local transcript download.
 - **Accurate capability reporting:** ask “who are you?” or “are you self-aware?” to see what is actually running, what is stored where, and its limits. This is software introspection, **not consciousness**.
 - **Server regression fixes:** completed answers and extracted memories retain their owner, prepare-time recall is scoped to that browser, and the automatic-memory setting is respected.
 
@@ -32,11 +33,11 @@ No account or model-provider API key. The inference runtime is bundled with the 
 | `forget: question` | Removes a taught card (not a memory-bank entry) |
 | `help` | Lists commands |
 
-The bundled corpus has 1,329 cards across history, science, language, technology, and everyday topics. `cards` reports the actual count, including taught cards. Coverage and depth vary. Weak matches are labeled; generation requests automatically prepare on-device AI when supported, rather than substituting an unrelated card. If AI cannot start, the response explains the limitation.
+The bundled corpus has 1,329 cards across history, science, language, technology, and everyday topics. `cards` reports the actual count, including taught cards. Coverage and depth vary. Weak matches are labeled; open-ended requests prepare browser generation when supported, rather than substituting an unrelated card. If browser generation cannot start, the response explains the limitation.
 
 **WEB** enables live search. An explicit request such as `search …` also enables search for that turn. Greetings, exact tools, and pasted-text extraction do not need a search request. Search failures fall back to local knowledge. Citations are evidence to inspect, not guarantees of truth.
 
-## AI is part of the website
+## Browser generation is part of the website
 
 Just ask, for example, `write a short email asking to reschedule a meeting`.
 On a supported device, Archiver initializes the model and answers the original
@@ -47,8 +48,9 @@ answers, and text extraction do not trigger an expensive model download.
 - **Compact model:** Qwen2.5 **0.5B** Instruct Q4. Archiver chooses f16 or f32 based on the GPU's capabilities; it does not try a larger model.
 - **Automatic assets:** the first generative request fetches a few hundred MB of weights, tokenizer, and GPU library directly from the upstream model/library hosts, not through Render. WebLLM uses the browser Cache API to reuse assets when storage permits. Clearing browser data or cache eviction can require another transfer.
 - **Device requirements:** WebGPU in a supported browser, HTTPS (or localhost), and sufficient GPU memory. A small download does not imply an equally small runtime memory footprint; some phones will not support it.
-- **Graceful fallback:** Data Saver, offline state, no usable GPU, or initialization errors leave instant tools available. Initialization is bounded to 90 seconds; failed initialization does not retry on every message. Retry is available in Settings. Stop cancels initialization as well as generation.
-- **Control:** automatic AI is on by default. Turn off **Settings → Engine → Automatically use on-device AI when needed** for persistent instant-only mode. This also releases an active model worker. No new model downloads occur while this preference is off.
+- **Graceful fallback:** Data Saver, offline state, no usable GPU, or initialization errors leave instant tools available. Initialization is bounded; failed initialization is isolated and **Try browser generation again** starts a fresh worker. Stop cancels initialization as well as generation.
+- **Control:** browser generation is enabled by default. The Settings confirmation distinguishes “enabled” from “active in this browser”; turn off **Settings → On-device generation → Use browser generation for writing, explanations, coding & plans** for persistent instant-only mode. This also releases an active model worker. No new model downloads occur while this preference is off.
+- **iPhone/Safari:** the interface uses safe-area insets, visual-viewport keyboard sizing, touch-sized controls, storage guards and an instant fallback when iOS Safari does not expose usable WebGPU. Add Archiver to the Home Screen for standalone mode.
 - **Bounded context:** this is a small, 4K-context model. Very long generation requests may need splitting. History and notes are bounded rather than pretending to provide unlimited recall.
 
 The actual bundled runtime is imported in Chromium in the browser tests. Weight
@@ -83,7 +85,8 @@ Full release notes: [CHANGELOG.md](CHANGELOG.md).
 
 - **Answers:** calculated/retrieved in the browser, or generated by the browser model. Prompts are not sent to a hosted model inference API.
 - **Conversations:** cached in browser storage and synchronized to this app’s server in the background. Sync is best effort, not a durable offline delivery queue. Keep a local transcript export if the server is unavailable.
-- **Memory bank:** stored in SQLite **on the app server**, associated with a browser cookie. Relevant cached memories can inform on-device AI; instant lookup does not generate personalized answers from memory.
+- **Memory bank:** stored in SQLite **on the app server**, associated with a browser cookie. Relevant cached memories can inform browser generation; instant lookup does not generate personalized answers from memory.
+- **Settings:** the explicit **Restore defaults** action confirms before replacing custom server-backed settings; chats and memories are kept.
 - **Taught cards:** browser local storage only. Clearing browser data removes them.
 - **WEB:** sends search queries through the app server to search services.
 
@@ -118,8 +121,8 @@ Node 18+ and Python 3.10+:
 make test
 ```
 
-Runs the existing conversation/search smoke checks, 3.1 offline and cancellation regressions, stub automatic-AI lifecycle tests, and FastAPI storage/isolation tests. The VM-module test uses Node’s experimental VM modules; no model is downloaded.
+Runs the existing conversation/search smoke checks, 3.1 offline and cancellation regressions, stub browser-generation lifecycle tests, and FastAPI storage/isolation tests. The VM-module test uses Node’s experimental VM modules; no model is downloaded.
 
-Optional browser checks (with the app running): install Playwright in your development environment and run `node tests/browser.js` and `node tests/browser-ai.js`. `BASE_URL` defaults to `http://127.0.0.1:8000`; `CHROMIUM_EXECUTABLE` can select an existing browser. These cover a blocked sync server, five viewport sizes, themes, text escaping, Stop/recovery, local export, real bundled-runtime import, and automatic initialization/reuse/cancellation with stub inference. Playwright is not a runtime dependency.
+Optional browser checks (with the app running): install Playwright in your development environment and run `node tests/browser.js` and `node tests/browser-ai.js`. `BASE_URL` defaults to `http://127.0.0.1:8000`; `CHROMIUM_EXECUTABLE` can select an existing browser. These cover a blocked sync server, five viewport sizes, themes, text escaping, Stop/recovery, local export, real bundled-runtime import, and browser-generation initialization/reuse/cancellation with stub inference. Playwright is not a runtime dependency.
 
 MIT — see `LICENSE`.

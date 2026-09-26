@@ -1,5 +1,15 @@
 # Changelog
 
+## 3.1.1 — 2026-09-26
+
+### Reliable controls, transparency & Safari polish
+
+- Wire the per-message **retry** action and make model retry start from a clean worker/promise state after timeout, cancellation or a failed initialization.
+- Rename the broad Auto AI wording to **browser generation** for its real scope: open-ended writing, explanations, coding and plans. Settings now explicitly confirms whether it is enabled or active in the current browser.
+- Add **Restore defaults** with confirmation and a server-side reset that removes retired provider settings without deleting chats or memories.
+- Add an accessible **Thought process · answer path** disclosure to responses. It lists the actual tools, sources, saved context and runtime used; it intentionally does not expose a private chain-of-thought transcript.
+- Harden iPhone Safari behavior: safe-area is applied once, visual-viewport sizing survives the keyboard, storage failures degrade safely, settings scroll correctly, and unsupported WebGPU falls back to instant tools.
+
 ## 3.1 — 2026-09-26
 
 ### Built-in AI, designed for Render Free

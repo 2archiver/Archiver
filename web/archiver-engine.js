@@ -1,4 +1,4 @@
-/* Archiver 3.1: instant retrieval and text tools, automatic on-device generation. */
+/* Archiver 3.1: instant retrieval and text tools, optional browser generation. */
 (function () {
   'use strict';
 
@@ -275,7 +275,7 @@
   /* ---- commands ---------------------------------------------------------- */
 
 const HELP = [
-    "I'm **Archiver 3.1** — your private research desk, instant local knowledge + automatic on-device AI. Chats can sync to the app server.",
+    "I'm **Archiver 3.1** — your private research desk, instant local knowledge + browser generation for open-ended work. Chats can sync to the app server.",
     '',
     '**Ask me anything.** History, science, health, tech, philosophy, nature, culture, practical life — plus **Render.com** (I know the host inside-out) and **intuition**. With **WEB** on I read live sources and give you a short read first, with 1–3 compact sources.',
     '',
@@ -815,7 +815,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       if (matches.every(m => m.entry && m.score >= ANSWER_AT) && matches[0].entry !== matches[1].entry) {
         return { text: matches.map((m, i) => '**' + understood.compare[i] + '**\n\n' + comprehension.excerpt(m.entry.a, 3, false)).join('\n\n') + '\n\n_Compared from local knowledge cards; this is not an exhaustive comparison._', kind: 'comparison', score: Math.min(...matches.map(m => m.score)) };
       }
-      return { text: 'I need a reliable local match for both sides of that comparison. Try more specific names or use WEB. On-device AI starts automatically in chat when this device supports it.', kind: 'clarify', score: 0 };
+      return { text: 'I need a reliable local match for both sides of that comparison. Try more specific names or use WEB. Browser generation starts for open-ended requests when this device supports it.', kind: 'clarify', score: 0 };
     }
     const tl = tool(t);
     if (tl) return { text: tl, kind: 'tool', score: 1 };
@@ -828,7 +828,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     if (LIVE_RE.test(t) && !/^(?:what is|define|explain|difference between|compare)\b/i.test(t)) return { text: "Live data — weather, news, prices, scores — needs web search. Turn on **WEB** and I will fetch it rather than guess.", kind: 'live', score: 0 };
 
     if (/^(?:write|draft|rewrite|rephrase|translate|compose|brainstorm|create|debug)\b/i.test(understood.query || t)) {
-      return { text: 'That needs generation rather than a stored answer. ' + (aiReason() || 'On-device AI starts automatically for this request in chat; the first use downloads a few hundred MB.') + ' I can still extract key sentences (`summarize: …`), compare known topics, or calculate in instant mode.', kind: 'capability', score: 1 };
+      return { text: 'That needs browser generation rather than a stored answer. ' + (aiReason() || 'Browser generation starts automatically for this request in chat; the first use downloads a few hundred MB.') + ' I can still extract key sentences (`summarize: …`), compare known topics, or calculate in instant mode.', kind: 'capability', score: 1 };
     }
     const r = resolve(understood.query || t);
     const best = search(r.text, 5);
@@ -895,6 +895,8 @@ I can describe my capabilities and limitations; that is not consciousness or fee
   let loadController = null;
   let modelWorker = null;
   let loadFailure = '';
+  let loadAbortReason = '';
+  let loadGeneration = 0;
   let aiEnabled = true;
   try { aiEnabled = localStorage.getItem('archiver.ai.enabled') !== '0'; } catch (_) {}
   let progress = { text: '', pct: 0 };
@@ -913,16 +915,25 @@ I can describe my capabilities and limitations; that is not consciousness or fee
   }
 
   function aiReason() {
-    if (!aiEnabled) return 'Automatic AI is off in Settings; instant tools remain available.';
+    if (!aiEnabled) return 'Browser generation is off in Settings; instant tools remain available.';
     if (!webgpu()) return 'This browser has no WebGPU; instant tools remain available.';
     if (webllmReady()) return '';
     if (navigator.connection && navigator.connection.saveData) return 'Data Saver is on, so automatic model downloads are paused.';
-    if (navigator.onLine === false) return 'You are offline; automatic AI will wait for a connection.';
+    if (navigator.onLine === false) return 'You are offline; browser generation will wait for a connection.';
     return loadFailure;
   }
 
-  function cancelLoad() {
+  function cancelLoad(reason) {
+    loadAbortReason = reason || 'stopped';
     if (loadController) loadController.abort();
+  }
+
+  function releaseEngine() {
+    try { if (engine) engine.interruptGenerate(); } catch (_) {}
+    try { if (modelWorker) modelWorker.terminate(); } catch (_) {}
+    engine = null;
+    activeModel = null;
+    modelWorker = null;
   }
 
   function setAIEnabled(value) {
@@ -930,87 +941,135 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     try { localStorage.setItem('archiver.ai.enabled', aiEnabled ? '1' : '0'); } catch (_) {}
     loadFailure = '';
     if (!aiEnabled) {
-      cancelLoad();
-      if (engine) engine.interruptGenerate();
-      if (modelWorker) modelWorker.terminate();
-      engine = null; activeModel = null; modelWorker = null;
+      cancelLoad('disabled');
+      loadGeneration++;
+      /* Detach the cancelled promise immediately. Its finally block compares
+         the captured attempt before clearing state, so a quick re-enable can
+         safely start a fresh load without an old attempt deleting it. */
+      loading = null;
+      loadController = null;
+      releaseEngine();
     }
-    emitProgress(aiEnabled ? 'Automatic AI ready when needed' : 'Instant-only mode', 0);
+    emitProgress(aiEnabled ? 'Browser generation is enabled when needed' : 'Instant tools only', 0);
   }
 
   /* Website-managed initialization. No model weights or inference on Render.
-     Both the runtime and worker are same-origin; weights/WASM use upstream
-     hosts and WebLLM's persistent browser Cache API. One attempt per page after
-     failure, with an explicit retry/reset, prevents a download/error loop. */
+     Both the runtime and worker are same-origin; model/WASM assets use the
+     runtime's browser Cache API. A failed attempt is isolated from the next
+     one so Retry really starts a fresh worker and cannot be blocked by a stale
+     promise. */
   async function load(wanted, onP) {
     if (webllmReady()) return true;
     if (loading) return loading;
-    if (aiReason()) throw new Error(aiReason());
+    const reason = aiReason();
+    if (reason) throw new Error(reason);
+
+    const generation = ++loadGeneration;
     const controller = new AbortController();
     loadController = controller;
+    loadAbortReason = '';
     let worker, timer, abortHandler;
     const stopped = () => {
-      if (controller.signal.aborted) throw new DOMException('AI initialization stopped', 'AbortError');
+      if (controller.signal.aborted || generation !== loadGeneration) {
+        throw new DOMException('AI initialization stopped', 'AbortError');
+      }
     };
     const unsubscribe = typeof onP === 'function' ? onProgress(onP) : () => {};
     let timedOut = false;
     const task = (async () => {
-      emitProgress('Checking this device for on-device AI…', 0);
-      const adapter = await navigator.gpu.requestAdapter();
+      emitProgress('Checking this device for browser generation…', 0);
+      if (!navigator.gpu || typeof navigator.gpu.requestAdapter !== 'function') {
+        throw new Error('WebGPU is not available in this browser. Instant tools remain available.');
+      }
+      const adapter = await navigator.gpu.requestAdapter({ powerPreference: 'low-power' });
       stopped();
       if (!adapter) throw new Error('No usable GPU adapter. Instant tools remain available.');
-      const halfPrecision = adapter.features.has('shader-f16');
+      const features = adapter.features || new Set();
+      const halfPrecision = typeof features.has === 'function' && features.has('shader-f16');
       const selected = wanted || PREFERRED[halfPrecision ? 0 : 1];
       if (!PREFERRED.includes(selected) || (!halfPrecision && selected.includes('f16'))) {
         throw new Error('That model is not supported by this device.');
       }
-      emitProgress('Starting built-in AI — first use fetches a few hundred MB…', 1);
+      emitProgress('Starting browser generation — first use fetches a few hundred MB…', 1);
       const mod = await import(/* webpackIgnore: true */ WEBLLM_RUNTIME);
       stopped();
-      const record = mod.prebuiltAppConfig.model_list.find(m => m.model_id === selected);
+      const records = mod.prebuiltAppConfig && mod.prebuiltAppConfig.model_list;
+      const record = Array.isArray(records) && records.find(m => m.model_id === selected);
       if (!record) throw new Error('The bundled runtime does not include the configured model.');
       worker = new Worker('/static/archiver-worker.js', { type: 'module' });
       const candidate = await mod.CreateWebWorkerMLCEngine(worker, selected, {
         appConfig: { model_list: [record], useIndexedDBCache: false },
         initProgressCallback: r => {
-          if (!controller.signal.aborted) emitProgress(r.text || 'Preparing on-device AI…', Math.round((r.progress || 0) * 100));
+          if (!controller.signal.aborted && generation === loadGeneration) {
+            emitProgress(r.text || 'Preparing browser generation…', Math.round((r.progress || 0) * 100));
+          }
         }
       });
       stopped();
       engine = candidate; activeModel = selected; modelWorker = worker;
-      emitProgress('On-device AI ready', 100);
+      emitProgress('Browser generation is active', 100);
       return { model: selected, pretty: pretty(selected) };
     })();
     const cancelled = new Promise((_, reject) => {
       abortHandler = () => {
-        if (worker) worker.terminate();
+        try { if (worker) worker.terminate(); } catch (_) {}
         reject(new DOMException('AI initialization stopped', 'AbortError'));
       };
       controller.signal.addEventListener('abort', abortHandler, { once: true });
-      timer = setTimeout(() => { timedOut = true; controller.abort(); }, LOAD_TIMEOUT_MS);
+      timer = setTimeout(() => {
+        timedOut = true;
+        loadAbortReason = 'timeout';
+        controller.abort();
+      }, LOAD_TIMEOUT_MS);
     });
     loading = Promise.race([task, cancelled]);
-    try { return await loading; }
+    const attempt = loading;
+    try { return await attempt; }
     catch (err) {
-      if (worker) worker.terminate();
+      try { if (worker) worker.terminate(); } catch (_) {}
       // Suppress late progress/results from the abandoned initialization.
-      controller.abort();
-      if (timedOut) loadFailure = 'AI initialization timed out. Instant tools still work; retry AI in Settings on a faster connection.';
-      else if (err.name !== 'AbortError') loadFailure = 'On-device AI could not start. ' + err.message + ' Retry AI in Settings.';
-      emitProgress(loadFailure || 'AI initialization stopped; instant tools are ready', 0);
+      if (!controller.signal.aborted) controller.abort();
+      const stoppedByUser = loadAbortReason && loadAbortReason !== 'timeout' && loadAbortReason !== 'retry';
+      if (timedOut) {
+        loadFailure = 'Browser generation timed out. Instant tools still work; try again on a faster connection.';
+      } else if (err.name !== 'AbortError' || !stoppedByUser) {
+        const detail = err && err.message ? ' ' + err.message : '';
+        loadFailure = 'Browser generation could not start.' + detail + ' Try again in Settings.';
+      }
+      emitProgress(loadFailure || 'Browser generation stopped; instant tools are ready', 0);
       throw err;
     } finally {
       clearTimeout(timer);
       controller.signal.removeEventListener('abort', abortHandler);
-      loadController = null; loading = null; unsubscribe();
+      if (loadController === controller) loadController = null;
+      if (loading === attempt) loading = null;
+      unsubscribe();
     }
   }
 
+  async function retryAI(wanted) {
+    /* A retry must not receive the rejected promise from the previous attempt.
+       This was the source of the dead retry button after a timeout or a failed
+       worker: the UI asked for a load while the old load was still referenced. */
+    const previous = loading;
+    if (previous) {
+      cancelLoad('retry');
+      try { await previous; } catch (_) {}
+    }
+    loadGeneration++;
+    releaseEngine();
+    loadFailure = '';
+    loadAbortReason = '';
+    emitProgress('Retrying browser generation…', 0);
+    return load(wanted);
+  }
+
   async function ensureAI(opts) {
+    opts = opts || {};
     if (webllmReady()) return true;
     const reason = aiReason();
     if (reason) { if (opts.onStatus) opts.onStatus(reason); return false; }
-    const cancelled = () => cancelLoad();
+    const cancelled = () => cancelLoad('stopped');
     const unsubscribe = onProgress(p => { if (opts.onStatus) opts.onStatus(p.text); });
     if (opts.signal) {
       if (opts.signal.aborted) { unsubscribe(); throw new DOMException('Stopped', 'AbortError'); }
@@ -1317,13 +1376,13 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     onProgress,
     setAIEnabled,
     cancelLoad,
-    retryAI: () => { loadFailure = ''; return load(); },
+    retryAI,
     mode,
     status: () => ({
       version: '3.1',
       aiEnabled,
       aiReason: aiReason(),
-      aiState: webllmReady() ? 'ready' : loading ? 'loading' : loadFailure ? 'error' : aiReason() ? 'paused' : 'idle',
+      aiState: !aiEnabled ? 'paused' : webllmReady() ? 'ready' : loading ? 'loading' : loadFailure ? 'error' : aiReason() ? 'paused' : 'idle',
       conscious: false,
       capabilities: ['retrieval', 'calculation', 'text-extraction', 'comparison', ...(webllmReady() ? ['generation'] : [])],
       engine: mode(),

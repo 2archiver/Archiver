@@ -12,7 +12,7 @@ export const prebuiltAppConfig = { model_list: [
 export class WebWorkerMLCEngineHandler { onmessage() {} }
 export async function CreateWebWorkerMLCEngine(worker, model, config) {
   globalThis.__modelLoads = (globalThis.__modelLoads || 0) + 1;
-  config.initProgressCallback({ progress: .2, text: 'Preparing built-in AI test model' });
+  config.initProgressCallback({ progress: .2, text: 'Preparing browser-generation test model' });
   await new Promise(resolve => setTimeout(resolve, 600));
   return { interruptGenerate() {}, chat: { completions: {
     create: async () => (async function* () {
@@ -74,9 +74,9 @@ export async function CreateWebWorkerMLCEngine(worker, model, config) {
     assert.equal(await page.evaluate(() => window.Archiver.status().aiEnabled), false);
     await send('write a poem');
     await page.waitForFunction(() => document.querySelector('#sendBtn').dataset.stopping === 'false');
-    assert.match(await page.locator('.msg-row.ai .msg-body').last().textContent(), /Automatic AI is off/);
+    assert.match(await page.locator('.msg-row.ai .msg-body').last().textContent(), /Browser generation is off/);
     assert.equal(await page.evaluate(() => globalThis.__modelLoads || 0), 0);
     assert.deepEqual(errors, []);
-    console.log('Browser AI checks passed: real bundled-runtime import, automatic first generation, engine reuse, startup progress, Stop/late-result protection, persisted instant-only preference (stub weights/inference).');
+    console.log('Browser-generation checks passed: real bundled-runtime import, first generation, engine reuse, startup progress, Stop/late-result protection, persisted instant-only preference (stub weights/inference).');
   } finally { await browser.close(); }
 })().catch(e => { console.error(e); process.exit(1); });
