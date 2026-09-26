@@ -1,7 +1,7 @@
 {
   "name": "Archiver 3.1 — Your everyday assistant",
   "short_name": "Archiver",
-  "description": "Instant local tools, automatic on-device AI, and live web when you ask. Chats can sync to the app server.",
+  "description": "Instant local tools, browser generation for open-ended work, and live web when you ask. Chats can sync to the app server.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

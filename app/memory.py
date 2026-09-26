@@ -379,6 +379,22 @@ class MemoryStore:
             out["api_key"] = "•" * 8
         return out
 
+    def reset_settings(self, defaults: dict[str, str], user_id: str | None = None) -> None:
+        """Replace a user's settings with the shipped defaults.
+
+        Restoring defaults is deliberately different from applying migrations:
+        migrations preserve custom persona/settings, while this explicit action
+        also removes retired provider credentials from the user's settings row.
+        """
+        uid = user_id or ""
+        with self._lock:
+            self._conn.execute("DELETE FROM settings WHERE user_id = ?", (uid,))
+            self._conn.executemany(
+                "INSERT INTO settings(user_id, key, value) VALUES(?, ?, ?)",
+                [(uid, key, str(value)) for key, value in defaults.items()],
+            )
+            self._conn.commit()
+
     # -- sessions ---------------------------------------------------------- #
 
     def create_session(self, title: str = "New chat", session_id: str | None = None, user_id: str | None = None) -> dict:
@@ -461,7 +477,7 @@ class MemoryStore:
         sid: str,
         role: str,
         content: str,
-        context: list[dict] | None = None,
+        context: list[dict] | dict | None = None,
         created_at: float | None = None,
         user_id: str | None = None,
     ) -> dict:
@@ -508,6 +524,48 @@ class MemoryStore:
             m["context"] = json.loads(m["context"]) if m.get("context") else []
             out.append(m)
         return out
+
+    def remove_last_turn(self, sid: str, user_id: str | None = None) -> bool:
+        """Remove the trailing user/assistant turn in an owned session.
+
+        Retry replaces a response rather than appending a second user message.
+        Removing the pair lets the normal prepare endpoint stage the prompt
+        again, and the trailing-role check prevents deleting older history when
+        a session has moved on or a stale browser retries an old turn.
+        """
+        uid = user_id or ""
+        with self._lock:
+            if user_id is not None:
+                session = self._conn.execute(
+                    "SELECT user_id FROM sessions WHERE id = ?", (sid,)
+                ).fetchone()
+                if not session or session["user_id"] not in (None, "", uid):
+                    return False
+            rows = self._conn.execute(
+                "SELECT id, role FROM messages WHERE session_id = ? ORDER BY id DESC LIMIT 2", (sid,)
+            ).fetchall()
+            if not rows:
+                return False
+            ids = []
+            if rows[0]["role"] in ("assistant", "archiver"):
+                ids.append(rows[0]["id"])
+                if len(rows) > 1 and rows[1]["role"] == "user":
+                    ids.append(rows[1]["id"])
+            elif rows[0]["role"] == "user":
+                # The old answer may not have reached the server yet.
+                ids.append(rows[0]["id"])
+            else:
+                return False
+            self._conn.executemany("DELETE FROM messages WHERE id = ?", ((mid,) for mid in ids))
+            latest = self._conn.execute(
+                "SELECT created_at FROM messages WHERE session_id = ? ORDER BY id DESC LIMIT 1", (sid,)
+            ).fetchone()
+            self._conn.execute(
+                "UPDATE sessions SET updated_at = ? WHERE id = ?",
+                ((latest["created_at"] if latest else now()), sid),
+            )
+            self._conn.commit()
+            return True
 
     def set_distilled_until(self, sid: str, message_id: int, user_id: str | None = None) -> None:
         with self._lock:

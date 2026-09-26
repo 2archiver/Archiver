@@ -384,6 +384,29 @@ a:hover { text-decoration-color: var(--ink); }
 .interp-headline { font-family: var(--serif); font-size: 16.5px; font-weight: 750; line-height: 1.35; color: var(--ink); margin: 0 0 8px; letter-spacing: -.015em; }
 .interp-voice { font-size: 13.5px; line-height: 1.6; color: var(--ink-2); margin: 0; }
 
+/* ---------- Transparent answer path ------------------------------------- */
+/* This is a concise, user-facing audit trail, not a verbatim private chain of
+   thought. It tells the reader which tools, sources, memories, and runtime were
+   actually used so an answer can be checked without exposing hidden reasoning. */
+.answer-trace {
+  margin-top: 12px; border-top: var(--border); padding-top: 10px; color: var(--ink-2);
+}
+.answer-trace summary {
+  cursor: pointer; list-style: none; display: flex; align-items: center; gap: 7px;
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase;
+  font-weight: 700; color: var(--ink-3); min-height: 28px;
+}
+.answer-trace summary::-webkit-details-marker { display: none; }
+.answer-trace summary::before { content: '›'; display: inline-grid; place-items: center; width: 18px; height: 18px; border: var(--border); border-radius: 50%; font-size: 16px; line-height: 1; transition: transform var(--motion-fast); }
+.answer-trace[open] summary::before { transform: rotate(90deg); }
+.answer-trace summary:hover { color: var(--ink); }
+.answer-trace-body { padding: 8px 12px 3px 25px; font-size: 12px; line-height: 1.55; }
+.answer-trace-body ul { margin: 0; padding-left: 17px; }
+.answer-trace-body li { margin: 3px 0; }
+.answer-trace-body li::marker { color: var(--accent); }
+.answer-trace-note { margin: 8px 0 0; color: var(--ink-3); font-size: 11px; }
+.answer-trace-tag { display: inline-flex; margin-left: auto; padding: 2px 7px; border: var(--border); border-radius: 999px; color: var(--accent); background: var(--accent-soft); font-size: 9.5px; letter-spacing: .04em; }
+
 /* ---------- Evidence — index markers ---------- */
 .src-pills { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 10px; padding-top: 10px; border-top: var(--border); }
 .src-pills-label { font-family: var(--mono); color: var(--ink-3); font-size: 10px; text-transform: uppercase; letter-spacing: .07em; font-weight: 700; }
@@ -493,7 +516,26 @@ a:hover { text-decoration-color: var(--ink); }
 }
 .settings-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; border-bottom: var(--border); background: var(--surface-2); }
 .settings-head h2 { font-family: var(--serif); font-size: 15px; font-weight: 750; margin: 0; letter-spacing: -.015em; }
+.settings-modal > header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: var(--border); background: var(--surface-2); }
+.settings-modal > header h2 { font-family: var(--serif); font-size: 17px; font-weight: 750; margin: 0; letter-spacing: -.015em; }
 .settings-body { padding: 18px 20px; display: flex; flex-direction: column; gap: 16px; }
+.settings-body fieldset { margin: 0; min-width: 0; padding: 14px; border: var(--border); border-radius: var(--radius-md); background: var(--surface); }
+.settings-body legend { padding: 0 6px; font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+.settings-modal > footer { display: flex; align-items: center; gap: 10px; padding: 14px 20px max(14px, env(safe-area-inset-bottom)); border-top: var(--border); background: var(--surface-2); }
+.engine-box { display: grid; gap: 10px; }
+.engine-line { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.engine-line b { font-size: 13px; line-height: 1.35; }
+.engine-line .mtag { margin-left: auto; color: var(--ink-3); font: 10px var(--mono); white-space: nowrap; }
+.engine-box p { margin: 0; font-size: 12.5px; line-height: 1.55; color: var(--ink-2); }
+.engine-box .desc, .desc { font-size: 11.5px; line-height: 1.55; color: var(--ink-3); }
+.toggle { display: flex; align-items: flex-start; gap: 9px; font-size: 12.5px; line-height: 1.45; color: var(--ink); cursor: pointer; }
+.toggle input { width: 18px; height: 18px; flex: 0 0 18px; margin: 0; accent-color: var(--accent); }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; padding: 8px 13px; border-radius: var(--radius-sm); border: var(--border); background: var(--surface); color: var(--ink-2); font-size: 12.5px; font-weight: 600; transition: all var(--motion-fast); }
+.btn:hover { color: var(--ink); border-color: var(--line-strong); background: var(--surface-2); }
+.btn.primary { color: var(--accent-ink); border-color: var(--accent); background: var(--accent); }
+.btn.primary:hover { color: var(--accent-ink); border-color: var(--accent-2); background: var(--accent-2); }
+.btn.sm { min-height: 32px; padding: 6px 10px; font-size: 11.5px; }
+
 .field label { font-size: 12px; font-weight: 600; color: var(--ink); display: block; margin-bottom: 6px; }
 .field input, .field textarea, .field select {
   width: 100%; background: var(--surface-2); border: var(--border); border-radius: var(--radius-sm);
@@ -689,6 +731,10 @@ a:hover { text-decoration-color: var(--ink); }
 .changelog-body::-webkit-scrollbar-thumb{ background:var(--line-strong); border-radius:999px; }
 @media(max-width:560px){
   .changelog-modal{ max-height:92vh; border-radius:14px; }
+  .settings-modal{ max-height:92vh; border-radius:14px; }
+  .settings-modal > footer{ flex-wrap:wrap; }
+  .settings-modal > footer > span{ display:none; }
+  .settings-modal > footer #restoreDefaults{ margin-right:auto; }
   .update-row{ flex-direction:column; align-items:stretch; }
 }
 
@@ -699,9 +745,14 @@ a:hover { text-decoration-color: var(--ink); }
 
 /* iPhone 14 Add to Home Screen — safe area & standalone */
 @supports (padding: max(0px)) {
+  /* Apply each safe-area inset once. Padding the shell and top bar together
+     double-counts the notch in iOS standalone mode. */
   .topbar{ padding-top: max(0px, env(safe-area-inset-top)); }
   .input-dock{ padding-bottom: max(16px, env(safe-area-inset-bottom)); }
-  .app-shell{ padding-top: env(safe-area-inset-top); }
+  .settings-overlay, .changelog-overlay {
+    padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
+      max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  }
 }
 @media (display-mode: standalone) {
   .topbar{ height: calc(56px + env(safe-area-inset-top)); }
@@ -762,8 +813,27 @@ button, a, input, textarea, select { touch-action: manipulation; }
 
 .ai-disclosure { max-width: 520px; font-size: 12px; color: var(--ink-2); margin: 12px 0 0; line-height: 1.6; }
 .ai-runtime-status { font: 10px var(--mono); color: var(--ink-3); padding: 7px 4px 0; }
+.ai-confirmation {
+  display: flex; align-items: flex-start; gap: 9px; margin-top: 12px; padding: 10px 11px;
+  border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface-2);
+  color: var(--ink-2); font-size: 12px; line-height: 1.45;
+}
+.ai-confirmation .mark { width: 18px; height: 18px; flex: 0 0 18px; display: grid; place-items: center; border-radius: 50%; background: var(--ink-3); color: var(--surface); font-weight: 800; font-size: 11px; }
+.ai-confirmation.active { border-color: rgba(46,125,91,.35); background: var(--accent-soft); color: var(--ink); }
+.ai-confirmation.active .mark { background: var(--good); }
+.ai-confirmation.warn .mark { background: var(--warn); }
+.ai-confirmation strong { display: block; color: var(--ink); font-size: 12.5px; }
+.ai-confirmation small { display: block; margin-top: 2px; color: var(--ink-3); font-size: 11px; }
 #composerStatus { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 #engineBarFill { display: block; }
+
+/* iOS Safari gives fixed overlays their own scrolling context. */
+.settings-modal, .changelog-modal { -webkit-overflow-scrolling: touch; }
+@supports (-webkit-touch-callout: none) {
+  .app-shell { height: var(--viewport-height, -webkit-fill-available); }
+  .settings-overlay, .changelog-overlay { min-height: -webkit-fill-available; }
+}
+
 </style>
 </head>
 <body>
@@ -853,8 +923,8 @@ button, a, input, textarea, select { touch-action: manipulation; }
         <div class="start-badge">LOCAL ANSWERS. YOUR PACE.</div>
         <div class="assistant-orb" aria-hidden="true"></div>
         <div class="start-greeting">What’s on <em>your mind?</em></div>
-        <div class="start-sub">A quick question, a tricky concept, a page of notes. Start here.<br>Instant local tools, built-in on-device AI, and the web only when you ask.</div>
-        <p class="ai-disclosure">AI prepares automatically when needed. First use fetches a few hundred MB into your browser cache; Data Saver pauses downloads. No model runs on our server.</p>
+        <div class="start-sub">A quick question, a tricky concept, a page of notes. Start here.<br>Instant local tools, browser generation for open-ended work, and the web only when you ask.</div>
+        <p class="ai-disclosure">Browser generation prepares only for open-ended writing, explanations, coding and plans. Lookup, calculations and note extraction stay instant. The first use fetches a few hundred MB into your browser cache; Data Saver pauses it. No model runs on our server.</p>
         <div class="start-features">
           <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> No model-provider key</span>
           <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Live web when you want it</span>
@@ -882,7 +952,7 @@ button, a, input, textarea, select { touch-action: manipulation; }
             </button>
           </div>
         </div>
-        <div class="ai-runtime-status" id="aiRuntimeStatus" role="status" aria-live="polite">Automatic AI · ready when needed</div>
+        <div class="ai-runtime-status" id="aiRuntimeStatus" role="status" aria-live="polite">Browser generation · ready when needed</div>
         <div class="composer-hint">
           <span>Enter to send · Shift+Enter for newline</span>
           <span id="composerStatus" role="status" aria-live="polite"></span>
@@ -937,17 +1007,21 @@ button, a, input, textarea, select { touch-action: manipulation; }
     </header>
     <div class="settings-body">
       <fieldset>
-        <legend>Engine</legend>
+        <legend>On-device generation</legend>
         <div class="engine-box">
           <div class="engine-line">
             <span class="dot on" id="engineDot"></span>
-            <b id="engineMode">Archiver — ready instantly</b>
+            <b id="engineMode">Browser generation · enabled when needed</b>
             <span class="mtag" id="engineModel"></span>
           </div>
-          <p id="engineBlurb">The website includes its own AI runtime. Questions that need writing or reasoning automatically prepare a compact model in a browser worker; local tools stay instant. No model runs on Render.</p>
-          <label class="toggle"><input type="checkbox" id="autoAI" checked> Automatically use on-device AI when needed</label>
-          <button class="btn" id="retryModel" hidden>Retry AI initialization</button>
-          <p class="desc">First use fetches a few hundred MB of model assets from their hosts; your browser caches them when permitted. Requires WebGPU and additional device memory. Data Saver and offline devices stay in instant mode. Turn this off for instant-only mode.</p>
+          <p id="engineBlurb">Archiver uses instant local tools for lookup, calculations and note extraction. For open-ended writing, explanations, coding and plans, it can prepare a compact language model in a browser worker. Nothing runs on Render.</p>
+          <div class="ai-confirmation" id="aiConfirmation" role="status" aria-live="polite">
+            <span class="mark" aria-hidden="true">✓</span>
+            <span><strong id="aiConfirmationTitle">Browser generation is enabled</strong><small id="aiConfirmationDetail">It will activate only for requests that need writing or explanations.</small></span>
+          </div>
+          <label class="toggle"><input type="checkbox" id="autoAI" checked> Use browser generation for writing, explanations, coding &amp; plans</label>
+          <button class="btn" id="retryModel" type="button" hidden>Try browser generation again</button>
+          <p class="desc">The first use fetches a few hundred MB of model assets from their hosts; your browser caches them when permitted. It requires WebGPU and additional device memory. Data Saver, offline mode or an unsupported browser leave instant tools available. Turn this off for instant-only mode.</p>
           <div class="engine-bar" id="engineBar" style="display:none"><span id="engineBarFill"></span></div>
           <div class="engine-progress" id="engineProgress" style="display:none"></div>
         </div>
@@ -964,7 +1038,7 @@ button, a, input, textarea, select { touch-action: manipulation; }
 
       <fieldset>
         <legend>Memory Bank</legend>
-        <p style="margin-top:0;margin-bottom:10px;font-size:12px;color:var(--fg-muted)">Memories are stored on this app’s server. Relevant cached memories can inform on-device AI.</p>
+        <p style="margin-top:0;margin-bottom:10px;font-size:12px;color:var(--fg-muted)">Memories are stored on this app’s server. Relevant cached memories can inform browser generation when a request needs it.</p>
         <label class="toggle"><input type="checkbox" id="setAutoExtract"> Learn new memories automatically from chat</label>
         <label class="toggle"><input type="checkbox" id="setAutoDistill"> Auto-distill and consolidate long chats</label>
       </fieldset>
@@ -973,7 +1047,7 @@ button, a, input, textarea, select { touch-action: manipulation; }
         <legend>Persona & Prompt</legend>
         <div class="field">
           <textarea id="setPersona" spellcheck="false" placeholder="Custom instructions for Archiver..."></textarea>
-          <div class="desc">Instructions for on-device AI. Instant lookup and text tools are deterministic.</div>
+          <div class="desc">Instructions for browser generation. Instant lookup and text tools are deterministic.</div>
         </div>
       </fieldset>
 
@@ -1043,8 +1117,8 @@ button, a, input, textarea, select { touch-action: manipulation; }
         <legend>Updates</legend>
         <div class="update-row">
           <div class="update-meta">
-            <b>3.1</b><span>2026-09-26 · latest</span>
-            <p>Website-managed AI with browser caching, no manual setup, and no model server. Local tools stay instant; designed for Render Free.</p>
+            <b>3.1.1</b><span>2026-09-26 · latest</span>
+            <p>Browser generation with retry, explicit runtime status, answer paths, Restore defaults, and Safari-friendly fallback. Local tools stay instant; designed for Render Free.</p>
           </div>
           <button class="btn sm" id="openChangelog" style="white-space:nowrap; flex-shrink:0;">View changelog →</button>
         </div>
@@ -1052,8 +1126,10 @@ button, a, input, textarea, select { touch-action: manipulation; }
       </fieldset>
     </div>
     <footer>
-      <button class="btn" id="cancelSettings">Cancel</button>
-      <button class="btn primary" id="saveSettings">Save</button>
+      <button class="btn" id="restoreDefaults" type="button">Restore defaults</button>
+      <span style="flex:1"></span>
+      <button class="btn" id="cancelSettings" type="button">Cancel</button>
+      <button class="btn primary" id="saveSettings" type="button">Apply settings</button>
     </footer>
   </div>
 </div>
@@ -1105,9 +1181,9 @@ button, a, input, textarea, select { touch-action: manipulation; }
     <div class="changelog-body">
       <div class="changelog-timeline">
         <div class="cl-entry" style="border-color:var(--accent)">
-          <div class="cl-head"><span class="cl-ver">3.1</span><span class="cl-tag">Latest</span><span class="cl-date">2026-09-26</span></div>
-          <div class="cl-title">Built-in AI, without a model server</div>
-          <div class="cl-body"><ul><li>Local replies no longer wait for the server. Working Stop and smoother streaming.</li><li>Restored conversation context, local comparisons, formatting, text extraction, and corrected calculator precedence.</li><li>Built-in, self-hosted AI runtime. Complex requests automatically prepare a compact 0.5B model in a browser worker; no manual download or API key.</li><li>Browser-cached model assets, Data Saver/offline guards, bounded initialization, Stop during loading, and instant fallback. No weights, GPU inference, or model storage on Render.</li><li>Mobile keyboard sizing, larger touch targets, accessible zoom, and a calmer chat layout.</li></ul></div>
+          <div class="cl-head"><span class="cl-ver">3.1.1</span><span class="cl-tag">Latest</span><span class="cl-date">2026-09-26</span></div>
+          <div class="cl-title">Reliable controls, transparency &amp; Safari polish</div>
+          <div class="cl-body"><ul><li>Local replies no longer wait for the server. Working Stop, Retry and smoother streaming.</li><li>Browser generation for open-ended writing, explanations, coding and plans. A compact 0.5B model runs in a browser worker; no manual download or API key.</li><li>Restore defaults confirms before replacing custom settings; chats and memories stay.</li><li>Accessible answer paths show the tools, sources, saved context and runtime used, without exposing private chain-of-thought.</li><li>Browser-cached model assets, Data Saver/offline/WebGPU guards, bounded initialization, Retry during failed loading, safe areas and keyboard-aware mobile layout.</li></ul></div>
         </div>
 
         <div class="cl-entry" style="border-color:var(--accent);">
@@ -1251,7 +1327,6 @@ button, a, input, textarea, select { touch-action: manipulation; }
         </details>
 
       </div>
-      <div style="margin-top:14px;
       <div style="margin-top:14px; padding:12px; background:var(--surface-2); border:1px solid var(--line); border-radius:10px; font-size:12px; line-height:1.6; color:var(--ink-2);">
         Full commit history: <a href="https://github.com/2archiver/Archiver/commits/main" target="_blank" rel="noopener" style="color:var(--accent); font-weight:600;">github.com/2archiver/Archiver/commits/main</a><br>
         Tip: ask in chat “what’s new?” for a friendly summary.
@@ -1275,6 +1350,13 @@ button, a, input, textarea, select { touch-action: manipulation; }
 (function(){
   const $  = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
+  /* Safari private browsing and locked-down web views can make storage
+     operations throw. Keep preferences optional so the chat still works. */
+  const storageGet = (key, fallback = '') => {
+    try { return localStorage.getItem(key) ?? fallback; } catch (_) { return fallback; }
+  };
+  const storageSet = (key, value) => { try { localStorage.setItem(key, value); } catch (_) {} };
+  const storageRemove = key => { try { localStorage.removeItem(key); } catch (_) {} };
 
   /* ========================================================================
      LOCAL-FIRST STORAGE & RECOVERY (Preserves history on web service restarts)
@@ -1319,6 +1401,23 @@ button, a, input, textarea, select { touch-action: manipulation; }
         this.saveSessions(sessList);
       }
     },
+    removeLastAssistant(sid) {
+      if (!sid) return false;
+      const list = this.getMessages(sid);
+      const i = list.length - 1;
+      if (i < 0 || !['assistant', 'archiver'].includes(list[i].role)) return false;
+      list.splice(i, 1);
+      this.saveMessages(sid, list);
+      const sessions = this.getSessions();
+      const row = sessions.find(s => s.id === sid);
+      if (row) {
+        const last = list[list.length - 1];
+        row.updated_at = last && last.created_at ? last.created_at : Date.now() / 1000;
+        row.last_message = last && last.content ? last.content.slice(0, 80) : '';
+        this.saveSessions(sessions);
+      }
+      return true;
+    },
     deleteSession(sid) {
       if (!sid) return;
       const list = this.getSessions().filter(s => s.id !== sid);
@@ -1334,11 +1433,13 @@ button, a, input, textarea, select { touch-action: manipulation; }
       this.setActiveSessionId(null);
     },
     getActiveSessionId() {
-      return localStorage.getItem(this.KEY_ACTIVE) || null;
+      try { return localStorage.getItem(this.KEY_ACTIVE) || null; } catch (_) { return null; }
     },
     setActiveSessionId(sid) {
-      if (sid) localStorage.setItem(this.KEY_ACTIVE, sid);
-      else localStorage.removeItem(this.KEY_ACTIVE);
+      try {
+        if (sid) localStorage.setItem(this.KEY_ACTIVE, sid);
+        else localStorage.removeItem(this.KEY_ACTIVE);
+      } catch (_) {}
     }
   };
 
@@ -1556,13 +1657,20 @@ button, a, input, textarea, select { touch-action: manipulation; }
     let extra = '';
     let ctx = m.context;
     if (typeof ctx === 'string') { try { ctx = JSON.parse(ctx); } catch (_) { ctx = null; } }
+    let path = m.process || m.trace || null;
+    if (ctx && !Array.isArray(ctx) && typeof ctx === 'object') {
+      path = path || ctx.process || null;
+      ctx = Array.isArray(ctx.memories) ? ctx.memories : [];
+    }
     if (Array.isArray(ctx) && ctx.length) extra = recallBox(ctx, false);
-    
+    if (typeof path === 'string') { try { path = JSON.parse(path); } catch (_) { path = null; } }
+    const pathMarkup = !isUser && !isSys ? answerPathBox(path) : '';
+
     el.innerHTML =
       '<div class="meta"><span class="who">' + (isUser ? 'you' : isSys ? 'summary' : 'archiver') + '</span>'
       + '<span>' + relTime(m.created_at) + '</span></div>'
       + '<div class="msg-body">' + (isUser ? esc(m.content).replace(/\n/g, '<br>') : md(m.content)) + '</div>'
-      + extra;
+      + pathMarkup + extra;
     if (!isUser && !isSys) el.appendChild(actionsFor());
     thread.appendChild(el);
     return el;
@@ -1571,8 +1679,8 @@ button, a, input, textarea, select { touch-action: manipulation; }
   function actionsFor() {
     const d = document.createElement('div');
     d.className = 'msg-actions';
-    d.innerHTML = '<button class="mini-btn" data-act="copy-msg">copy</button>'
-      + '<button class="mini-btn" data-act="retry">retry</button>';
+    d.innerHTML = '<button class="mini-btn" data-act="copy-msg" aria-label="Copy response">copy</button>'
+      + '<button class="mini-btn" data-act="retry" aria-label="Retry latest response" title="Retry the latest response">retry</button>';
     return d;
   }
 
@@ -1586,6 +1694,39 @@ button, a, input, textarea, select { touch-action: manipulation; }
         + '<span class="txt">' + esc(m.content) + '</span>'
         + (m.score != null ? '<span class="sc">' + Number(m.score).toFixed(2) + '</span>' : '') + '</div>').join('')
       + '</details>';
+  }
+
+  function answerPathBox(path) {
+    if (!path || !Array.isArray(path.steps) || !path.steps.length) return '';
+    const steps = path.steps.filter(Boolean).slice(0, 7);
+    const tag = path.runtime ? '<span class="answer-trace-tag">' + esc(path.runtime) + '</span>' : '';
+    return '<details class="answer-trace">'
+      + '<summary><span>Thought process · answer path</span>' + tag + '</summary>'
+      + '<div class="answer-trace-body"><ul>' + steps.map(step => '<li>' + esc(step) + '</li>').join('') + '</ul>'
+      + (path.note ? '<p class="answer-trace-note">' + esc(path.note) + '</p>' : '')
+      + '</div></details>';
+  }
+
+  function makeAnswerPath({ usedModel, searchRequested, sources, memories }) {
+    const steps = ['Checked the request against Archiver’s local tools and stored knowledge.'];
+    if (searchRequested) {
+      steps.push(sources.length
+        ? 'Read ' + sources.length + ' live source' + (sources.length === 1 ? '' : 's') + ' because WEB was on.'
+        : 'WEB was on, but no live source was returned; no source was invented.');
+    } else {
+      steps.push('WEB was off, so no live search was used.');
+    }
+    if (memories) steps.push('Selected ' + memories + ' relevant saved memor' + (memories === 1 ? 'y' : 'ies') + ' for context.');
+    if (usedModel) {
+      steps.push('Generated the response with the small language model in this browser worker.');
+    } else {
+      steps.push('Returned a deterministic local result: retrieval, calculation, comparison or text extraction.');
+    }
+    return {
+      runtime: usedModel ? 'on-device' : searchRequested && sources.length ? 'web + local' : 'instant local',
+      steps,
+      note: 'This is a concise audit trail of the tools used, not a verbatim private reasoning transcript.'
+    };
   }
 
   function interpretationCard(interp, sources) {
@@ -1625,11 +1766,11 @@ button, a, input, textarea, select { touch-action: manipulation; }
 
   /* ---------- chat execution ---------- */
   const syncQueues = new Map();
-  function syncTurn(sid, message, answer, context) {
+  function syncTurn(sid, message, answer, context, process) {
     const next = (syncQueues.get(sid) || Promise.resolve()).catch(() => {}).then(async () => {
       if (!LocalStore.getSessions().some(s => s.id === sid)) return;
       await api('/api/chat/prepare', { method: 'POST', body: JSON.stringify({ session_id: sid, message }) });
-      await api('/api/chat/commit', { method: 'POST', body: JSON.stringify({ session_id: sid, message, answer, memory_ids: context.map(m => m.id) }) });
+      await api('/api/chat/commit', { method: 'POST', body: JSON.stringify({ session_id: sid, message, answer, memory_ids: context.map(m => m.id), process }) });
       loadMemories(); loadStats();
     }).catch(() => { toast('Saved in this browser. Server sync is unavailable.'); }).finally(() => {
       if (syncQueues.get(sid) === next) syncQueues.delete(sid);
@@ -1637,15 +1778,17 @@ button, a, input, textarea, select { touch-action: manipulation; }
     syncQueues.set(sid, next);
   }
 
-  async function send() {
+  async function send(retryText) {
     const ta = $('#chatInput');
-    const text = ta.value.trim();
+    const retrying = typeof retryText === 'string';
+    const text = (retrying ? retryText : ta.value).trim();
     if (!text || state.streaming) return;
 
     ta.value = ''; grow();
 
-    // Ensure session ID exists locally
-    if (!state.sessionId) {
+    // Ensure session ID exists locally. A retry reuses the existing user turn
+    // rather than adding the same question a second time.
+    if (!state.sessionId && !retrying) {
       state.sessionId = 's_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
       const newSess = {
         id: state.sessionId,
@@ -1658,13 +1801,15 @@ button, a, input, textarea, select { touch-action: manipulation; }
       LocalStore.setActiveSessionId(state.sessionId);
       renderSessions();
     }
+    if (!state.sessionId) return;
 
     const sid = state.sessionId; // captured: never save into a different conversation
-    const userMsg = { role: 'user', content: text, created_at: Date.now() / 1000 };
-    appendMessage(userMsg);
-    LocalStore.addMessage(state.sessionId, userMsg);
-    scrollDown(true);
-
+    if (!retrying) {
+      const userMsg = { role: 'user', content: text, created_at: Date.now() / 1000 };
+      appendMessage(userMsg);
+      LocalStore.addMessage(state.sessionId, userMsg);
+      scrollDown(true);
+    }
 
     const aEl = appendMessage({ role: 'archiver', content: '', created_at: Date.now()/1000 });
     const body = $('.msg-body', aEl);
@@ -1675,7 +1820,7 @@ button, a, input, textarea, select { touch-action: manipulation; }
     const signal = state.abort.signal;
     $('#composerStatus').textContent = state.search ? 'Searching…' : 'Working locally…';
     const A = window.Archiver;
-    let acc = '', ctx = [], frame = null, usedModel = false;
+    let acc = '', ctx = [], frame = null, usedModel = false, answerPath = null;
     const onDelta = piece => {
       if (signal.aborted) return;
       acc += piece;
@@ -1702,7 +1847,7 @@ button, a, input, textarea, select { touch-action: manipulation; }
         setTimeout(() => toast('Tip: turn on WEB for live answers — tap WEB above', 'mem'), 350);
       }
 
-      const searchLimit = Math.min(parseInt(localStorage.getItem('archiver.searchCount') || '3', 10) || 3, 3);
+      const searchLimit = Math.min(parseInt(storageGet('archiver.searchCount', '3'), 10) || 3, 3);
       const answer = await A.chat(prep.message, prep.history || [], {
         system: prep.system, search: state.search, signal,
         searchLimit,
@@ -1722,6 +1867,12 @@ button, a, input, textarea, select { touch-action: manipulation; }
       if (frame !== null) { cancelAnimationFrame(frame); frame = null; }
       if (signal.aborted) throw new DOMException('Stopped', 'AbortError');
       const sources = A.sources ? A.sources() : [];
+      answerPath = makeAnswerPath({
+        usedModel,
+        searchRequested: state.search || /^(?:search|lookup|look up|google|find out about|find me|browse)\b/i.test(text),
+        sources,
+        memories: usedModel ? ctx.length : 0
+      });
 
       let cleanAnswer = answer;
       const iSrc = cleanAnswer.indexOf('**Sources**');
@@ -1740,6 +1891,10 @@ button, a, input, textarea, select { touch-action: manipulation; }
       }
       $('#toggleSearch').classList.remove('searching'); $('#cbSearch').classList.remove('searching');
 
+      if (answerPath) {
+        const d = document.createElement('div'); d.innerHTML = answerPathBox(answerPath);
+        if (d.firstChild) aEl.appendChild(d.firstChild);
+      }
       if (!usedModel) ctx = [];
       if (ctx.length) {
         const rb = recallBox(ctx, false);
@@ -1759,12 +1914,13 @@ button, a, input, textarea, select { touch-action: manipulation; }
         role: 'archiver',
         content: answer,
         created_at: Date.now() / 1000,
-        context: ctx
+        context: ctx,
+        process: answerPath
       };
       LocalStore.addMessage(sid, aiMsg);
 
       // Serialize server writes per session without delaying local responses.
-      syncTurn(sid, text, answer, ctx);
+      syncTurn(sid, text, answer, ctx, answerPath);
 
     } catch (err) {
       if (err.name === 'AbortError') {
@@ -1780,6 +1936,37 @@ button, a, input, textarea, select { touch-action: manipulation; }
       $('#composerStatus').textContent = signal.aborted ? 'Stopped' : '';
       state.streaming = false; state.abort = null; updateSend(); paintEngine(); scrollDown();
     }
+  }
+
+  async function retryMessage(row) {
+    if (state.streaming) { toast('Stop the current response before retrying'); return; }
+    const aiRows = $$('.msg-row.ai', $('#chatThread'));
+    if (!aiRows.length || aiRows[aiRows.length - 1] !== row) {
+      toast('Retry is available for the latest response');
+      return;
+    }
+    let userRow = row.previousElementSibling;
+    while (userRow && !userRow.classList.contains('user')) userRow = userRow.previousElementSibling;
+    const prompt = userRow && $('.msg-body', userRow) ? $('.msg-body', userRow).innerText.trim() : '';
+    if (!prompt || !state.sessionId) { toast('There is no message to retry', 'err'); return; }
+    const removedLocal = LocalStore.removeLastAssistant(state.sessionId);
+    if (!removedLocal && LocalStore.getMessages(state.sessionId).length) {
+      toast('That response is already being replaced', 'err');
+      return;
+    }
+    row.remove();
+    const sid = state.sessionId;
+    /* Put server cleanup in the same per-session queue, but do not make the
+       visible retry wait on a sleeping/offline server. The next answer's sync
+       is chained after this cleanup, while local generation starts now. */
+    const previousSync = syncQueues.get(sid) || Promise.resolve();
+    const cleanup = previousSync.catch(() => {}).then(() =>
+      api('/api/sessions/' + encodeURIComponent(sid) + '/retry', { method: 'POST' })
+    ).catch(() => {}).finally(() => {
+      if (syncQueues.get(sid) === cleanup) syncQueues.delete(sid);
+    });
+    syncQueues.set(sid, cleanup);
+    await send(prompt);
   }
 
   function updateSend() {
@@ -1895,23 +2082,50 @@ button, a, input, textarea, select { touch-action: manipulation; }
     const A = window.Archiver;
     if (!A) return;
     const st = A.status();
-    const labels = { ready: 'On-device AI ready', loading: 'Preparing on-device AI…', error: 'AI unavailable · instant tools ready', paused: 'Instant mode', idle: 'Automatic AI · ready when needed' };
+    const labels = {
+      ready: 'Browser generation · active',
+      loading: 'Preparing browser generation…',
+      error: 'Browser generation unavailable · instant tools ready',
+      paused: 'Instant tools only',
+      idle: 'Browser generation · enabled when needed'
+    };
     const label = labels[st.aiState] || labels.idle;
+    const confirm = $('#aiConfirmation');
+    const confirmTitle = $('#aiConfirmationTitle');
+    const confirmDetail = $('#aiConfirmationDetail');
+    const retry = $('#retryModel');
     $('#idxMeter').textContent = st.cards;
-    $('#engineDot').className = 'dot ' + (st.aiState === 'error' ? 'warn' : 'on');
+    $('#engineDot').className = 'dot ' + (st.aiState === 'error' || st.aiState === 'paused' ? 'warn' : 'on');
     $('#engineMode').textContent = label;
+    $('#engineModel').textContent = st.modelPretty ? st.modelPretty : '';
     $('#aiRuntimeStatus').textContent = label;
-    $('#aiRuntimeStatus').title = st.aiReason || 'Model assets load automatically for requests that need generation.';
+    $('#aiRuntimeStatus').title = st.aiReason || 'Browser generation is reserved for open-ended writing, explanations, coding and plans.';
     $('#autoAI').checked = st.aiEnabled;
-    $('#retryModel').hidden = st.aiState !== 'error';
-    $('#retryModel').disabled = st.loading;
+    if (confirm) {
+      const active = st.aiState === 'ready' || (st.aiEnabled && st.aiState === 'idle');
+      confirm.className = 'ai-confirmation ' + (st.aiState === 'error' || st.aiState === 'paused' ? 'warn' : active ? 'active' : '');
+      confirmTitle.textContent = st.aiState === 'ready'
+        ? 'Browser generation is active in this browser'
+        : st.aiEnabled ? 'Browser generation is enabled' : 'Browser generation is off';
+      confirmDetail.textContent = st.aiState === 'ready'
+        ? 'Writing and explanations can now run on-device; lookup and note tools remain instant.'
+        : st.aiEnabled
+          ? (st.aiReason || 'It will activate only for requests that need writing or explanations.')
+          : 'Instant lookup, calculations and note tools remain available.';
+    }
+    /* Keep Retry available for a failed load and for a temporarily paused
+       device (offline/Data Saver/WebGPU becoming available after a browser
+       change). It is disabled only while an attempt is actually running. */
+    const retryablePause = st.aiState === 'paused' && st.aiEnabled && /offline|Data Saver|WebGPU/i.test(st.aiReason || '');
+    retry.hidden = !(st.aiState === 'error' || retryablePause);
+    retry.disabled = st.loading;
     $('#engineProgress').style.display = st.loading || st.aiReason ? 'block' : 'none';
     $('#engineProgress').textContent = st.aiReason || st.progressText || '';
     $('#engineBar').style.display = st.loading ? 'block' : 'none';
     $('#engineBarFill').style.width = st.progress + '%';
-    $('#healthDot').className = 'dot on';
-    $('#healthText').textContent = st.engine === 'neural' ? 'AI ready' : 'instant';
-    $('#modelText').textContent = st.engine === 'neural' ? 'AI ready' : 'instant';
+    $('#healthDot').className = 'dot ' + (st.aiState === 'error' || st.aiState === 'paused' ? 'warn' : 'on');
+    $('#healthText').textContent = st.engine === 'neural' ? 'generation active' : 'instant tools';
+    $('#modelText').textContent = st.engine === 'neural' ? 'generation active' : 'instant tools';
   }
 
   function fillSettings(s) {
@@ -1919,7 +2133,30 @@ button, a, input, textarea, select { touch-action: manipulation; }
     if ($('#setAutoDistill')) $('#setAutoDistill').checked = String(s.auto_distill) === '1';
     if ($('#setAutoExtract')) $('#setAutoExtract').checked = String(s.auto_extract) === '1';
     if ($('#setPersona')) $('#setPersona').value = s.persona || '';
-    if ($('#setSearchCount')) $('#setSearchCount').value = localStorage.getItem('archiver.searchCount') || 3;
+    if ($('#setSearchCount')) $('#setSearchCount').value = storageGet('archiver.searchCount', '3');
+  }
+
+  async function restoreDefaults() {
+    if (state.streaming || syncQueues.size) {
+      toast('Finish the current response and sync before restoring settings');
+      return;
+    }
+    if (!window.confirm('Restore Archiver settings to their defaults? Your custom persona and retrieval preferences will be replaced. Chats and memories will stay.')) return;
+    try {
+      const restored = await api('/api/settings/restore', { method: 'POST' });
+      state.settings = restored;
+      if (window.Archiver) window.Archiver.setAIEnabled(true);
+      storageRemove('archiver.searchCount');
+      storageRemove('archiver-theme');
+      fillSettings(restored);
+      document.documentElement.removeAttribute('data-theme');
+      if ($('#themeSelect')) $('#themeSelect').value = 'system';
+      $('#settingsOverlay').classList.remove('on');
+      paintEngine();
+      toast('Defaults restored. Chats and memories were kept.', 'ok');
+    } catch (e) {
+      toast('Could not restore defaults: ' + e.message, 'err');
+    }
   }
 
   async function saveSettings() {
@@ -1939,9 +2176,9 @@ button, a, input, textarea, select { touch-action: manipulation; }
     try {
       await api('/api/settings', { method: 'PUT', body: JSON.stringify(body) });
       state.settings = { ...s, ...body };
-      if ($('#setSearchCount')) localStorage.setItem('archiver.searchCount', $('#setSearchCount').value);
+      if ($('#setSearchCount')) storageSet('archiver.searchCount', $('#setSearchCount').value);
       $('#settingsOverlay').classList.remove('on');
-      toast('Saved settings', 'ok');
+      toast('Settings applied', 'ok');
     } catch (e) { toast('Could not save: ' + e.message, 'err'); }
   }
 
@@ -2010,10 +2247,21 @@ button, a, input, textarea, select { touch-action: manipulation; }
       paintEngine();
     };
     $('#retryModel').onclick = async () => {
-      if (state.streaming) return;
-      try { await window.Archiver.retryAI(); }
-      catch (err) { toast(window.Archiver.status().aiReason || err.message, 'err'); }
-      finally { paintEngine(); }
+      if (state.streaming || $('#retryModel').disabled) return;
+      $('#retryModel').disabled = true;
+      $('#composerStatus').textContent = 'Retrying browser generation…';
+      paintEngine();
+      $('#retryModel').disabled = true;
+      try {
+        await window.Archiver.retryAI();
+        toast('Browser generation is ready', 'ok');
+      } catch (err) {
+        const st = window.Archiver.status();
+        toast(st.aiReason || st.progressText || err.message || 'Browser generation could not start', 'err');
+      } finally {
+        $('#composerStatus').textContent = '';
+        paintEngine();
+      }
     };
     $('#sendBtn').onclick = () => {
       if (state.streaming) { if (state.abort) state.abort.abort(); }
@@ -2125,6 +2373,10 @@ button, a, input, textarea, select { touch-action: manipulation; }
       }
       const act = e.target.closest('[data-act]');
       if (!act) return;
+      if (act.dataset.act === 'retry') {
+        await retryMessage(act.closest('.msg-row'));
+        return;
+      }
       if (act.dataset.act === 'copy-interp') {
         const c = act.closest('.interp-card');
         try {
@@ -2165,6 +2417,7 @@ button, a, input, textarea, select { touch-action: manipulation; }
     $('#closeSettings').onclick = () => { $('#settingsOverlay').classList.remove('on'); };
     $('#cancelSettings').onclick = () => { $('#settingsOverlay').classList.remove('on'); };
     $('#saveSettings').onclick = saveSettings;
+    $('#restoreDefaults').onclick = restoreDefaults;
 
     async function clearAllHistory() {
       if (state.streaming || syncQueues.size) { toast('Wait for chat sync or the response to finish before clearing history'); return; }
@@ -2277,7 +2530,7 @@ button, a, input, textarea, select { touch-action: manipulation; }
     }
     apply(saved);
     if (sel) sel.addEventListener('change', function(){
-      localStorage.setItem('archiver-theme', sel.value);
+      try { localStorage.setItem('archiver-theme', sel.value); } catch(e){}
       apply(sel.value);
     });
   } catch(e){}
