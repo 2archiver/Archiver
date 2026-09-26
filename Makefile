@@ -10,4 +10,7 @@ dev:
 	. .venv/bin/activate && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 test:
-	. .venv/bin/activate && python -m pytest tests/ -q
+	node tests/smoke.js
+	node tests/offline.js
+	node --experimental-vm-modules tests/model.js
+	.venv/bin/python -m pytest tests/ -q

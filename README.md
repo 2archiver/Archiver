@@ -1,106 +1,125 @@
-# Archiver 2.6
+# Archiver 3.1
 
-**A private assistant that runs in your browser, reads the web for you, and remembers you.**
+**An everyday assistant with instant local tools, automatically managed on-device AI, and live web search when you ask.**
 
-No API key. No account. No signup. Nothing you type is sent to a model provider.
+No account or model-provider API key. The inference runtime is bundled with the website; model assets are fetched and cached automatically in the browser when needed. No model server, deployment-time npm step, or model weights in Git.
 
-**Try it: <https://archiver-r7zh.onrender.com>**
+## New in 3.1
 
----
+- **Local answers do not wait for the server.** Conversation history is read from the browser cache; server synchronization runs in the background, in turn order.
+- **Better offline handling:** comparisons between known topics, informal request cleanup, requested sentence/bullet formatting, extractive summaries and action items from pasted notes, and restored conversation context.
+- **Corrected calculator:** parentheses, operator precedence, right-associative powers, unary signs, and percentages. No `eval`.
+- **Built-in on-device generation:** requests that need writing or reasoning automatically initialize a compact 0.5B model. No Settings detour or manual installation. Inference runs in a browser worker, not on Render; local tools still answer immediately.
+- **Responsive chat:** frame-batched streaming, working Stop for search and generation, larger touch targets, keyboard-aware layout, accessible zoom, corrected light/dark themes, and local transcript download.
+- **Accurate capability reporting:** ask “who are you?” or “are you self-aware?” to see what is actually running, what is stored where, and its limits. This is software introspection, **not consciousness**.
+- **Server regression fixes:** completed answers and extracted memories retain their owner, prepare-time recall is scoped to that browser, and the automatic-memory setting is respected.
 
-## What it does
+3.1 is not a claim of Meta AI parity or a measured 10× comprehension improvement. The instant path is deterministic retrieval and text processing. Requests beyond it automatically try a small language model, which broadens the supported tasks but can still make mistakes.
 
-You ask it something. It answers — from what it already knows, and from live
-sources when you turn **WEB** on.
+## Try it
 
-It reads those sources rather than listing them. You get a short answer, the
-sense it made of your question, whether the sources agree, and how confident it
-is. If it found nothing worth your time, it says so instead of showing you four
-links that don't answer the question.
-
-There is one model. It is called Archiver. You don't pick it, download it, or
-configure it.
-
-## How it talks
-
-It has a view and it gives it. Ask it something contested and you get the
-strongest version of each side, then which one it finds more convincing — it
-won't invent a second side to look balanced, and it won't moralise at you.
-Short sentences, dry humour, no fawning.
-
-It also knows what you just said. `and?`, `why?`, `based?`, `what do you think`
-are answered against the previous turn rather than looked up as new questions —
-so a follow-up about Stalingrad stays about Stalingrad. Greetings, slang,
-swearing and fragments are treated as talk and never handed to a search engine:
-`hey yo` is a hello, not a Japanese wrestler named Yo-Hey, and `fu` is somebody
-in a mood rather than a lookup.
-
-Asking about its own vocabulary works too. After it mentions its 61 cards,
-`cards` explains the cards — `memory`, `web`, `sources` and `teach` all answer
-about itself rather than searching for the concept. And a genuine miss always
-says what it *does* know instead of stopping the conversation.
-
-## Using it
-
-| | |
+| Request | What happens without a model |
 |---|---|
-| Ask anything | Type and press send |
-| **WEB** | Turn it on to search live sources |
-| **MEM** | Your memory bank — what it has learned about you |
-| `teach: question = answer` | Teach it something permanently |
-| `forget: question` | Remove something you taught |
-| `help` | Everything it can do |
+| `Compare Python and JavaScript` | Side-by-side excerpts from local knowledge cards |
+| `What is 18% of 250?` | Local calculation: 45 |
+| `(2 + 3) * 4` | Local calculation: 20 |
+| `Explain photosynthesis in 2 bullet points` | Formats a local answer |
+| `one sentence` / `make it shorter` | Extracts a shorter version of the previous reply |
+| `Summarize: …your notes…` | Selects key sentences; does not pretend to generate a new summary |
+| `Extract action items: …your notes…` | Extracts explicitly signaled tasks; does not invent owners or deadlines |
+| `count words: …` | Whitespace-separated word count |
+| `teach: question = answer` | Saves a knowledge card in this browser |
+| `forget: question` | Removes a taught card (not a memory-bank entry) |
+| `help` | Lists commands |
 
-## How it works, briefly
+The bundled corpus has 1,329 cards across history, science, language, technology, and everyday topics. `cards` reports the actual count, including taught cards. Coverage and depth vary. Weak matches are labeled; generation requests automatically prepare on-device AI when supported, rather than substituting an unrelated card. If AI cannot start, the response explains the limitation.
 
-Your question goes to modesty-sized local retrieval (61 curated cards) and, if
-WEB is on, to a keyless server-side search across Wikipedia, Wikimedia, Stack
-Exchange and DuckDuckGo. Results are scored for relevance and most are thrown
-away — a search panel that is always full is a panel nobody trusts.
+**WEB** enables live search. An explicit request such as `search …` also enables search for that turn. Greetings, exact tools, and pasted-text extraction do not need a search request. Search failures fall back to local knowledge. Citations are evidence to inspect, not guarantees of truth.
 
-Then the model, running on your own GPU through WebGPU, writes the answer. It
-loads itself the first time you send a message, downloads once, and never
-touches a server.
+## AI is part of the website
 
-Your conversations and memories live in one SQLite file you own.
+Just ask, for example, `write a short email asking to reschedule a meeting`.
+On a supported device, Archiver initializes the model and answers the original
+request—without a manual download button. Greetings, calculations, stored-topic
+answers, and text extraction do not trigger an expensive model download.
 
----
+- **Bundled runtime:** `web/vendor/web-llm-0.2.80.js`, shared by the page and worker, with its license and checksum-verified reproduction script. It is served precompressed with long-lived versioned caching. No inference-library CDN dependency at runtime.
+- **Compact model:** Qwen2.5 **0.5B** Instruct Q4. Archiver chooses f16 or f32 based on the GPU's capabilities; it does not try a larger model.
+- **Automatic assets:** the first generative request fetches a few hundred MB of weights, tokenizer, and GPU library directly from the upstream model/library hosts, not through Render. WebLLM uses the browser Cache API to reuse assets when storage permits. Clearing browser data or cache eviction can require another transfer.
+- **Device requirements:** WebGPU in a supported browser, HTTPS (or localhost), and sufficient GPU memory. A small download does not imply an equally small runtime memory footprint; some phones will not support it.
+- **Graceful fallback:** Data Saver, offline state, no usable GPU, or initialization errors leave instant tools available. Initialization is bounded to 90 seconds; failed initialization does not retry on every message. Retry is available in Settings. Stop cancels initialization as well as generation.
+- **Control:** automatic AI is on by default. Turn off **Settings → Engine → Automatically use on-device AI when needed** for persistent instant-only mode. This also releases an active model worker. No new model downloads occur while this preference is off.
+- **Bounded context:** this is a small, 4K-context model. Very long generation requests may need splitting. History and notes are bounded rather than pretending to provide unlimited recall.
 
-## Run it yourself
+The actual bundled runtime is imported in Chromium in the browser tests. Weight
+loading and generation are stubbed in automated lifecycle tests; those tests
+verify integration, not live GPU performance or answer quality. External asset
+hosts and browser storage policies remain dependencies.
+
+### Why this fits a free Render web service
+
+Render serves FastAPI, SQLite-backed APIs, and the website's static files. It does
+**not** load an LLM, require a GPU, download model weights at boot/build time,
+or proxy hundreds of MB of model assets per visitor. Browser workers do inference;
+the runtime is a small, cacheable website asset. `render.yaml` explicitly selects
+`plan: free` and keeps the existing Python-only build/start commands.
+
+Bundling all the weights into the Render deployment would not remove the browser
+transfer. It would instead increase deploy size and consume Render outbound
+bandwidth. Putting inference in the free service would add model/runtime memory
+pressure and CPU latency. Neither is required for this architecture.
+
+According to [Render's Free-instance documentation](https://render.com/docs/free),
+free services spin down after idle periods, have an ephemeral filesystem, and
+cannot attach persistent disks. **SQLite memories on Render Free are therefore
+not durable across restarts, spin-downs, or redeployments.** Keep exports; use a
+suitable external durable database or a paid service with a persistent disk if
+permanent server-side archives are required. This release does not claim to solve
+Render Free's storage limits.
+
+Full release notes: [CHANGELOG.md](CHANGELOG.md).
+
+## Privacy and storage — precisely
+
+- **Answers:** calculated/retrieved in the browser, or generated by the browser model. Prompts are not sent to a hosted model inference API.
+- **Conversations:** cached in browser storage and synchronized to this app’s server in the background. Sync is best effort, not a durable offline delivery queue. Keep a local transcript export if the server is unavailable.
+- **Memory bank:** stored in SQLite **on the app server**, associated with a browser cookie. Relevant cached memories can inform on-device AI; instant lookup does not generate personalized answers from memory.
+- **Taught cards:** browser local storage only. Clearing browser data removes them.
+- **WEB:** sends search queries through the app server to search services.
+
+The loaded page’s local tools work without a network connection; loading the page from scratch is not an offline/PWA guarantee. There is no service worker.
+
+**No account authentication.** Cookie-associated archives are not a substitute for access control. Use this as a personal app; do not expose sensitive archives publicly. Clearing cookies can lose access to the corresponding server archive.
+
+## Run it
 
 ```bash
-git clone https://github.com/2archiver/Archiver.git
-cd Archiver
-python3 -m venv .venv && . .venv/bin/activate
+python3 -m venv .venv
+. .venv/bin/activate
 pip install -r requirements.txt
 ./run.sh
 ```
 
-Then open <http://localhost:8000>.
+Open <http://localhost:8000>.
 
-Three dependencies: FastAPI, uvicorn, httpx. No build step, no bundler, no npm.
-
-| Variable | Default | What it's for |
+| Environment variable | Default | Purpose |
 |---|---|---|
-| `PORT` | `8000` | Port to listen on |
-| `ARCHIVER_DB` | `archiver.db` | Where your memory bank is stored |
+| `PORT` | `8000` | HTTP port |
+| `ARCHIVER_DB` | `archiver.db` | Server-side SQLite archive |
 
-To deploy on Render: build `pip install -r requirements.txt`, start `./run.sh`.
-Attach a persistent disk and point `ARCHIVER_DB` at it, or your memories are
-lost on every deploy.
+For Render Free: build `pip install -r requirements.txt`, start `./run.sh`. The Blueprint selects the free plan; no inference service or extra process is needed. Free instances cannot attach a persistent disk (see the storage warning above). The app binds to `0.0.0.0` and uses relative browser API URLs.
 
-## Known limits
+## Tests
 
-- **WebGPU is required** for the model. Chrome, Edge and Safari 26+ have it.
-  Without it you still get the corpus and live search, just no reasoning.
-- **The model is roughly 5 GB**, downloaded once per browser. Desktop is fine.
-  A phone will likely run out of GPU memory and fall back to a smaller one.
-- **The curated corpus is narrow** — WWII, contemporary internet figures, and
-  web engineering. Outside that, WEB is what carries the answer.
-- **Search grounds, it doesn't verify.** A Wikipedia sentence can be wrong.
-- **No auth.** It's a personal app. Don't publish a copy with a memory bank you
-  care about.
+Node 18+ and Python 3.10+:
 
----
+```bash
+.venv/bin/pip install pytest
+make test
+```
+
+Runs the existing conversation/search smoke checks, 3.1 offline and cancellation regressions, stub automatic-AI lifecycle tests, and FastAPI storage/isolation tests. The VM-module test uses Node’s experimental VM modules; no model is downloaded.
+
+Optional browser checks (with the app running): install Playwright in your development environment and run `node tests/browser.js` and `node tests/browser-ai.js`. `BASE_URL` defaults to `http://127.0.0.1:8000`; `CHROMIUM_EXECUTABLE` can select an existing browser. These cover a blocked sync server, five viewport sizes, themes, text escaping, Stop/recovery, local export, real bundled-runtime import, and automatic initialization/reuse/cancellation with stub inference. Playwright is not a runtime dependency.
 
 MIT — see `LICENSE`.

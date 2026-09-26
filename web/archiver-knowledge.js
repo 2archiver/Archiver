@@ -1,5 +1,5 @@
 /* ============================================================================
-   ARCHIVER — knowledge base v2.6
+   ARCHIVER — knowledge base v3.1
 
    A grounded, offline corpus. Real content, honest sourcing, no generation.
 
@@ -1349,15 +1349,15 @@
     
     { id: 'archiver-who', q: ['who is archiver', 'what is archiver', 'who is the archiver', 'tell me about archiver',
           'what is the archiver', 'who made archiver', 'what does archiver do', 'archiver assistant'],
-      a: 'I am Archiver 2.6 — a private research assistant that runs in your browser. No API key, no account, nothing you type is sent to a model provider. About 1300 offline topics plus live WEB search when you turn it on. I remember in a local SQLite file you own. Short answers, sources you can check, and a point of view.',
+      a: 'I am Archiver 3.1: local knowledge and text tools, with automatically managed on-device language generation and live WEB search. I do not have consciousness. Chats and memory can sync to the app server; taught cards are stored in the browser. Ask who are you for current runtime capabilities.',
       tags: ['archiver', 'self', 'identity'] },
-    { id: 'archiver-compare-light', q: ['compare yourself to similar small models', 'compare archiver to tinyllama', 'compare archiver to phi-3', 'compare archiver to gemma', 'how do you compare to small models', 'small models on render free'], a: 'I am Archiver 2.6 — retrieval + synthesis over ~1300 offline topics plus live WEB, built to idle on Render free (0.5 CPU / 512 MB RAM, sleeps ~15 min, ~30s wake, no GPU). TinyLlama 1.1B (Q4 ~0.6 GB), Qwen2.5 0.5B (~0.3 GB) and SmolLM2 1.7B (~1.0 GB Q4) WILL fit free with quantized GGUF via llama.cpp and Docker (bind 0.0.0.0:$PORT). Phi-3 mini 3.8B (Q4 ~2.2 GB) and Gemma 2 2B (Q4 ~1.6 GB) are sharper but need ~2-4 GB RAM, so they need the $7/mo Hobby upgrade. I trade model depth for grounded search + privacy; they trade grounding for local LLM generality.', tags: ['render','archiver'] },
-    { id: 'light-tinyllama', q: ['what is tinyllama', 'tinyllama 1.1b', 'tiny llama model'], a: 'TinyLlama 1.1B is a 1.1-billion-parameter chat model trained on 3T tokens — tiny, fast, Apache 2.0. Q4 GGUF ~0.6 GB, runs on 512 MB RAM with swap, great for Render free. Weak at reasoning but fine for chat, classification, and RAG on a budget.', tags: ['model','render'] },
-    { id: 'light-phi3', q: ['what is phi-3 mini', 'phi-3 3.8b', 'phi 3 mini render'], a: 'Phi-3 mini 3.8B (Microsoft) is a 3.8B reasoning-heavy model trained on high-quality synthetic data. Q4 GGUF ~2.2 GB, needs ~3-4 GB RAM — too large for Render free 512 MB, but runs on Hobby/Pro (1-2 GB+). Best quality-per-size in this bracket, beats 7B models on many benchmarks.', tags: ['model','render'] },
-    { id: 'light-gemma2', q: ['what is gemma 2 2b', 'gemma 2b model', 'gemma 2 render'], a: 'Gemma 2 2B (Google) is a 2-billion-parameter open model, very fluent for 2B. Q4 GGUF ~1.6 GB, needs ~2 GB RAM — borderline for free, better on 1 GB+ Hobby. Good multilingual and instruction following, Apache 2.0.', tags: ['model','render'] },
-    { id: 'light-qwen25', q: ['what is qwen2.5 0.5b', 'qwen 0.5b 1.5b', 'qwen2.5 render'], a: 'Qwen2.5 0.5B and 1.5B (Alibaba) are tiny multilingual models. 0.5B Q4 ~0.3 GB fits anywhere, including Render free; 1.5B Q4 ~1.0 GB fits with tuning. Strong for size, supports 32k context, ideal for free-tier edge bots.', tags: ['model','render'] },
-    { id: 'light-smollm2', q: ['what is smollm2', 'smollm2 1.7b', 'smollm 1.7b render'], a: 'SmolLM2 1.7B (Hugging Face) is a 1.7B small LM trained on curated data, strong for its size. Q4 GGUF ~1.0 GB, fits Render free with quantized runtime. Good balance of quality and footprint for free-tier hosting.', tags: ['model','render'] },
-    { id: 'light-hermes3', q: ['what is hermes 3 8b', 'hermes 8b render'], a: 'Hermes 3 8B is a fine-tuned Llama 3.1 8B variant, very capable but Q4 ~4.8 GB — needs 6 GB+ RAM. Not for free tier; needs Render Pro or larger instance.', tags: ['model','render'] },
+    { id: 'archiver-compare-light', q: ['compare yourself to similar small models', 'compare archiver to tinyllama', 'compare archiver to phi-3', 'compare archiver to gemma', 'how do you compare to small models', 'small models on render free'], a: 'Archiver 3.1 uses instant retrieval and automatically managed browser-side model inference. Small local models have narrower capabilities than large hosted assistants. Fitting a model depends on actual available RAM, GPU memory and runtime overhead, not just its download size. Do not assume a model will fit a free hosting tier.', tags: ['render','archiver'] },
+    { id: 'light-tinyllama', q: ['what is tinyllama', 'tinyllama 1.1b', 'tiny llama model'], a: 'TinyLlama 1.1B is a small language-model family. Quantization reduces weight storage, but runtime memory also includes working buffers and the context cache. Do not assume it fits a free web-service instance or that swap is available. Archiver instead keeps inference in the browser.', tags: ['model','render'] },
+    { id: 'light-phi3', q: ['what is phi-3 mini', 'phi-3 3.8b', 'phi 3 mini render'], a: 'Phi-3 mini is a 3.8-billion-parameter model from Microsoft. It needs substantially more runtime memory than its quantized weight file alone. Select hosting based on measured peak memory and latency, not a workspace plan name; Archiver does not run it on the Render server.', tags: ['model','render'] },
+    { id: 'light-gemma2', q: ['what is gemma 2 2b', 'gemma 2b model', 'gemma 2 render'], a: 'Gemma 2 2B is a small model from Google, distributed under the Gemma terms rather than Apache 2.0. Runtime memory depends on quantization, context size and inference software. A weight file smaller than available RAM does not guarantee the model will fit or run quickly.', tags: ['model','render'] },
+    { id: 'light-qwen25', q: ['what is qwen2.5 0.5b', 'qwen 0.5b 1.5b', 'qwen2.5 render'], a: 'Qwen2.5 includes 0.5B and 1.5B instruction-tuned models. Archiver 3.1 automatically prepares the quantized 0.5B model in a supported browser, using its pinned WebLLM build with a 4K context window. The first transfer is a few hundred MB; runtime GPU memory is additional. This is browser inference, not a model running on Render Free.', tags: ['model','render'] },
+    { id: 'light-smollm2', q: ['what is smollm2', 'smollm2 1.7b', 'smollm 1.7b render'], a: 'SmolLM2 is a family of small language models from Hugging Face, including a 1.7B variant. Quantization can reduce its weight size but does not eliminate runtime overhead. Do not promise that the 1.7B model fits a free web-service instance without measuring peak memory for the chosen runtime and context.', tags: ['model','render'] },
+    { id: 'light-hermes3', q: ['what is hermes 3 8b', 'hermes 8b render'], a: 'Hermes 3 8B is a fine-tuned Llama 3.1 8B model. Even quantized inference requires several GB of memory plus runtime and context overhead. It is not the compact browser model used by Archiver and should not be assumed suitable for a free, low-memory web service.', tags: ['model','render'] },
   ];
 
   const HIST25_NAP1 = [
@@ -1682,10 +1682,237 @@
 
   const HIST25 = [...HIST25_NAP1, ...HIST25_NAP2, ...HIST25_N3A, ...HIST25_N3B, ...HIST25_SS, ...HIST25_EURO1, ...HIST25_EURO2];
 
+  const OFFLINE31 = [
+  {
+    "id": "31-python-language",
+    "q": [
+      "what is python",
+      "python",
+      "python programming"
+    ],
+    "a": "Python is a general-purpose programming language with readable syntax and a large library ecosystem. It is widely used for automation, data analysis, backend services, and machine learning. Compared with JavaScript, it is less commonly used for code running directly in a web browser.",
+    "tags": [
+      "general"
+    ]
+  },
+  {
+    "id": "31-ram",
+    "q": [
+      "what is ram",
+      "ram",
+      "random access memory"
+    ],
+    "a": "RAM is fast working memory used by running programs. Ordinary RAM loses its contents when power is removed. More RAM can let you run larger programs or more programs at once, but it does not replace long-term storage.",
+    "tags": [
+      "general"
+    ]
+  },
+  {
+    "id": "31-ssd",
+    "q": [
+      "what is an ssd",
+      "ssd",
+      "solid state drive"
+    ],
+    "a": "An SSD stores files in nonvolatile flash memory, so data normally remains after power is removed. It has no spinning disks and generally provides faster random access than a hard drive. It is slower than RAM and serves a different purpose: persistent storage rather than active working memory.",
+    "tags": [
+      "general"
+    ]
+  },
+  {
+    "id": "31-mitosis",
+    "q": [
+      "what is mitosis",
+      "mitosis"
+    ],
+    "a": "Mitosis separates duplicated chromosomes into two nuclei, usually followed by division into two cells. The resulting cells ordinarily have the same chromosome number as the original cell. It supports growth, tissue repair, and some forms of asexual reproduction.",
+    "tags": [
+      "general"
+    ]
+  },
+  {
+    "id": "31-meiosis",
+    "q": [
+      "what is meiosis",
+      "meiosis"
+    ],
+    "a": "Meiosis uses two cell divisions after one round of DNA replication to produce cells with half the original chromosome number. Crossing over and chromosome assortment create genetic variation. In humans it is part of producing eggs and sperm, unlike mitosis which normally preserves chromosome number.",
+    "tags": [
+      "general"
+    ]
+  },
+  {
+    "id": "31-photosynthesis-basics",
+    "q": [
+      "what is photosynthesis",
+      "photosynthesis",
+      "explain photosynthesis"
+    ],
+    "a": "Photosynthesis uses light energy to build sugars from carbon dioxide and water. Plants, algae, and cyanobacteria perform oxygen-producing photosynthesis, releasing oxygen as a byproduct. In simple terms, plants use sunlight to make food; the energy then supports much of the food web.",
+    "tags": [
+      "general"
+    ]
+  },
+  {
+    "id": "31-weather-basics",
+    "q": [
+      "what is weather",
+      "weather definition"
+    ],
+    "a": "Weather is the short-term condition of the atmosphere at a particular place, including temperature, rain, wind, and humidity. Climate describes patterns over much longer periods, commonly using 30-year averages. A cold day does not by itself disprove a warming climate.",
+    "tags": [
+      "general"
+    ]
+  },
+  {
+    "id": "31-deflation",
+    "q": [
+      "what is deflation",
+      "deflation"
+    ],
+    "a": "Deflation is a sustained decline in the general price level, not merely one item getting cheaper. It increases the purchasing power of money but can increase the real burden of fixed debts. Disinflation is different: prices are still rising, but the inflation rate is falling.",
+    "tags": [
+      "general"
+    ]
+  },
+  {
+    "id": "31-correlation",
+    "q": [
+      "what is correlation",
+      "correlation"
+    ],
+    "a": "Correlation describes how variables vary together; it does not by itself show that one causes the other. A common cause, chance, or reversed direction can explain an association. To argue causation, look for a plausible mechanism and evidence that rules out important alternatives.",
+    "tags": [
+      "general"
+    ]
+  },
+  {
+    "id": "31-causation",
+    "q": [
+      "what is causation",
+      "causation"
+    ],
+    "a": "Causation means that changing one factor produces a change in another under specified conditions. Randomized experiments can help isolate a causal effect; observational studies need stronger assumptions to address confounding. Causal claims should state the population, comparison, and limits of the evidence.",
+    "tags": [
+      "general"
+    ]
+  },
+  {
+    "id": "31-http",
+    "q": [
+      "what is http",
+      "http"
+    ],
+    "a": "HTTP is an application protocol for exchanging requests and responses, often between browsers and web servers. Plain HTTP does not encrypt the traffic in transit. HTTPS adds TLS to protect confidentiality, integrity, and server authentication.",
+    "tags": [
+      "general"
+    ]
+  },
+  {
+    "id": "31-https",
+    "q": [
+      "what is https",
+      "https"
+    ],
+    "a": "HTTPS is HTTP carried over TLS. It encrypts data in transit and checks the server certificate, helping prevent eavesdropping and tampering. It does not guarantee that a website is honest or that its content is correct.",
+    "tags": [
+      "general"
+    ]
+  },
+  {
+    "id": "31-list-python",
+    "q": [
+      "what is a python list",
+      "python list"
+    ],
+    "a": "A Python list is an ordered, mutable collection. Use a list when you need to append, remove, or replace elements. Lists can hold mixed types, though consistent element types often make code clearer.",
+    "tags": [
+      "general"
+    ]
+  },
+  {
+    "id": "31-tuple-python",
+    "q": [
+      "what is a python tuple",
+      "python tuple"
+    ],
+    "a": "A Python tuple is an ordered collection whose element references cannot be changed after creation. It is useful for fixed records and returning multiple values. A tuple is hashable only if all its elements are hashable, and mutable objects inside it can still change.",
+    "tags": [
+      "general"
+    ]
+  },
+  {
+    "id": "31-active-recall",
+    "q": [
+      "what is active recall",
+      "active recall"
+    ],
+    "a": "Active recall means trying to retrieve information from memory before checking the answer. Practice questions, flashcards, and explaining a topic without notes are examples. Check your mistakes afterward rather than repeatedly rehearsing an incorrect answer.",
+    "tags": [
+      "general"
+    ]
+  },
+  {
+    "id": "31-spaced-repetition",
+    "q": [
+      "what is spaced repetition",
+      "spaced repetition"
+    ],
+    "a": "Spaced repetition spreads review sessions over time instead of cramming them together. Revisit material after some forgetting, shortening the interval for difficult items and lengthening it for well-recalled ones. Combining spacing with retrieval practice is generally more effective than passive rereading alone.",
+    "tags": [
+      "general"
+    ]
+  },
+  {
+    "id": "31-budget-plan",
+    "q": [
+      "how to make a budget",
+      "monthly budget"
+    ],
+    "a": "Start with take-home income and essential fixed bills, then estimate variable essentials such as food and transport. Set aside money for irregular bills, debt payments, and savings before assigning discretionary spending. Compare planned and actual spending each month and adjust; percentage rules are starting points, not requirements.",
+    "tags": [
+      "general"
+    ]
+  },
+  {
+    "id": "31-debugging-workflow",
+    "q": [
+      "how to debug code",
+      "debugging checklist"
+    ],
+    "a": "Reproduce the failure with the smallest reliable example and record the exact error. Compare expected and actual behavior, inspect inputs and state, and test one hypothesis at a time. Add a regression test once you fix it so the same failure is easier to catch next time.",
+    "tags": [
+      "general"
+    ]
+  },
+  {
+    "id": "31-study-plan",
+    "q": [
+      "how to plan studying",
+      "study plan"
+    ],
+    "a": "List the topics and the date you need to know them by, then test yourself to find weak areas. Allocate short focused sessions to retrieval practice, worked examples, and reviewing mistakes. Leave time for spaced review rather than filling every session with new material.",
+    "tags": [
+      "general"
+    ]
+  },
+  {
+    "id": "31-email-template",
+    "q": [
+      "how to write a professional email",
+      "professional email template"
+    ],
+    "a": "Use a subject that names the action or topic. Start with the reason for writing, add only necessary context, and end with a specific next step or question. Template: Hello [name], I am writing about [topic]. [Key context.] Could you [action] by [date]? Thank you, [name].",
+    "tags": [
+      "general"
+    ]
+  }
+];
+
   window.ARCHIVER_KB = {
-    version: '2.6',
-    generated: '2026-09-25',
-    cards: [...WW2, ...FIGURES, ...TECH, ...GENERAL, ...WORDS, ...SCIENCE, ...WORLD, ...LANGUAGE, ...EVERYDAY, ...MORE, ...MORE24, ...HIST25, ...LIGHT],
+    version: '3.1',
+    generated: '2026-09-26',
+    cards: [...WW2, ...FIGURES, ...TECH, ...GENERAL, ...WORDS, ...SCIENCE, ...WORLD, ...LANGUAGE, ...EVERYDAY, ...MORE, ...MORE24, ...HIST25, ...LIGHT, ...OFFLINE31],
     note: 'Grounded offline corpus. Charges are not convictions; contested history is not a "side".'
   };
 })();
