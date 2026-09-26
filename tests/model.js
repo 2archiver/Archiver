@@ -16,9 +16,13 @@ async function fixture(options = {}) {
   } } } };
   const storage = new Map(options.disabled ? [['archiver.ai.enabled', '0']] : []);
   const ctx = { console, clearTimeout, URL, AbortController, DOMException,
-    setTimeout: (fn, ms) => setTimeout(fn, options.timeout && ms === 90000 ? 15 : ms),
+    setTimeout: (fn, ms) => setTimeout(fn, options.timeout && ms >= 8 * 60 * 1000 ? 15 : ms),
     navigator: { onLine: options.offline ? false : true, connection: { saveData: !!options.saveData },
-      gpu: options.noGPU ? undefined : { requestAdapter: async () => options.noAdapter ? null : { features: new Set(options.f32 ? [] : ['shader-f16']) } } },
+      gpu: options.noGPU ? undefined : { requestAdapter: async hint => {
+        stats.adapterCalls = (stats.adapterCalls || 0) + 1;
+        if (options.rejectAdapterHint && hint) throw Error('unsupported power preference');
+        return options.noAdapter ? null : { features: new Set(options.f32 ? [] : ['shader-f16']) };
+      } } },
     localStorage: { getItem: key => storage.get(key) || null, setItem: (key, value) => storage.set(key, value) },
     Worker: class { terminate() { stats.terminated++; } },
     fetch: () => { throw Error('unexpected fetch'); } };
@@ -66,6 +70,8 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
   assert.equal(stats.payload.messages[2].role, 'assistant');
   assert.ok(!JSON.stringify(stats.payload).includes('HOSTILE HISTORY'));
   assert.match(stats.payload.messages[0].content, /not a conscious being/);
+  assert.match(stats.payload.messages[0].content, /Prompt-specific approach: For this writing request/);
+  assert.match(stats.payload.messages[0].content, /do not reveal hidden chain-of-thought/);
   assert.match(await A.chat('write ' + '界'.repeat(4000), []), /too long/);
   await A.chat('write another poem', []);
   assert.equal(stats.attempts, 1, 'already-loaded engine reused');
@@ -73,10 +79,11 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
   await assert.rejects(A.chat('write a second poem', [], { signal: stop.signal, onDelta: () => stop.abort() }), { name: 'AbortError' });
   assert.equal(stats.interrupted, 1);
   A.setAIEnabled(false);
-  assert.equal(A.mode(), 'grounded'); assert.equal(storage.get('archiver.ai.enabled'), '0');
-  assert.ok(stats.terminated > 0, 'instant-only mode frees worker');
+  assert.equal(A.mode(), 'neural', 'the compatibility toggle cannot disable browser generation');
+  assert.equal(storage.get('archiver.ai.enabled'), '1');
+  assert.equal(stats.terminated, 0, 'an active engine remains available');
 
-  for (const config of [{ noGPU: true }, { noAdapter: true }, { saveData: true }, { offline: true }, { disabled: true }]) {
+  for (const config of [{ noGPU: true }, { noAdapter: true }, { offline: true }]) {
     const f = await fixture(config);
     const response = await f.A.chat('write a poem', []);
     assert.equal(f.stats.imports, 0, `no download for ${JSON.stringify(config)}`);
@@ -84,6 +91,13 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
   }
   const f32 = await fixture({ f32: true });
   await f32.A.chat('write a poem', []); assert.equal(f32.stats.id, models[1]);
+  const safariAdapter = await fixture({ rejectAdapterHint: true });
+  await safariAdapter.A.chat('write a poem', []);
+  assert.equal(safariAdapter.stats.adapterCalls, 2, 'Safari adapter is retried without powerPreference');
+  assert.equal(safariAdapter.A.mode(), 'neural');
+  const migratedPreference = await fixture({ disabled: true });
+  assert.equal(migratedPreference.A.status().aiEnabled, true);
+  assert.equal(migratedPreference.storage.get('archiver.ai.enabled'), '1', 'legacy instant-only preference is migrated');
   const failure = await fixture({ failOnce: true });
   await failure.A.chat('write a poem', []); await failure.A.chat('write another', []);
   assert.equal(failure.stats.attempts, 1, 'failure does not cause a download loop');
@@ -104,19 +118,15 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
   const firstToggle = togglePending.A.chat('write a poem', []);
   while (!togglePending.stats.resolveLoad) await tick();
   togglePending.A.setAIEnabled(false);
-  await firstToggle;
-  assert.equal(togglePending.A.status().aiState, 'paused');
-  assert.equal(togglePending.A.status().loading, false, 'disable detaches an in-flight load');
-  togglePending.A.setAIEnabled(true);
-  const secondToggle = togglePending.A.chat('write another poem', []);
-  while (togglePending.stats.attempts < 2 || !togglePending.stats.resolveLoad) await tick();
+  assert.equal(togglePending.A.status().aiEnabled, true, 'generation remains enabled during initialization');
   togglePending.stats.resolveLoad();
-  await secondToggle;
-  assert.equal(togglePending.A.mode(), 'neural', 're-enable starts a fresh load after disable');
+  await firstToggle;
+  assert.equal(togglePending.A.status().aiState, 'ready');
+  assert.equal(togglePending.stats.attempts, 1, 'no disable/reload cycle');
 
   const timeout = await fixture({ timeout: true });
   const fallback = await timeout.A.chat('write a poem', []);
   assert.match(fallback, /timed out/); assert.equal(timeout.A.status().loading, false);
   assert.ok(timeout.stats.terminated > 0);
-  console.log('Browser-generation checks passed: same-origin runtime, cache config, small model, feature gating, pause/disable, retry, timeout, cancellation, late results, roles, and streaming (stub inference).');
+  console.log('Browser-generation checks passed: same-origin runtime, cache config, small model, Safari adapter fallback, enabled-by-default behavior, retry, timeout, cancellation, late results, prompt-specific instructions, roles, and streaming (stub inference).');
 })().catch(e => { console.error(e); process.exit(1); });

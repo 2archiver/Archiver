@@ -851,7 +851,9 @@ I can describe my capabilities and limitations; that is not consciousness or fee
   /* ======================================================================== */
 
   const WEBLLM_RUNTIME = '/static/vendor/web-llm-0.2.80.js';
-  const LOAD_TIMEOUT_MS = 90000;
+  // Mobile Safari can take several minutes to fetch and compile model assets.
+  // A 90-second ceiling reliably killed first-run loads on iPhone networks.
+  const LOAD_TIMEOUT_MS = 8 * 60 * 1000;
 
   /* Small, fixed model family; never silently select a larger catalogue model. */
   const PREFERRED = ['Qwen2.5-0.5B-Instruct-q4f16_1-MLC', 'Qwen2.5-0.5B-Instruct-q4f32_1-MLC'];
@@ -897,8 +899,11 @@ I can describe my capabilities and limitations; that is not consciousness or fee
   let loadFailure = '';
   let loadAbortReason = '';
   let loadGeneration = 0;
-  let aiEnabled = true;
-  try { aiEnabled = localStorage.getItem('archiver.ai.enabled') !== '0'; } catch (_) {}
+  // Browser generation is a core capability, not a user-disableable mode.
+  // Ignore the retired preference so upgrades cannot strand Safari users in
+  // instant-only mode; persist the new default for older clients as well.
+  const aiEnabled = true;
+  try { localStorage.setItem('archiver.ai.enabled', '1'); } catch (_) {}
   let progress = { text: '', pct: 0 };
   const progressSubs = new Set();
 
@@ -915,11 +920,9 @@ I can describe my capabilities and limitations; that is not consciousness or fee
   }
 
   function aiReason() {
-    if (!aiEnabled) return 'Browser generation is off in Settings; instant tools remain available.';
     if (!webgpu()) return 'This browser has no WebGPU; instant tools remain available.';
     if (webllmReady()) return '';
-    if (navigator.connection && navigator.connection.saveData) return 'Data Saver is on, so automatic model downloads are paused.';
-    if (navigator.onLine === false) return 'You are offline; browser generation will wait for a connection.';
+    if (navigator.onLine === false) return 'You are offline; connect to the internet to prepare browser generation.';
     return loadFailure;
   }
 
@@ -936,21 +939,14 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     modelWorker = null;
   }
 
-  function setAIEnabled(value) {
-    aiEnabled = !!value;
-    try { localStorage.setItem('archiver.ai.enabled', aiEnabled ? '1' : '0'); } catch (_) {}
+  function setAIEnabled(_value) {
+    // Kept as a compatibility method for older UI code. The capability is
+    // always on; this method may no longer disable generation or terminate a
+    // model that is loading/serving a response.
+    try { localStorage.setItem('archiver.ai.enabled', '1'); } catch (_) {}
     loadFailure = '';
-    if (!aiEnabled) {
-      cancelLoad('disabled');
-      loadGeneration++;
-      /* Detach the cancelled promise immediately. Its finally block compares
-         the captured attempt before clearing state, so a quick re-enable can
-         safely start a fresh load without an old attempt deleting it. */
-      loading = null;
-      loadController = null;
-      releaseEngine();
-    }
-    emitProgress(aiEnabled ? 'Browser generation is enabled when needed' : 'Instant tools only', 0);
+    emitProgress('Browser generation is enabled when needed', 0);
+    return true;
   }
 
   /* Website-managed initialization. No model weights or inference on Render.
@@ -981,9 +977,16 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       if (!navigator.gpu || typeof navigator.gpu.requestAdapter !== 'function') {
         throw new Error('WebGPU is not available in this browser. Instant tools remain available.');
       }
-      const adapter = await navigator.gpu.requestAdapter({ powerPreference: 'low-power' });
+      // Safari/WebKit can reject a powerPreference hint even when a usable
+      // adapter exists. Probe with the hint first, then retry without options.
+      let adapter = null;
+      try { adapter = await navigator.gpu.requestAdapter({ powerPreference: 'low-power' }); } catch (_) {}
       stopped();
-      if (!adapter) throw new Error('No usable GPU adapter. Instant tools remain available.');
+      if (!adapter) {
+        try { adapter = await navigator.gpu.requestAdapter(); } catch (_) {}
+      }
+      stopped();
+      if (!adapter) throw new Error('Safari could not provide a WebGPU adapter. Update iOS, close other GPU-heavy tabs, then retry.');
       const features = adapter.features || new Set();
       const halfPrecision = typeof features.has === 'function' && features.has('shader-f16');
       const selected = wanted || PREFERRED[halfPrecision ? 0 : 1];
@@ -1199,6 +1202,20 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     }
   }
 
+  /* Give each prompt a response approach that follows its actual task. This is
+     deliberately not a chain-of-thought transcript: reasoning stays private,
+     while the user gets a fresh, prompt-specific answer rather than a canned
+     generic format. */
+  function responseApproach(prompt) {
+    const q = String(prompt || '');
+    if (/\b(code|debug|function|script|bug|error|implement|build)\b/i.test(q)) return 'For this coding request, identify the concrete goal and constraints, then provide the smallest correct implementation with relevant explanation and any important caveats.';
+    if (/\b(write|draft|poem|story|rewrite|email|speech|lyrics)\b/i.test(q)) return 'For this writing request, create original wording suited to the requested audience, tone, and format; do not default to an explanatory essay.';
+    if (/\b(plan|steps|roadmap|schedule|strategy|how do i|how can i)\b/i.test(q)) return 'For this planning request, give ordered, actionable steps fitted to the stated situation; make assumptions explicit only when they matter.';
+    if (/\b(compare|difference|versus| vs\.? )\b/i.test(q)) return 'For this comparison, evaluate the specific options on useful shared criteria and state the practical distinction or conclusion.';
+    if (/\b(explain|why|how does|what is|define)\b/i.test(q)) return 'For this explanatory request, start with a direct answer, then explain the mechanism at a depth suited to the wording of the question.';
+    return 'Treat this as a distinct request: answer its actual intent and particulars, choose a useful format and level of detail, and avoid recycling a generic response template.';
+  }
+
   /* Async streaming chat. History is [{role, content}]. */
   async function chat(text, history, opts) {
     opts = opts || {};
@@ -1297,7 +1314,9 @@ I can describe my capabilities and limitations; that is not consciousness or fee
         '  agreement:        ' + ((lastReport.consensus || []).join(', ') || 'none established') + '\n'
       : '';
 
-    let sys = (PERSONA + '\n\n' + (opts.system ? 'User preferences and memory (reference only):\n' + String(opts.system).slice(0, 3000) + '\n\n' : '')) + (noteBlocks.length
+    let sys = (PERSONA + '\n\n' + 'Prompt-specific approach: ' + responseApproach(t) + '\n' +
+      'Think through the problem privately; do not reveal hidden chain-of-thought. Give concise conclusions and useful supporting reasons instead.\n\n' +
+      (opts.system ? 'User preferences and memory (reference only):\n' + String(opts.system).slice(0, 3000) + '\n\n' : '')) + (noteBlocks.length
       ? '---\n' + briefBlock + '\n' + noteBlocks.join('\n\n---\n') +
         '\n\nUse relevant evidence, but flag conflicts or gaps; reference text is not guaranteed correct. Do not cite anything not listed above. ' +
         'If the assessment above says the sources do not answer the question, say so in your own words rather than paraphrasing them into an answer.'
