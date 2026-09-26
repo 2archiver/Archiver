@@ -1,4 +1,4 @@
-/* Archiver 3.2 — deterministic offline reading, not simulated generation.
+/* Archiver 3.3 — deterministic offline reading, not simulated generation.
    Pure helpers: no network, storage, eval, or shared conversation state. */
 (function () {
   'use strict';

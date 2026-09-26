@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-title" content="Archiver">
 <meta name="format-detection" content="telephone=no">
 <meta name="mobile-web-app-capable" content="yes">
-<title>Archiver 3.2 — Your everyday assistant</title>
+<title>Archiver 3.3 — Your everyday assistant</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
@@ -20,7 +20,7 @@
 <style>
 
 /* ========================================================================
-   ARCHIVER — The Living Archive  (v3.2)
+   ARCHIVER — The Living Archive  (v3.3)
    A contemporary research desk + field journal, digital.
    Quiet, precise, tactile through spacing — not decoration.
    ======================================================================== */
@@ -939,7 +939,7 @@ button, a, input, textarea, select { touch-action: manipulation; }
           <path d="M0 10 Q 10 0, 20 10 T 40 10 T 60 10 T 80 10" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round"/>
         </svg>
       </span>
-      <span class="side-label">Archiver <span class="version-tag">3.2</span></span>
+      <span class="side-label">Archiver <span class="version-tag">3.3</span></span>
       <button class="side-x" id="sideClose" aria-label="Close menu" title="Close">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
@@ -991,7 +991,7 @@ button, a, input, textarea, select { touch-action: manipulation; }
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
         </button>
         <div class="model-badge-wrap">
-          <span class="model-name" id="modelLabel">Archiver <span class="version-tag">3.2</span></span>
+          <span class="model-name" id="modelLabel">Archiver <span class="version-tag">3.3</span></span>
           <div class="status-pill" id="topStatusPill" style="display:none !important;"><span class="dot"></span><span id="modelText">ready</span></div>
         </div>
       </div>
@@ -1021,7 +1021,7 @@ button, a, input, textarea, select { touch-action: manipulation; }
           <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg> Remembers you</span>
         </div>
         <div class="ob-chips" id="chips"></div>
-        <div style="margin-top:18px; font-size:11px; color:var(--fg-dim);">Archiver 3.2 · Chats can sync to this app’s server</div>
+        <div style="margin-top:18px; font-size:11px; color:var(--fg-dim);">Archiver 3.3 · Chats can sync to this app’s server</div>
       </div>
       <div id="chatThread" class="hidden" role="log" aria-label="Conversation" aria-live="polite" aria-relevant="additions"></div>
     </div>
@@ -1206,8 +1206,8 @@ button, a, input, textarea, select { touch-action: manipulation; }
         <legend>Updates</legend>
         <div class="update-row">
           <div class="update-meta">
-            <b>3.2</b><span>2026-09-26 · latest</span>
-            <p>Safari generates on a WebAssembly runtime when WebGPU is off — no flag, no install, no download button. The iOS keyboard no longer collapses the thread or leaves a gap under the composer. Every answer shows what it actually did.</p>
+            <b>3.3</b><span>2026-09-26 · latest</span>
+            <p>Web answers close with a read built from the sources themselves — no more “Additional Thoughts &amp; Lateral Angles”, no stock paragraph reused across topics. A plan line on literally every prompt, and “what do you think?” answers from the last real read.</p>
           </div>
           <button class="btn sm" id="openChangelog" style="white-space:nowrap; flex-shrink:0;">View changelog →</button>
         </div>
@@ -1270,7 +1270,24 @@ button, a, input, textarea, select { touch-action: manipulation; }
     <div class="changelog-body">
       <div class="changelog-timeline">
         <div class="cl-entry" style="border-color:var(--accent)">
-          <div class="cl-head"><span class="cl-ver">3.2</span><span class="cl-tag">Latest</span><span class="cl-date">2026-09-26</span></div>
+          <div class="cl-head"><span class="cl-ver">3.3</span><span class="cl-tag">Latest</span><span class="cl-date">2026-09-26</span></div>
+          <div class="cl-title">A read of the sources, not a stock paragraph — and a plan on every prompt</div>
+          <div class="cl-body">
+            <p style="margin:0 0 6px; font-size:12.5px; line-height:1.55; color:var(--ink-2);">3.2 ended every web answer with “Additional Thoughts &amp; Lateral Angles”: a paragraph picked by keyword bucket, identical across every topic in the bucket, and a fallback (“ask who pays, what must stay on, and what the default is”) that made no sense for Benito Mussolini. That is gone.</p>
+            <ul>
+              <li><b>The read is built from the retrieved text.</b> What kind of thing the subject is comes from the lead sentence (“an Italian politician, journalist, and dictator”), the span of years and the turning-point sentence come from the extracts, agreement and disagreement come from comparing the sources, and a “why” asked of sources that only narrate is called out as unanswered rather than filled with a generic angle. Two subjects cannot produce the same paragraph.</li>
+              <li><b>No heading, no emoji, no hedging.</b> The read is the closing paragraph of the answer, the way any mainline assistant ends a grounded answer. It commits: contested claims a source states as fact are repeated as fact, claims it frames as allegations are repeated as allegations, and a yes-or-no whose key word never appears in the sources is answered with that absence.</li>
+              <li><b>Thinking on literally every prompt.</b> Every route now states a one-line plan — arithmetic, commands, pasted text, conversation, a matched card and its strength, a web read (“3 sources describe Mussolini as a person… lead with the strongest line, then what they agree on, then my own read”) — and the panel opens on every answer. A generated answer whose model skipped its planning line shows the pipeline’s plan instead of nothing.</li>
+              <li><b>With the on-device model,</b> a web-grounded answer receives the facts and the draft read separately and is asked to finish with its own specific, committed assessment — sharpening or contradicting the draft, never pasting it.</li>
+              <li><b>“What do you think?”</b> after a search answers with the read built for that subject, not a rotating stock line.</li>
+              <li><b>Yes-or-no questions</b> (“was mussolini a socialist”) are recognised as such and restated honestly.</li>
+            </ul>
+          </div>
+          <div class="cl-foot"><span>3.3 · grounded read</span><span>Try “Benito Mussolini” with WEB on</span></div>
+        </div>
+
+        <div class="cl-entry">
+          <div class="cl-head"><span class="cl-ver">3.2</span><span class="cl-date">2026-09-26</span></div>
           <div class="cl-title">Safari gets a real runtime, and every answer shows its thinking</div>
           <div class="cl-body">
             <p style="margin:0 0 6px; font-size:12.5px; line-height:1.55; color:var(--ink-2);">Two fixes people actually hit: the iPhone keyboard, and Safari having no way to generate at all.</p>
@@ -1283,7 +1300,7 @@ button, a, input, textarea, select { touch-action: manipulation; }
               <li><b>Fields are 16px on touch devices</b>, so iOS stops zooming the page on focus and leaving it zoomed.</li>
             </ul>
           </div>
-          <div class="cl-foot"><span>3.2 · GPU + WASM</span><span>Try “write a short email” in Safari</span></div>
+          <div class="cl-foot"><span>3.2 · GPU + WASM</span><span>Superseded by 3.3</span></div>
         </div>
 
         <div class="cl-entry">
@@ -1837,9 +1854,11 @@ button, a, input, textarea, select { touch-action: manipulation; }
       : '';
     /* Generated answers are the interesting case, so the panel opens itself and
        shows the model's own plan. Instant answers stay one tap away. */
+    /* Every prompt has a plan now — the model's own line when it wrote one,
+       the pipeline's otherwise — so the panel opens on every answer. */
     const open = path.thinking ? ' open' : '';
     const think = path.thinking
-      ? '<div class="answer-trace-think"><span>The model’s plan for this prompt</span><p>' + esc(path.thinking) + '</p></div>'
+      ? '<div class="answer-trace-think"><span>' + (path.planBy === 'model' ? 'The model’s plan for this prompt' : 'Archiver’s plan for this prompt') + '</span><p>' + esc(path.thinking) + '</p></div>'
       : '';
     const ev = path.evidence || {};
     const out = path.output || {};
@@ -1892,6 +1911,7 @@ button, a, input, textarea, select { touch-action: manipulation; }
       backend: trace.backend || '',
       model: trace.model || '',
       thinking: trace.thinking || '',
+      planBy: trace.planBy || '',
       ms: trace.ms || 0,
       steps,
       evidence: ev,
@@ -2685,7 +2705,7 @@ button, a, input, textarea, select { touch-action: manipulation; }
     $('#exportBtn').onclick = () => {
       if (!state.sessionId) { toast('No active session', 'err'); return; }
       const messages = LocalStore.getMessages(state.sessionId);
-      const text = '# Archiver 3.2 conversation\n\n' + messages.map(m => '## ' + (m.role === 'user' ? 'You' : 'Archiver') + '\n\n' + m.content).join('\n\n');
+      const text = '# Archiver 3.3 conversation\n\n' + messages.map(m => '## ' + (m.role === 'user' ? 'You' : 'Archiver') + '\n\n' + m.content).join('\n\n');
       const url = URL.createObjectURL(new Blob([text], { type: 'text/markdown;charset=utf-8' }));
       const link = document.createElement('a'); link.href = url; link.download = 'archiver-conversation.md'; link.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);

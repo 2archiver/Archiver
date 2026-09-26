@@ -1,8 +1,16 @@
-# Archiver 3.2
+# Archiver 3.3
 
 **An everyday assistant with instant local tools, browser generation for open-ended work, and live web search when you ask.**
 
 No account or model-provider API key. Two inference runtimes are bundled with the website — WebGPU where a browser offers it, WebAssembly where it does not — and model assets are fetched and cached automatically in the browser when needed. No model server, deployment-time npm step, or model weights in Git.
+
+## New in 3.3
+
+- **Web answers close with a read of the sources, not a stock paragraph.** 3.2 ended every web answer with a section headed “Additional Thoughts & Lateral Angles” whose text was chosen by keyword bucket — one paragraph for anything mentioning an influencer, one for anything mentioning Render, and a fallback (“ask who pays, what must stay on, and what the default is”) for everything else, Benito Mussolini included. That code is gone. The closing paragraph is now built in `app/take.py` from the retrieved text itself: what kind of thing the subject is comes from the lead sentence (“an Italian politician, journalist, and dictator”), the span of years and the turning-point sentence come from the extracts, agreement and disagreement come from comparing the sources, and a “why” asked of sources that only narrate is called out as unanswered instead of filled with a generic angle. Two subjects cannot produce the same paragraph. There is no heading, no emoji, and no hedging: a claim a source states as the subject’s own conduct is repeated as such, a claim it frames as an allegation is repeated as an allegation, and a yes-or-no whose key word never appears in the sources is answered with that absence.
+- **Thinking on literally every prompt.** 3.2 showed a plan line only when the on-device model wrote one. Every route now states its own one-line plan in its own terms — the arithmetic to be evaluated, the command to be run, the pasted text to be worked from, the matched card and its strength, or the web read (“1 source (Wikipedia) describes the Battle of Kursk as an event … lead with the strongest line, then what the sources agree on, then my own read of the 1943 record”). A generated answer whose model skipped its planning line shows the pipeline’s plan instead of nothing, and the panel says whose plan it is.
+- **The on-device model gets the read as a draft, not as fact.** For a web-grounded answer the prompt carries the facts and Archiver’s draft read separately, and asks the model to finish with its own specific, committed assessment — sharpening or contradicting the draft, never pasting it.
+- **“What do you think?”** after a search answers with the read built for that subject, not one of three rotating stock lines.
+- Yes-or-no questions (“was mussolini a socialist”) are recognised as such and restated honestly. Tests: `tests/test_take.py` (new) covers the read against real Wikipedia leads; `tests/model.js` covers the plan line on every route and the grounded prompt.
 
 ## New in 3.2
 
@@ -23,7 +31,7 @@ No account or model-provider API key. Two inference runtimes are bundled with th
 - **Accurate capability reporting:** ask “who are you?” or “are you self-aware?” to see what is actually running, what is stored where, and its limits. This is software introspection, **not consciousness**.
 - **Server regression fixes:** completed answers and extracted memories retain their owner, prepare-time recall is scoped to that browser, and the automatic-memory setting is respected.
 
-3.2 is not a claim of Meta AI parity or a measured 10× comprehension improvement. The instant path is deterministic retrieval and text processing. Requests beyond it automatically try a small language model, which broadens the supported tasks but can still make mistakes. Earlier releases are described in [CHANGELOG.md](CHANGELOG.md); the in-app changelog panel carries the same recent entries plus older releases, newest-first, and counts what it actually renders.
+3.3 is not a claim of Meta AI parity or a measured 10× comprehension improvement. The instant path is deterministic retrieval and text processing; the closing read of a web answer is assembled from the retrieved sentences by rules, not written by a model on the server. Requests beyond it automatically try a small language model, which broadens the supported tasks but can still make mistakes. Earlier releases are described in [CHANGELOG.md](CHANGELOG.md); the in-app changelog panel carries the same recent entries plus older releases, newest-first, and counts what it actually renders.
 
 ## Try it
 

@@ -1,5 +1,5 @@
 /* ============================================================================
-   ARCHIVER — knowledge base v3.2
+   ARCHIVER — knowledge base v3.3
 
    A grounded, offline corpus. Real content, honest sourcing, no generation.
 
@@ -1910,7 +1910,7 @@
 ];
 
   window.ARCHIVER_KB = {
-    version: '3.2',
+    version: '3.3',
     generated: '2026-09-26',
     cards: [...WW2, ...FIGURES, ...TECH, ...GENERAL, ...WORDS, ...SCIENCE, ...WORLD, ...LANGUAGE, ...EVERYDAY, ...MORE, ...MORE24, ...HIST25, ...LIGHT, ...OFFLINE31],
     note: 'Grounded offline corpus. Charges are not convictions; contested history is not a "side".'

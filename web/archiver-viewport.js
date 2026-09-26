@@ -1,4 +1,4 @@
-/* Archiver 3.2 — viewport and software-keyboard manager.
+/* Archiver 3.3 — viewport and software-keyboard manager.
 
    iOS Safari does not shrink the *layout* viewport when the software keyboard
    opens. It shrinks the *visual* viewport and then scrolls the whole document
