@@ -31,6 +31,8 @@ from typing import Any, Awaitable, Callable
 
 import httpx
 
+from . import take as take_mod
+
 TIMEOUT = httpx.Timeout(14.0, connect=6.0)
 
 # Wikimedia's policy requires "<client>/<version> (<contact>)"; a bare product
@@ -519,6 +521,8 @@ _SHAPES: list[tuple[str, str]] = [
     ("why", r"\b(why|how come|what caused|what led to)\b"),
     ("how", r"\b(how|in what way)\b"),
     ("what", r"\b(what|which)\b"),
+    # A bare yes-or-no: "was mussolini a socialist", "can dogs eat grapes".
+    ("verdict", r"^(?:is|was|are|were|does|did|do|can|could|has|have|had|will|would|should)\s+\S+\s+\S+"),
 ]
 
 # Note the absence of "the". Stripping it turned "what is the meaning of
@@ -589,6 +593,8 @@ def interpret_question(query: str) -> dict[str, Any]:
     ):
         shape = "clause"
 
+    yes_no = shape == "verdict" and re.match(
+        r"^(?:is|was|are|were|does|did|do|can|could|has|have|had|will|would|should)\b", q, re.I)
     restatement = {
         "who": f"who {subject} is",
         "when": f"when {subject} happened",
@@ -597,7 +603,7 @@ def interpret_question(query: str) -> dict[str, Any]:
         "how": f"how to {subject}",
         "count": f"how {subject}",
         "clause": subject,
-        "verdict": f"whether {subject}",
+        "verdict": f"a yes-or-no on “{q.rstrip('?.! ')}”" if yes_no else f"whether {subject}",
         "what": f"what {subject} is",
         "topic": subject,
     }.get(shape, subject)
@@ -911,85 +917,6 @@ def _conflict(results: list[dict[str, Any]], shared: list[str]) -> str:
     return ""
 
 
-def _seed(text: str) -> int:
-    import zlib
-
-    return zlib.crc32((text or "").encode("utf-8"))
-
-
-def _pick(options: list[str], key: str) -> str:
-    """Deterministic variety.
-
-    The same question always gets the same sentence, so the voice is a voice and
-    not a slot machine — but different questions do not all read identically.
-    """
-    return options[_seed(key) % len(options)]
-
-
-def _gloss(result: dict[str, Any], first: bool) -> str:
-    """One line on what a given source is for."""
-    src = result.get("source", "")
-    if src == "Stack Exchange":
-        return "someone hit this exact problem" if first else "another thread on it"
-    if first:
-        return "the main article"
-    return "more detail"
-
-
-def _synthesize_thoughts(
-    query: str,
-    results: list[dict[str, Any]],
-    technical: bool,
-    interp: dict[str, Any],
-) -> str:
-    """Generate energetic, substantive, and creative lateral thoughts on the topic."""
-    if not results:
-        return ""
-    q_lower = query.lower()
-    titles = [r.get("title", "") for r in results]
-    first_title = titles[0] if titles else query
-
-    # General web search
-    if any(k in q_lower for k in ("tool", "search", "engine", "web search")):
-        return (
-            f"For **{first_title}**, the strongest results usually come from triangulating a focused question with primary sources — chase the original document or dataset rather than the aggregator that merely lists it."
-        )
-    # Technical, Engineering & AI
-    if technical or any(k in q_lower for k in ("code", "api", "python", "javascript", "db", "database", "server", "stream", "llm", "ai", "css", "html", "git", "cache", "network", "linux", "gpu", "webgpu", "memory")):
-        return (
-            f"From an engineering lens on **{first_title}**, the critical design lever is almost always state boundaries and deterministic fallbacks. Systems thrive when failure paths degrade gracefully to local offline caches rather than stalling the whole pipeline on upstream latency."
-        )
-    # History, Conflicts & Geopolitics
-    if any(k in q_lower for k in ("war", "battle", "treaty", "history", "ww2", "wwii", "president", "empire", "revolution", "soviet", "nazi", "reich", "churchill", "hitler", "stalin", "roosevelt", "stalingrad", "kursk", "barbarossa")):
-        return (
-            f"My historical read on **{first_title}**: everyone remembers the bold arrow on the map, but wars are won in the warehouse. For {first_title}, the boring truth is logistics and production — who could move fuel, shells, and food in winter — decided it before the famous charge did. That is less cinematic and more correct."
-        )
-    # Culture, Figures & Internet Lore
-    if any(k in q_lower for k in ("who is", "streamer", "youtuber", "drama", "influencer", "celebrity", "podcast", "figure", "manosphere", "looksmaxxing")):
-        return (
-            f"With figures and subcultures like **{first_title}**, modern discourse is heavily filtered through short-form clip economies and meme amplification. Digging into unedited long-form exchanges reveals far more about the real incentives than viral second-hand commentary."
-        )
-    # Figures & Controversial Public Figures — Grok has a take
-    if any(k in q_lower for k in ("nick fuentes", "fuentes", "clavicular", "kanye", "ye ", "trump", "biden", "musk", "tate")):
-        return (
-            f"My take on **{first_title}**: the facts above are the receipts, but the *why* is audience economics. Controversial figures scale by turning outrage into distribution — clips outrun context every time. If you only watch the 30-second cut, you will misjudge the person and the incentive. Watch one full long-form exchange and you will see the actual playbook, which is far more banal than the meme suggests."
-        )
-    # Render free-tier economics — must not fallback to generic Pro bono
-    if any(k in q_lower for k in ("render", "free tier", "free service", "freemium", "afford", "hosting", "sleep", "cold start")) or any(k in first_title.lower() for k in ("render", "free tier", "freemium")):
-        return (
-            f"My take on **{first_title}**: free is a funnel, not charity. Render lets free Web Services sleep after ~15 min idle — next request pays a ~30s cold start — because keeping it warm 24/7 is the real cost. They afford it by paying only for awake time, shared capacity, and converting you when you need always-on, Postgres/Redis, or scale. If you can live with sleep, free is honest; if you need uptime, you buy wakefulness."
-        )
-    # Self-aware lightweight-model comparison — avoid Madonna misfire
-    if any(k in q_lower for k in ("compare", "tinyllama", "tiny llama", "phi-3", "phi 3", "gemma", "qwen", "smollm", "lightweight", "small model")) and any(k in q_lower for k in ("you", "yourself", "archiver", "compare")):
-        return (
-            f"Where I sit vs those lights: I'm not a weights file — I'm retrieval + synthesis over ~1300 offline topics plus live WEB, built to idle on Render's free 512 MB instance (sleep -> ~30s wake) with no GPU. TinyLlama 1.1B, Qwen2.5 0.5B/1.5B and SmolLM2 1.7B *will* actually fit free (quantized GGUF, <400 MB RAM). Phi-3 mini 3.8B and Gemma 2 2B are sharper but want ~3-4 GB RAM, so you slip to paid. I trade pure model depth for grounded sources and privacy; they trade grounding for local LLM chops."
-        )
-    # Science, Philosophy & General Knowledge — Grok-styled, opinionated, not generic
-    return (
-        f"My read on **{first_title}**: skip the headline — find the constraint that actually binds it. For {first_title}, ask who pays, what must stay on, and what the default is. Most surprises live there, not in the press release."
-    )
-
-
 def brief(
     query: str,
     results: list[dict[str, Any]],
@@ -999,10 +926,14 @@ def brief(
     corrected: str = "",
     original: str = "",
 ) -> dict[str, Any]:
-    """Read the results back as a substantive, lively summary with grounding.
+    """Read the results back: the facts, then Archiver's own read of them.
 
-    Extracts key facts, background narrative, and technical details from the
-    retrieved sources into an informative synthesis with creative lateral thoughts.
+    The facts are sentences lifted from the sources. The read at the end is
+    built by `take.compose` from those same sentences — what kind of thing the
+    subject is, the span and hinge of the record, what the sources agree on,
+    and what the question asked for that they do not contain. It is a closing
+    paragraph of the answer, not a labelled section, and it is different for
+    every subject because it is made from that subject's own text.
     """
     reading = interp.get("restatement", "")
     if corrected:
@@ -1014,7 +945,8 @@ def brief(
             "headline": "",
             "reading": reading,
             "voice": "Nothing directly answering that found in live sources. Try rephrasing or asking more specifically.",
-            "additional_thoughts": "",
+            "take": "",
+            "plan": f"Read the question as {reading or query}; no live source cleared the confidence bar, so say so rather than dress up a weak match.",
             "confidence": "nothing worth citing",
             "sources": 0,
             "consensus": [],
@@ -1063,9 +995,9 @@ def brief(
     if conflict:
         paras.append(conflict)
 
-    thoughts = _synthesize_thoughts(query, results, technical, interp)
-    if thoughts:
-        paras.append(f"💡 **Additional Thoughts & Lateral Angles**\n{thoughts}")
+    read = take_mod.compose(query, results, interp, shared, conflict, level, technical)
+    if read["text"]:
+        paras.append(read["text"])
 
     voice = "\n\n".join(paras) if paras else ""
     label = {"high": "well supported", "single": "one source", "none": "nothing worth citing"}.get(level, "supported")
@@ -1074,7 +1006,8 @@ def brief(
         "headline": headline,
         "reading": reading,
         "voice": voice,
-        "additional_thoughts": thoughts,
+        "take": read["text"],
+        "plan": read["plan"],
         "confidence": label,
         "sources": n,
         "consensus": shared,

@@ -1,5 +1,36 @@
 # Changelog
 
+## 3.3 — 2026-09-26
+
+### A read of the sources, not a stock paragraph
+
+- **Removed `_synthesize_thoughts` and the “💡 Additional Thoughts & Lateral Angles” section.** It chose a paragraph by keyword bucket — influencer, Render, engineering, history, “compare … you” — and fell back to *“skip the headline — find the constraint that actually binds it. For X, ask who pays, what must stay on, and what the default is”* for everything else. The same sentences were returned for every topic in a bucket, and the fallback was nonsense for most subjects (it was shipped for Benito Mussolini).
+- **New `app/take.py`.** The closing paragraph of a web answer is built from the retrieved extracts: the lead sentence is parsed for what the subject *is* (“an Italian politician, journalist, and dictator”; “a major World War II Eastern Front battle”; “a high-level, general-purpose programming language”), the extracts are scanned for the span of years and the sentence that carries the turning point, the consensus and date-conflict checks say what the sources agree on and how independent they are (two Wikipedia pages are “one editorial view from two angles”), and the question’s shape is compared with what the extracts contain. A “why” asked of sources that only narrate says so and refuses to invent a cause; a “when” with no dates says so; a yes-or-no whose key word never appears in the sources answers with that absence; a Stack Exchange thread is read as a practitioner answer with a version caveat.
+- **It commits.** Archiver’s own sentences carry no hedges (`take.HEDGES` is checked in tests). Contested claims a source states as the subject’s own conduct are repeated as conduct — “the source does not hedge and neither will I” — and claims a source frames as allegations are repeated as allegations. Where a living figure’s long-form record is named in the extract (a show, a podcast), the read names it instead of advising the reader to “find a long-form source”.
+- **No heading.** The read is the last paragraph of the answer body, before the source list — the way a grounded answer from any mainline assistant ends. `report.additional_thoughts` is replaced by `report.take`; `report.plan` is new.
+- Two subjects cannot produce the same paragraph, and `tests/test_take.py` asserts that no sentence is shared between six unrelated subjects except the single-source caveat.
+
+### Thinking on literally every prompt
+
+- Every route states a one-line plan (`trace.thinking`, with `trace.planBy` saying whose it is): commands name the command, arithmetic names the expression and that it is evaluated with operator precedence, pasted-text work says it will add nothing that is not in the text, conversation says it retrieves nothing, a card match names the card and its strength, and the search path shows the server’s plan for the read. The Thought process panel opens on every answer and is labelled “Archiver’s plan” or “The model’s plan” accordingly.
+- A generated answer whose model skipped the `Thinking:` line shows the pipeline’s plan — approach, evidence held, backend — instead of an empty panel. The audit step says that is what happened.
+
+### The on-device model and the read
+
+- For a web-grounded generation the system prompt carries the facts and the draft read separately (“my draft read … sharpen it, contradict it where the evidence does, never paste it”) and adds a closing rule: finish with one short paragraph of your own assessment, specific to the subject, committed, with no heading and no generic advice.
+- The server persona (3.3) says the same, and untouched 3.2 personas are upgraded in place; customised ones are left alone as before.
+
+### Smaller
+
+- “What do you think?” after a search answers with the read built for that subject; without a grounded read it says it only has the local card and suggests WEB, instead of a rotating stock line.
+- `interpret_question` recognises a bare yes-or-no (“was mussolini a socialist”) as a verdict question and restates it as one.
+- Version 3.3 everywhere the version is stated: persona, default model label (with migration), `/api/health`, engine, corpus, page title, manifest, changelog panel.
+
+### Tests
+
+- `tests/test_take.py` (new): profile reading, the Mussolini regression, cross-subject distinctness, commitment and hedges, allegations vs conduct, why/when/yes-or-no shapes, events, Stack Exchange, `brief()` composition, and a source-level check that the 3.2 stock sentences are gone.
+- `tests/model.js`: a plan line on every prompt and per route, the pipeline fallback when the model skips its line, the grounded prompt’s draft read and closing rule, the read appearing once in the no-model answer with no heading, and the opinion follow-up.
+
 ## 3.2 — 2026-09-26
 
 ### Generation on Safari without WebGPU

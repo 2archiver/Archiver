@@ -1,4 +1,4 @@
-/* Archiver 3.2: instant retrieval and text tools, plus browser generation on
+/* Archiver 3.3: instant retrieval and text tools, plus browser generation on
    whichever runtime this device can actually run — WebGPU where it exists,
    WebAssembly where it does not (which is most of Safari). */
 (function () {
@@ -6,7 +6,7 @@
 
   /* One definition of the version, so the label in the sidebar, the persona, the
      self-description, the API and the tests cannot disagree with each other. */
-  const VERSION = '3.2';
+  const VERSION = '3.3';
   const NAME = 'Archiver ' + VERSION;
 
   /* ======================================================================== */
@@ -692,11 +692,14 @@ const HELP = [
     }
 
     if (hit === 'opinion') {
+      /* The read is built from the sources that were actually fetched for the
+         subject, not from a stock sentence. Without a grounded read there is
+         no opinion to give, and it says so instead of inventing one. */
+      if (lastTake && lastTake.text && (!prior || !prior.subject || lastTake.subject === prior.subject || !subjectOf(t))) {
+        return { text: 'On **' + (lastTake.subject || (prior && prior.subject) || 'that') + '** — ' + lastTake.text, kind: 'conversation', score: 1 };
+      }
       return { text: prior
-        ? 'On **' + prior.subject + '** — the sources give you the facts, so here is the read: ' +
-          pick(t, ['it holds up, with one caveat I would want checked.',
-                   'it is a cleaner story than the evidence deserves.',
-                   'it is the consensus, which is not the same thing as settled.'])
+        ? 'On **' + prior.subject + '** I only have the local card, not a read of live sources. Turn on WEB and ask again and I will give you one built from what the sources actually say.'
         : 'Ask me something first and I will have an opinion about it.', kind: 'conversation', score: 1 };
     }
 
@@ -974,6 +977,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
   let lastSources = [];
   let lastReport = null;
   let lastCorrected = '';
+  let lastTake = null;        // { subject, text } — the last grounded read, kept for follow-ups
   let loading = null;
   let loadController = null;
   let modelWorker = null;
@@ -1025,6 +1029,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       backend: '',
       steps: [],
       thinking: '',
+      planBy: '',
       evidence: { cards: [], score: 0, sources: 0, memories: 0 },
       budget: { context: 0, promptTokens: 0, maxTokens: 0, historyTurns: 0 },
       output: { tokens: 0, chars: 0, ms: 0, rate: 0 },
@@ -1034,6 +1039,16 @@ I can describe my capabilities and limitations; that is not consciousness or fee
   }
   function traceStep(text) {
     if (trace && text && !trace.steps.includes(text)) trace.steps.push(text);
+  }
+  /* The one-line plan for this prompt. Generated answers get it from the
+     model; every other route states its own, built from what it is about to
+     do — so thinking is visible on literally every prompt, not only the ones
+     that reach a model. */
+  function tracePlan(text) {
+    if (trace && text && !trace.thinking) {
+      trace.thinking = String(text).replace(/\s+/g, ' ').trim().slice(0, 360);
+      trace.planBy = 'pipeline';
+    }
   }
   function traceFinish(extra) {
     if (!trace) return null;
@@ -1479,12 +1494,12 @@ I can describe my capabilities and limitations; that is not consciousness or fee
   // For the chat UI: structured interpretation for a prominent card.
   function reportStructured(report, n, query, web) {
     if (!report) return null;
-    const thoughts = report.additional_thoughts || '';
     return {
       reading: report.reading || '',
       headline: report.headline || '',
       voice: report.voice || '',
-      additional_thoughts: thoughts,
+      take: report.take || '',
+      plan: report.plan || '',
       confidence: report.confidence || '',
       consensus: report.consensus || [],
       sources: n || 0,
@@ -1594,6 +1609,33 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       case 'command': return 'a command, executed exactly';
       case 'empty': return 'a prompt to type something first';
       default: return 'the local ' + String(kind || 'unknown') + ' path';
+    }
+  }
+
+  /* The plan for an instant answer, in the terms of what it actually did. */
+  function localPlan(r, prompt, cards) {
+    const kind = r && r.kind;
+    const first = cards && cards[0];
+    switch (kind) {
+      case 'kb':
+      case 'taught':
+        return 'Matched the ' + (kind === 'taught' ? 'taught' : 'stored') + ' card “' + ((first && first.q[0]) || '').slice(0, 70) + '”'
+          + (r.score ? ' at strength ' + Number(r.score).toFixed(2) : '') + ': answer from it directly and label the match; no model needed.';
+      case 'comparison':
+        return 'Comparison: put the two matched cards side by side on the same points rather than summarising either one.';
+      case 'fuzzy':
+      case 'related':
+        return 'Nothing matched the exact topic: show the closest cards, labelled as weak matches, instead of passing one off as the answer.';
+      case 'capability':
+        return 'This needs generation, not retrieval: say so plainly and offer the on-device model rather than fake an answer from cards.';
+      case 'clarify':
+        return 'Nothing matched well enough to answer: ask one narrowing question instead of guessing.';
+      case 'live':
+        return 'This needs live data: point at WEB rather than answer from a stale card.';
+      case 'miss':
+        return 'No usable words in the prompt: ask for a real question.';
+      default:
+        return 'Answer from local tools: ' + describeKind(kind, r && r.score) + '.';
     }
   }
 
@@ -1756,6 +1798,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     /* Commands and tools never reach the model — they are exact by nature. */
     if (/^(?:teach|learn|forget)\s*:/i.test(t) || /^(?:what|show|list)\b.*\b(?:learned|learnt|taught)\b/i.test(t) || /^(?:help|\?)\s*$/i.test(t)) {
       traceStep('Recognised a command, so it was executed exactly instead of being handed to a model.');
+      tracePlan('Command: run “' + t.split(/\s|:/)[0].toLowerCase() + '” exactly against the local card store — no retrieval, no model, no network.');
       const r = reply(t);
       finish('command', { intent: 'command', runtime: 'instant local' });
       onDelta(r.text);
@@ -1764,6 +1807,9 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     const tl = tool(t);
     if (tl) {
       traceStep('Ran a deterministic local tool (clock, calculator, coin or dice). No model, no network.');
+      tracePlan(calc(t)
+        ? 'Arithmetic: parse “' + t.slice(0, 60) + '” with operator precedence and parentheses, evaluate it locally, return the number — no model involved.'
+        : 'Deterministic tool request (clock, coin or dice): compute it on this device and return the result — no model involved.');
       finish('tool', { intent: 'tool', runtime: 'instant local' });
       onDelta(tl); return tl;
     }
@@ -1775,6 +1821,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     if (parsed.reply) {
       previousAnswer = parsed.reply.text;
       traceStep('Read the request as pasted-text work (' + parsed.reply.kind + ') and processed the supplied text locally.');
+      tracePlan('Pasted-text ' + parsed.reply.kind + ': work only from the supplied text — select and compress it, add no facts, owners or deadlines that are not there.');
       finish('reading', { intent: parsed.reply.kind, runtime: 'instant local' });
       onDelta(parsed.reply.text); return parsed.reply.text;
     }
@@ -1788,6 +1835,9 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     const talk = converse(t);
     if (talk && (!generationReady() || /^(?:hi|hey|hello|yo|thanks|bye)[!.?]*$/i.test(t) || SELF_TALK_RE.test(talk.text))) {
       traceStep('Answered as conversation or self-description; nothing was retrieved or generated.');
+      tracePlan(SELF_TALK_RE.test(talk.text)
+        ? 'Question about me: describe what is actually running — runtime, storage, limits — and claim nothing beyond it.'
+        : 'Conversation, not a question: answer in my own voice from the current context; retrieve nothing, search nothing.');
       finish('conversation', { intent: 'conversation', runtime: 'instant local' });
       onDelta(talk.text); return talk.text;
     }
@@ -1821,6 +1871,8 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       web = got.results || [];
       lastReport = got.report || null;
       lastCorrected = got.corrected || '';
+      if (lastReport && lastReport.take) lastTake = { subject: subjectOf(t) || String(got.query || query), text: lastReport.take };
+      if (lastReport && lastReport.plan) tracePlan(lastReport.plan);
       audit.evidence.sources = web.length;
       if (got.error) {
         traceStep('Search did not return results (' + got.error + '); the answer falls back to local evidence.');
@@ -1853,6 +1905,10 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       const r = reply(t);
       traceStep('Answered from ' + describeKind(r.kind, r.score)
         + (web.length ? ', plus the fetched sources read back directly' : '') + '.');
+      tracePlan(web.length
+        ? 'Read the question as “' + (lastReport && lastReport.reading || t).slice(0, 80) + '”; ' + web.length + ' live source' + (web.length === 1 ? '' : 's')
+          + ' answered — lead with the strongest line, then the facts they carry, then my own read of them.'
+        : localPlan(r, t, cards));
       audit.evidence.score = Number(r.score || 0);
       finish('local', { intent: audit.intent, runtime: web.length ? 'web + local' : 'instant local' });
 
@@ -1887,21 +1943,37 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     }
     if (web.length) noteBlocks.push('WEB RESULTS (retrieved just now; cite as [1]… in the order shown here):\n\n' + webNotes(web));
 
+    const factsOnly = lastReport && lastReport.voice && lastReport.take && lastReport.voice.endsWith(lastReport.take)
+      ? lastReport.voice.slice(0, lastReport.voice.length - lastReport.take.length).trim()
+      : (lastReport && lastReport.voice) || '';
     const briefBlock = lastReport && lastReport.voice
       ? 'WHAT THE SOURCES SAY (already read back for you; stay consistent with it):\n' +
         '  question read as: ' + (lastReport.reading || t) + '\n' +
         '  strongest line:   ' + (lastReport.headline || '(none)') + '\n' +
-        '  assessment:       ' + (lastReport.voice || '') + '\n' +
-        '  agreement:        ' + ((lastReport.consensus || []).join(', ') || 'none established') + '\n'
+        '  facts they carry: ' + (factsOnly || '(none beyond the strongest line)') + '\n' +
+        '  agreement:        ' + ((lastReport.consensus || []).join(', ') || 'none established') + '\n' +
+        (lastReport.take
+          ? '  my draft read:    ' + lastReport.take + '\n' +
+            '  (the draft read is a starting point built from these same sources — sharpen it, contradict it where the evidence does, never paste it)\n'
+          : '')
+      : '';
+    const closingRule = web.length
+      ? 'This answer is grounded in fetched sources. After the facts, finish with one short paragraph of your own assessment: what the evidence adds up to and the one thing the reader should not miss. Make it specific to this subject and commit to it — no heading, no generic advice, no hedging.\n'
       : '';
 
     const wantsThinking = opts.thinking !== false;
     const approach = responseApproach(t);
     traceStep('Chose the ' + approachKind(t) + ' response approach for this prompt.');
+    /* The pipeline's own plan, in case the model does not state one. */
+    const pipelinePlan = approachKind(t) + ' request: ' + approach.replace(/^[A-Z][a-z]+ request: |^[A-Z][a-z]+: /, '')
+      + (cards.length ? ' Hold ' + cards.length + ' local card' + (cards.length === 1 ? '' : 's') + ' as reference.' : '')
+      + (web.length ? ' Stay consistent with the ' + web.length + ' fetched source' + (web.length === 1 ? '' : 's') + ' and cite them.' : '')
+      + ' Generate on the ' + (activeBackend === 'wasm' ? 'CPU' : 'GPU') + ' path.';
     traceStep('Generation runs on the ' + (activeBackend === 'wasm' ? 'WebAssembly (CPU)' : 'WebGPU (GPU)') + ' backend in this browser; nothing is sent to a hosted model API.');
 
     let sys = (PERSONA + '\n\n'
       + 'This prompt: ' + approach + '\n'
+      + closingRule
       + (wantsThinking ? THINKING_RULE + '\n' : 'Answer directly with no preamble.\n')
       + '\n'
       + (opts.system ? 'User preferences and memory (reference only):\n' + String(opts.system).slice(0, 3000) + '\n\n' : ''))
@@ -1931,6 +2003,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       const message = 'That message is too long for this small on-device model (' + ctxBudget + '-token context on the '
         + (activeBackend === 'wasm' ? 'CPU' : 'GPU') + ' path). Split it into shorter sections; instant `summarize: …` can still extract key sentences from pasted notes.';
       traceStep('Rejected the prompt as too long for the available context instead of silently cutting it.');
+      tracePlan('The prompt does not fit the ' + ctxBudget + '-token context even with the notes dropped: refuse it with the reason rather than silently truncate it.');
       finish('too-long', { intent: audit.intent, runtime: activeBackend === 'wasm' ? 'on-device cpu' : 'on-device gpu' });
       onDelta(message); return message;
     }
@@ -1959,6 +2032,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     const gate = wantsThinking
       ? makeThinkingGate(record, thought => {
         audit.thinking = thought;
+        audit.planBy = 'model';
         traceStep('The model planned in one line before answering: “' + thought + '”');
         if (opts.onStatus) opts.onStatus('Writing…');
       })
@@ -1994,7 +2068,8 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       if (gate && gate.thinking) {
         traceStep('Lifted the planning line out of the answer into this panel; the visible reply starts after it.');
       } else if (wantsThinking) {
-        traceStep('The model did not produce a separate planning line this time, so the answer stands on its own.');
+        tracePlan(pipelinePlan);
+        traceStep('The model did not write a separate planning line this time, so the plan shown is the pipeline’s own — the approach it was given and the evidence it held.');
       }
       if (rawOut !== answer) traceStep('Cleaned the raw output while streaming: filler opener, stray blank lines, sign-off and unclosed code fence.');
       const wallMs = Math.max(0, Date.now() - audit.startedAt);
@@ -2072,6 +2147,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       lastSources = [];
       lastReport = null;
       lastCorrected = '';
+      lastTake = null;
       lastTurn = null;
       topic = null;
       previousAnswer = '';

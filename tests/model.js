@@ -61,7 +61,8 @@ async function fixture(options = {}) {
     },
     localStorage: { getItem: key => storage.get(key) || null, setItem: (key, value) => storage.set(key, value) },
     Worker: class { terminate() { stats.terminated++; } },
-    fetch: () => { throw Error('unexpected fetch'); }
+    // Throws unless a test installs a search stub on stats.fetch.
+    fetch: (...args) => { if (stats.fetch) return stats.fetch(...args); throw Error('unexpected fetch'); }
   };
   ctx.window = ctx;
   vm.createContext(ctx);
@@ -98,7 +99,7 @@ const GENERATIVE = 'write a poem about rain';
 (async () => {
   /* ---------------- WebGPU backend (unchanged fast path) ---------------- */
   const { A, stats, storage } = await fixture();
-  assert.equal(A.version, '3.2');
+  assert.equal(A.version, '3.3');
   assert.equal(Array.from(A.status().backendCandidates).join(','), 'webgpu,wasm', 'both runtimes are available here');
   for (const q of ['hello', '2+2', 'compare Python and JavaScript', 'summarize: One. Two.']) await A.chat(q, []);
   assert.equal(stats.imports.length, 0, 'instant tasks do not download a model');
@@ -148,13 +149,18 @@ const GENERATIVE = 'write a poem about rain';
   assert.equal(poem, 'Rain falls softly.', 'the planning line is lifted out of the visible answer');
   assert.equal(seen, poem, 'and never streamed to the reader either');
   assert.match(thought.A.trace().thinking, /four plain lines/);
+  assert.equal(thought.A.trace().planBy, 'model');
   assert.match(thought.A.trace().steps.join(' | '), /planned in one line before answering/);
 
+  /* 3.3: a model that skips its planning line does not leave the panel empty —
+     the pipeline's own plan (approach, evidence held, backend) stands in. */
   const noThinking = await fixture({ chunks: ['Just an answer, no plan line.'] });
   const plain = await noThinking.A.chat(GENERATIVE, []);
   assert.equal(plain, 'Just an answer, no plan line.', 'a model that ignores the instruction still answers');
-  assert.equal(noThinking.A.trace().thinking, '');
-  assert.match(noThinking.A.trace().steps.join(' | '), /did not produce a separate planning line/);
+  assert.match(noThinking.A.trace().thinking, /^writing request: produce original wording/);
+  assert.match(noThinking.A.trace().thinking, /Generate on the GPU path/);
+  assert.equal(noThinking.A.trace().planBy, 'pipeline');
+  assert.match(noThinking.A.trace().steps.join(' | '), /did not write a separate planning line.*pipeline’s own/);
 
   const optOut = await fixture({ chunks: ['Thinking: hidden\n\nAnswer.'] });
   assert.equal(await optOut.A.chat(GENERATIVE, [], { thinking: false }), 'Thinking: hidden\n\nAnswer.',
@@ -184,6 +190,7 @@ const GENERATIVE = 'write a poem about rain';
     ['what is mitosis', /local knowledge card|No local card/],
     ['summarize: One. Two. Three.', /pasted-text work/],
   ];
+  const plans = [];
   for (const [q, want] of cases) {
     await audit.A.chat(q, []);
     const tr = audit.A.trace();
@@ -192,7 +199,57 @@ const GENERATIVE = 'write a poem about rain';
     assert.ok(tr.runtime, `every prompt records a runtime: ${q}`);
     assert.match(tr.steps.join(' | '), want, `the trail for "${q}" says what actually happened`);
     assert.match(tr.note, /Not a transcript of private reasoning/);
+    /* 3.3: thinking on literally every prompt — a plan line for each route,
+       stated in that route's own terms rather than one shared sentence. */
+    assert.ok(tr.thinking && tr.thinking.length > 20, `every prompt states a plan: ${q} -> ${JSON.stringify(tr.thinking)}`);
+    assert.equal(tr.planBy, 'pipeline', `an instant answer's plan is the pipeline's own: ${q}`);
+    plans.push(tr.thinking);
   }
+  assert.equal(new Set(plans).size, plans.length, 'the plans differ per route instead of being one recycled line');
+  assert.match(plans[1], /2 \+ 3 \* 4.*operator precedence/, 'the arithmetic plan names the expression');
+  assert.match(plans[2], /help/, 'the command plan names the command');
+  assert.match(plans[5], /supplied text/, 'the pasted-text plan says it works only from the supplied text');
+
+  /* ---------------- a web-grounded generated answer ---------------- */
+  const grounded = await fixture({ chunks: ['Thinking: Answer from the two sources, then close with my own read.', '\n\nMussolini was a dictator. The read: the 1922 appointment is the hinge.'] });
+  const REPORT = {
+    reading: 'who benito mussolini is',
+    headline: 'Benito Mussolini was an Italian politician, journalist, and dictator who led the Kingdom of Italy from 1922 until 1943.',
+    voice: 'He founded fascism in 1919.\n\nRead Mussolini as an Italian politician, journalist, and dictator. The record here runs 1919–1945.',
+    take: 'Read Mussolini as an Italian politician, journalist, and dictator. The record here runs 1919–1945.',
+    plan: 'Read the question as who benito mussolini is; 1 source (Wikipedia) describes Mussolini as a person; lead with the strongest line, then my own read of the 1919–1945 record.',
+    confidence: 'one source', sources: 1, consensus: ['National Fascist Party']
+  };
+  grounded.stats.fetch = async () => ({ ok: true, json: async () => ({
+    results: [{ title: 'Benito Mussolini', extract: 'x', url: 'https://en.wikipedia.org/wiki/Benito_Mussolini', source: 'Wikipedia', confidence: 0.9, quote: REPORT.headline }],
+    report: REPORT, confidence: 'single', corrected: '', query: 'benito mussolini'
+  }) });
+  /* Without a model: the read closes the answer, once, with no heading. */
+  const readBack = await grounded.A.chat('who is benito mussolini', [], { search: true });
+  assert.ok(readBack.includes(REPORT.take), 'the read is part of the answer body');
+  assert.equal(readBack.split(REPORT.take).length - 1, 1, 'and appears exactly once');
+  assert.ok(!/Additional Thoughts|Lateral Angles|💡/.test(readBack), 'no 3.2 heading, no emoji');
+  assert.ok(readBack.indexOf(REPORT.take) < readBack.indexOf('**Sources**'), 'the read precedes the source list');
+  assert.equal(grounded.A.trace().thinking, REPORT.plan, 'the search route shows the server’s plan as its thinking');
+  assert.equal(grounded.A.trace().planBy, 'pipeline');
+  /* "what do you think?" answers from that read, not a rotating stock line. */
+  const opinion = await grounded.A.chat('what do you think?', []);
+  assert.match(opinion, /Read Mussolini as an Italian politician/, 'the opinion follow-up reuses the grounded read');
+  assert.ok(!/holds up, with one caveat|cleaner story than the evidence|which is not the same thing as settled/.test(opinion), 'and not the 3.2 stock lines');
+
+  await grounded.A.load();
+  const gOut = await grounded.A.chat('who is benito mussolini', [], { search: true });
+  const gSys = grounded.stats.payload.messages[0].content;
+  assert.match(gSys, /my draft read:\s+Read Mussolini as an Italian politician/, 'the model receives the server read as a draft');
+  assert.match(gSys, /facts they carry: He founded fascism in 1919\.\s*\n/, 'the facts are passed without the draft read glued on');
+  assert.match(gSys, /never paste it/, 'and is told what to do with the draft');
+  assert.match(gSys, /finish with one short paragraph of your own assessment/, 'a grounded answer must close with the model’s own committed read');
+  assert.ok(!/Additional Thoughts|Lateral Angles/.test(gSys + gOut), 'the 3.2 heading is gone from prompt and answer');
+  assert.match(grounded.A.trace().thinking, /Answer from the two sources/, 'the model’s own plan line wins when it writes one');
+  const gInterp = grounded.A.interpretation();
+  assert.equal(gInterp.take, REPORT.take);
+  assert.equal(gInterp.plan, REPORT.plan);
+  assert.ok(!('additional_thoughts' in gInterp), 'the old field is not carried forward');
   await audit.A.chat(GENERATIVE, []);
   const genTrace = audit.A.trace();
   assert.equal(genTrace.route, 'generated');
@@ -305,5 +362,5 @@ const GENERATIVE = 'write a poem about rain';
   assert.match(fallback, /timed out/); assert.equal(timeout.A.status().loading, false);
   assert.ok(timeout.stats.terminated > 0);
 
-  console.log('Browser-generation checks passed: same-origin GPU and WASM runtimes, automatic backend choice, Safari CPU fallback, source retry, cache config, small model, enabled-by-default behavior, retry, timeout, cancellation, late results, prompt-specific instructions, visible one-line thinking, output shaping, per-turn audit trails, roles, and streaming (stub inference).');
+  console.log('Browser-generation checks passed: same-origin GPU and WASM runtimes, automatic backend choice, Safari CPU fallback, source retry, cache config, small model, enabled-by-default behavior, retry, timeout, cancellation, late results, prompt-specific instructions, a plan line on every prompt, grounded read in prompt and answer, output shaping, per-turn audit trails, roles, and streaming (stub inference).');
 })().catch(e => { console.error(e); process.exit(1); });

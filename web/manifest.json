@@ -1,5 +1,5 @@
 {
-  "name": "Archiver 3.2 — Your everyday assistant",
+  "name": "Archiver 3.3 — Your everyday assistant",
   "short_name": "Archiver",
   "description": "Instant local tools, browser generation on WebGPU or WebAssembly, and live web when you ask. Every answer shows what it did. Chats can sync to the app server.",
   "start_url": "/",
