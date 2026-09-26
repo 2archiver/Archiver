@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-title" content="Archiver">
 <meta name="format-detection" content="telephone=no">
 <meta name="mobile-web-app-capable" content="yes">
-<title>Archiver 3.1 — Your everyday assistant</title>
+<title>Archiver 3.2 — Your everyday assistant</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
@@ -20,7 +20,7 @@
 <style>
 
 /* ========================================================================
-   ARCHIVER — The Living Archive  (v3.1)
+   ARCHIVER — The Living Archive  (v3.2)
    A contemporary research desk + field journal, digital.
    Quiet, precise, tactile through spacing — not decoration.
    ======================================================================== */
@@ -405,7 +405,40 @@ a:hover { text-decoration-color: var(--ink); }
 .answer-trace-body li { margin: 3px 0; }
 .answer-trace-body li::marker { color: var(--accent); }
 .answer-trace-note { margin: 8px 0 0; color: var(--ink-3); font-size: 11px; }
-.answer-trace-tag { display: inline-flex; margin-left: auto; padding: 2px 7px; border: var(--border); border-radius: 999px; color: var(--accent); background: var(--accent-soft); font-size: 9.5px; letter-spacing: .04em; }
+.answer-trace-tag { display: inline-flex; margin-left: auto; padding: 2px 7px; border: var(--border); border-radius: 999px; color: var(--accent); background: var(--accent-soft); font-size: 9.5px; letter-spacing: .04em; flex-shrink: 0; }
+.answer-trace-summary { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* The model's own one-line plan, lifted out of the answer stream. Shown inside
+   the disclosure because it is reasoning, not part of the reply. */
+.answer-trace-think {
+  margin: 2px 0 9px; padding: 8px 10px; border-left: 2px solid var(--accent);
+  background: var(--accent-soft); border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+.answer-trace-think span {
+  display: block; font-family: var(--mono); font-size: 9.5px; letter-spacing: .07em;
+  text-transform: uppercase; font-weight: 700; color: var(--accent-ink); margin-bottom: 3px;
+}
+.answer-trace-think p { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--ink); }
+.answer-trace-facts {
+  display: flex; flex-wrap: wrap; gap: 5px 10px; margin: 9px 0 0; padding-top: 8px;
+  border-top: var(--border); font-family: var(--mono); font-size: 10px; color: var(--ink-3);
+}
+.answer-trace-facts b { color: var(--ink-2); font-weight: 700; }
+
+/* Live "thinking" line: what the pipeline is doing right now, in the row that
+   is about to be answered. Replaced by the disclosure above when it finishes. */
+.think-live {
+  display: flex; align-items: center; gap: 7px; margin-bottom: 7px;
+  font-family: var(--mono); font-size: 10px; letter-spacing: .05em; text-transform: uppercase;
+  color: var(--ink-3); min-height: 16px;
+}
+.think-live .spark {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex: 0 0 7px;
+  animation: thinkPulse 1.1s var(--ease) infinite;
+}
+.think-live .txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@keyframes thinkPulse { 0%, 100% { opacity: .25; transform: scale(.8); } 50% { opacity: 1; transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .think-live .spark { animation: none; opacity: .8; } }
 
 /* ---------- Evidence — index markers ---------- */
 .src-pills { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 10px; padding-top: 10px; border-top: var(--border); }
@@ -766,7 +799,8 @@ a:hover { text-decoration-color: var(--ink); }
 }
 
 
-/* 3.1 — compact conversation UI, touch-first without disabling browser zoom. */
+/* 3.1 — compact conversation UI, touch-first without disabling browser zoom.
+   3.2 adds the keyboard-aware rules below; both keep browser zoom working. */
 .app-shell { height: var(--viewport-height, 100dvh); min-height: 0; }
 .main, .chat-container, #chatThread, .msg-row { min-width: 0; min-height: 0; }
 .chat-container { overscroll-behavior: contain; scroll-padding-bottom: 24px; }
@@ -839,6 +873,57 @@ button, a, input, textarea, select { touch-action: manipulation; }
   .settings-overlay, .changelog-overlay { min-height: -webkit-fill-available; }
 }
 
+/* ---------- 3.2 — keyboard-aware layout ----------
+   --viewport-height is the LAYOUT viewport, written by archiver-viewport.js.
+   --kb-height is the software keyboard, and is 0 whenever there is no keyboard
+   (a collapsing toolbar does not count). Sizing the shell from the visual
+   viewport instead is what used to squeeze the thread while typing and leave a
+   blank gutter under the composer afterwards. */
+:root { --viewport-height: 100dvh; --kb-height: 0px; }
+.app-shell { height: var(--viewport-height, 100dvh); }
+
+/* A fixed overlay does not move when iOS scrolls the document to reveal a
+   caret, so its bottom edge ends up behind the keyboard. Give the keyboard the
+   space back instead of letting it cover the field. */
+.kb-open .settings-overlay,
+.kb-open .changelog-overlay { padding-bottom: calc(var(--kb-height, 0px) + 10px); }
+.kb-open .settings-modal,
+.kb-open .changelog-modal {
+  max-height: calc(var(--viewport-height, 100dvh) - var(--kb-height, 0px) - 20px);
+}
+.kb-open .mem-drawer, .kb-open .sidebar { height: var(--viewport-height, 100dvh); }
+
+/* With the keyboard up on a phone there is very little left. Spend it on the
+   conversation: the runtime line and the shortcut hint lose first. */
+.kb-open .ai-runtime-status { display: none; }
+.kb-cramped .composer-hint { display: none; }
+.kb-cramped .input-textarea { max-height: min(120px, 22dvh); }
+.kb-cramped .composer-tools { padding-bottom: 4px; }
+.kb-cramped .start-features, .kb-cramped .start-badge, .kb-cramped .ai-disclosure { display: none; }
+
+/* iOS Safari zooms the page on focus for any field whose computed font size is
+   under 16px — and then leaves it zoomed, which also makes every viewport
+   measurement wrong. Raising the text is the accessible fix; clamping the
+   viewport scale would be a regression for low-vision readers, so the meta tag
+   deliberately leaves zoom available and this rule does the work instead. */
+@media (pointer: coarse) {
+  input, textarea, select { font-size: 16px; }
+  .side-searchrow input { font-size: 16px; }
+  #memSearch, #newMem { font-size: 16px; }
+  .settings-modal input[type="text"], .settings-modal input[type="number"],
+  .settings-modal textarea, .settings-modal select { font-size: 16px; }
+  /* A 44px target is the documented minimum; the send button is round, so it
+     also needs the width to be tappable with a thumb. */
+  .send-btn { width: 44px; height: 44px; }
+  .ghost-btn { min-height: 40px; }
+}
+
+/* Respect a user who asked the OS to reduce motion: the keyboard inset is
+   applied instantly rather than eased. */
+@media (prefers-reduced-motion: reduce) {
+  .input-dock, .settings-modal, .changelog-modal { transition: none; }
+}
+
 </style>
 </head>
 <body>
@@ -854,7 +939,7 @@ button, a, input, textarea, select { touch-action: manipulation; }
           <path d="M0 10 Q 10 0, 20 10 T 40 10 T 60 10 T 80 10" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round"/>
         </svg>
       </span>
-      <span class="side-label">Archiver <span class="version-tag">3.1</span></span>
+      <span class="side-label">Archiver <span class="version-tag">3.2</span></span>
       <button class="side-x" id="sideClose" aria-label="Close menu" title="Close">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
@@ -906,7 +991,7 @@ button, a, input, textarea, select { touch-action: manipulation; }
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
         </button>
         <div class="model-badge-wrap">
-          <span class="model-name" id="modelLabel">Archiver <span class="version-tag">3.1</span></span>
+          <span class="model-name" id="modelLabel">Archiver <span class="version-tag">3.2</span></span>
           <div class="status-pill" id="topStatusPill" style="display:none !important;"><span class="dot"></span><span id="modelText">ready</span></div>
         </div>
       </div>
@@ -929,14 +1014,14 @@ button, a, input, textarea, select { touch-action: manipulation; }
         <div class="assistant-orb" aria-hidden="true"></div>
         <div class="start-greeting">What’s on <em>your mind?</em></div>
         <div class="start-sub">A quick question, a tricky concept, a page of notes. Start here.<br>Instant local tools, browser generation for open-ended work, and the web only when you ask.</div>
-        <p class="ai-disclosure">Browser generation prepares only for open-ended writing, explanations, coding and plans. Lookup, calculations and note extraction stay instant. The first use fetches a few hundred MB into your browser cache; Data Saver pauses it. No model runs on our server.</p>
+        <p class="ai-disclosure">Browser generation prepares only for open-ended writing, explanations, coding and plans. Lookup, calculations and note extraction stay instant. The first use fetches a few hundred MB into your browser cache; Data Saver pauses it. Archiver picks WebGPU where the browser has it and a WebAssembly runtime where it does not, so Safari is not left out. No model runs on our server.</p>
         <div class="start-features">
           <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> No model-provider key</span>
           <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Live web when you want it</span>
           <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg> Remembers you</span>
         </div>
         <div class="ob-chips" id="chips"></div>
-        <div style="margin-top:18px; font-size:11px; color:var(--fg-dim);">Archiver 3.1 · Chats can sync to this app’s server</div>
+        <div style="margin-top:18px; font-size:11px; color:var(--fg-dim);">Archiver 3.2 · Chats can sync to this app’s server</div>
       </div>
       <div id="chatThread" class="hidden" role="log" aria-label="Conversation" aria-live="polite" aria-relevant="additions"></div>
     </div>
@@ -1024,7 +1109,7 @@ button, a, input, textarea, select { touch-action: manipulation; }
             <span class="mark" aria-hidden="true">✓</span>
             <span><strong id="aiConfirmationTitle">Browser generation is enabled</strong><small id="aiConfirmationDetail">It will activate only for requests that need writing or explanations.</small></span>
           </div>
-          <p class="desc">Browser generation is always enabled for writing, explanations, coding and plans. Its status is shown here and beside the chat box; it activates on demand. The first use downloads model assets and requires WebGPU. Keep this page open while it prepares. Offline mode or an unsupported browser may prevent generation.</p>
+          <p class="desc">Browser generation is always enabled for writing, explanations, coding and plans. Its status is shown here and beside the chat box; it activates on demand. There is nothing to install and no download button: the first generative request fetches model assets into this browser’s cache and reuses them afterwards. Archiver picks the runtime automatically — WebGPU where the browser has it, and a WebAssembly (CPU) runtime where it does not, which is what most Safari installs get. Keep this page open while it prepares. Offline mode, Data Saver, or a browser with neither runtime will leave the instant tools running instead.</p>
           <button class="btn" id="retryModel" type="button" hidden>Retry browser generation</button>
           <div class="engine-bar" id="engineBar" style="display:none"><span id="engineBarFill"></span></div>
           <div class="engine-progress" id="engineProgress" style="display:none"></div>
@@ -1121,12 +1206,12 @@ button, a, input, textarea, select { touch-action: manipulation; }
         <legend>Updates</legend>
         <div class="update-row">
           <div class="update-meta">
-            <b>3.1.1</b><span>2026-09-26 · latest</span>
-            <p>Browser generation with retry, explicit runtime status, answer paths, Restore defaults, and Safari-friendly fallback. Local tools stay instant; designed for Render Free.</p>
+            <b>3.2</b><span>2026-09-26 · latest</span>
+            <p>Safari generates on a WebAssembly runtime when WebGPU is off — no flag, no install, no download button. The iOS keyboard no longer collapses the thread or leaves a gap under the composer. Every answer shows what it actually did.</p>
           </div>
           <button class="btn sm" id="openChangelog" style="white-space:nowrap; flex-shrink:0;">View changelog →</button>
         </div>
-        <div class="desc" style="margin-top:8px;">Newest first, from first commit. Also on <a href="https://github.com/2archiver/Archiver/commits/main" target="_blank" rel="noopener" style="color:var(--accent);">GitHub</a> · <span id="changelogCount" style="color:var(--ink-3);">43 releases</span></div>
+        <div class="desc" style="margin-top:8px;">Newest first, from first commit. Also on <a href="https://github.com/2archiver/Archiver/commits/main" target="_blank" rel="noopener" style="color:var(--accent);">GitHub</a> · <span id="changelogCount" style="color:var(--ink-3);">release history</span></div>
       </fieldset>
     </div>
     <footer>
@@ -1185,9 +1270,47 @@ button, a, input, textarea, select { touch-action: manipulation; }
     <div class="changelog-body">
       <div class="changelog-timeline">
         <div class="cl-entry" style="border-color:var(--accent)">
-          <div class="cl-head"><span class="cl-ver">3.1.1</span><span class="cl-tag">Latest</span><span class="cl-date">2026-09-26</span></div>
+          <div class="cl-head"><span class="cl-ver">3.2</span><span class="cl-tag">Latest</span><span class="cl-date">2026-09-26</span></div>
+          <div class="cl-title">Safari gets a real runtime, and every answer shows its thinking</div>
+          <div class="cl-body">
+            <p style="margin:0 0 6px; font-size:12.5px; line-height:1.55; color:var(--ink-2);">Two fixes people actually hit: the iPhone keyboard, and Safari having no way to generate at all.</p>
+            <ul>
+              <li><b>Generation on Safari without WebGPU.</b> A second vendored runtime — llama.cpp compiled to WebAssembly — is chosen automatically when the browser has no usable GPU. No flag to enable, nothing to install, no download button. Same model family, CPU instead of GPU, slower and labelled as such.</li>
+              <li><b>iOS keyboard rewritten.</b> The shell is now sized from the layout viewport, not the visual one. The thread no longer collapses while typing and the blank gutter under the composer after the keyboard closes is gone. Pinch-zoom and toolbar collapse are no longer mistaken for a keyboard.</li>
+              <li><b>Thinking on every prompt.</b> Generated answers start with one planning line; it is lifted out of the reply and shown in the Thought process panel. Instant answers get a panel too, built from what actually ran — matched card and its score, the arithmetic, the query searched, the backend chosen and why, tokens and seconds.</li>
+              <li><b>Better small-model output.</b> Task-specific approaches for eight request types, a presence penalty against repetition, and streaming cleanup of filler openers, blank-line padding, sign-offs and unclosed code fences.</li>
+              <li><b>Data Saver is now actually honored</b>, as 3.1 claimed. Offline, Data Saver, or a browser with neither runtime leaves instant tools working and says why.</li>
+              <li><b>Fields are 16px on touch devices</b>, so iOS stops zooming the page on focus and leaving it zoomed.</li>
+            </ul>
+          </div>
+          <div class="cl-foot"><span>3.2 · GPU + WASM</span><span>Try “write a short email” in Safari</span></div>
+        </div>
+
+        <div class="cl-entry">
+          <div class="cl-head"><span class="cl-ver">3.1.2</span><span class="cl-date">2026-09-26</span></div>
+          <div class="cl-title">Mobile Settings, always-on generation, longer first load</div>
+          <div class="cl-body"><ul><li>Settings dialog scrolls and its tap targets work on touch; opening it refreshes runtime status.</li><li>Browser generation is always enabled — the optional toggle is gone and legacy instant-only preferences migrate back.</li><li>Mobile Safari adapter selection retries without power hints; the first-load ceiling went from 90 seconds to eight minutes.</li><li>Task-specific response guidance added while hidden chain-of-thought stayed private.</li></ul></div>
+          <div class="cl-foot"><span>3.1.2</span><span>Superseded by 3.2 on Safari</span></div>
+        </div>
+
+        <div class="cl-entry">
+          <div class="cl-head"><span class="cl-ver">3.1.1</span><span class="cl-date">2026-09-26</span></div>
           <div class="cl-title">Reliable controls, transparency &amp; Safari polish</div>
           <div class="cl-body"><ul><li>Local replies no longer wait for the server. Working Stop, Retry and smoother streaming.</li><li>Browser generation for open-ended writing, explanations, coding and plans. A compact 0.5B model runs in a browser worker; no manual download or API key.</li><li>Restore defaults confirms before replacing custom settings; chats and memories stay.</li><li>Accessible answer paths show the tools, sources, saved context and runtime used, without exposing private chain-of-thought.</li><li>Browser-cached model assets, Data Saver/offline/WebGPU guards, bounded initialization, Retry during failed loading, safe areas and keyboard-aware mobile layout.</li></ul></div>
+        </div>
+
+        <div class="cl-entry">
+          <div class="cl-head"><span class="cl-ver">3.1</span><span class="cl-date">2026-09-26</span></div>
+          <div class="cl-title">Built-in AI, designed for Render Free</div>
+          <div class="cl-body"><ul><li>Pinned WebLLM 0.2.80 runtime and license shipped with the website; no inference-library CDN call and no deployment-time npm step.</li><li>Qwen2.5 0.5B initializes automatically for requests that need generation — no Settings detour, no manual install.</li><li>f16/f32 variant chosen from GPU capabilities; weights, tokenizer and GPU library fetched straight into the browser cache.</li><li>Server preparation moved off the response path; deterministic comparisons, formatting, extractive summaries, action items and a corrected calculator.</li><li>Render Blueprint pinned to <code>plan: free</code>, with SQLite’s ephemerality documented rather than papered over.</li></ul></div>
+          <div class="cl-foot"><span>3.1</span><span>Initialization ceiling was 90s, raised in 3.1.2</span></div>
+        </div>
+
+<div class="cl-entry">
+          <div class="cl-head"><span class="cl-ver">2.6</span><span class="cl-date">2026-09-25</span></div>
+          <div class="cl-title">Identity solid + real thinking</div>
+          <div class="cl-body"><p style="margin:0;">“Who is archiver” no longer returns Hegel. Bare “archiver”, “what is archiver” and “who is the archiver” all answer correctly. Self-detection expanded, dedicated identity card, stronger thinking prompt (precision over completeness). Version tags and knowledge base at 2.6.</p></div>
+          <div class="cl-foot"><span>96aa3c8</span><span>Identity</span></div>
         </div>
 
         <div class="cl-entry" style="border-color:var(--accent);">
@@ -1206,12 +1329,6 @@ button, a, input, textarea, select { touch-action: manipulation; }
 
         
         <div class="cl-entry">
-          <div class="cl-head"><span class="cl-ver">2.6</span><span class="cl-date">2026-09-25</span></div>
-          <div class="cl-title">Identity solid + real thinking</div>
-          <div class="cl-body"><p style="margin:0;">“Who is archiver” no longer returns Hegel. Bare “archiver”, “what is archiver” and “who is the archiver” all answer correctly. Self-detection expanded, dedicated identity card, stronger thinking prompt (precision over completeness). Version tags and knowledge base at 2.6.</p></div>
-          <div class="cl-foot"><span>96aa3c8</span><span>Identity</span></div>
-        </div>
-<div class="cl-entry">
           <div class="cl-head"><span class="cl-ver">2.4</span><span class="cl-date">2026-09-24</span></div>
           <div class="cl-title">1000 topics, Render-aware & intuitive</div>
           <div class="cl-body">
@@ -1296,14 +1413,14 @@ button, a, input, textarea, select { touch-action: manipulation; }
         </div>
 
         <div class="cl-entry">
-          <div class="cl-head"><span class="cl-ver muted">2.6</span><span class="cl-date">2026-09-23</span></div>
+          <div class="cl-head"><span class="cl-ver muted">2.6-era</span><span class="cl-date">2026-09-23</span></div>
           <div class="cl-title">Calmer reading</div>
           <div class="cl-body"><p style="margin:0;">Shorter answers, interpretation first, closeable sidebar.</p></div>
           <div class="cl-foot"><span>2db51f4</span><span>Readable</span></div>
         </div>
 
         <div class="cl-entry">
-          <div class="cl-head"><span class="cl-ver muted">2.2</span><span class="cl-date">2026-09-23</span></div>
+          <div class="cl-head"><span class="cl-ver muted">2.2-era</span><span class="cl-date">2026-09-23</span></div>
           <div class="cl-title">Search foundations</div>
           <div class="cl-body"><p style="margin:0;">Working search, no dead ends, multi-provider.</p></div>
           <div class="cl-foot"><span>8178c08</span><span>Search</span></div>
@@ -1324,7 +1441,7 @@ button, a, input, textarea, select { touch-action: manipulation; }
         </div>
 
         <details style="margin-top:6px; padding:10px; background:var(--surface-2); border:1px solid var(--line); border-radius:10px;">
-          <summary style="cursor:pointer; font-size:12px; font-weight:700; color:var(--ink);">See every commit (42) — technical list</summary>
+          <summary style="cursor:pointer; font-size:12px; font-weight:700; color:var(--ink);">Early commit list — technical snapshot, newest first above</summary>
           <div style="margin-top:10px; font-family:var(--mono); font-size:11px; line-height:1.7; color:var(--ink-2); word-break:break-all;">
             1f01a26 Initial · 89c6081 Grok test · 8644dc0 Saves memory · 0bff1db Remaining · 8d3891f Scripts · cb48a3d Render fix · c81c0d1 Main · 59f4aff Memory · c23cddb Serve UI · ee0b8ef 2.0 local · 7d654c2 I-am · d466642 Obsidian · 9c88bf5 Wiki 403 · 358c6f3 Multi-provider · 8178c08 Search · 7710e30 Docs · 0bb2020 No padding · 6cf983d Names · 2db51f4 Interpret first · 41a595a Calmer · 97867e2 Scrim · 3cffe3e Merge · ce7758b Human tone · ae78775 Smart trigger · bb29c7f Safari · 624955a Style · 938a348 Ranking · 18d4eb3 Greetings · fa540c3 No leakage · 377095b Memory · 1152144 Render · 581af70 OSINT · 564c7e7 Clean · cecca38 Archive · a8447bd OLED · d4bb8f0 Grok voice · 91c1cec Stand-alone · 9f4dc3c 300 · 02586a2 Private · c0cce63 Discord · dca64c5 Quieter · bdad073 Changelog btn · 74f6388 2.3 500 · 7899ac9 fix · <b>now → 2.4 · 1000</b>
           </div>
@@ -1344,6 +1461,7 @@ button, a, input, textarea, select { touch-action: manipulation; }
 
 <script src="/static/archiver-knowledge.js"></script>
 <script src="/static/archiver-comprehension.js"></script>
+<script src="/static/archiver-viewport.js"></script>
 <script src="/static/archiver-engine.js"></script>
 
 
@@ -1700,36 +1818,86 @@ button, a, input, textarea, select { touch-action: manipulation; }
       + '</details>';
   }
 
+  /* Runtime names a reader can act on. "on-device cpu" alone does not tell a
+     Safari user anything useful; the label says what it is and why. */
+  const RUNTIME_LABELS = {
+    'instant local': 'instant · local tools',
+    'web + local': 'web + local',
+    'on-device gpu': 'on-device · GPU',
+    'on-device cpu': 'on-device · CPU',
+    'error': 'failed · local fallback'
+  };
+
   function answerPathBox(path) {
-    if (!path || !Array.isArray(path.steps) || !path.steps.length) return '';
-    const steps = path.steps.filter(Boolean).slice(0, 7);
-    const tag = path.runtime ? '<span class="answer-trace-tag">' + esc(path.runtime) + '</span>' : '';
-    return '<details class="answer-trace">'
-      + '<summary><span>Thought process · answer path</span>' + tag + '</summary>'
-      + '<div class="answer-trace-body"><ul>' + steps.map(step => '<li>' + esc(step) + '</li>').join('') + '</ul>'
+    if (!path) return '';
+    const steps = (Array.isArray(path.steps) ? path.steps : []).filter(Boolean).slice(0, 14);
+    if (!steps.length && !path.thinking) return '';
+    const tag = path.runtime
+      ? '<span class="answer-trace-tag">' + esc(RUNTIME_LABELS[path.runtime] || path.runtime) + '</span>'
+      : '';
+    /* Generated answers are the interesting case, so the panel opens itself and
+       shows the model's own plan. Instant answers stay one tap away. */
+    const open = path.thinking ? ' open' : '';
+    const think = path.thinking
+      ? '<div class="answer-trace-think"><span>The model’s plan for this prompt</span><p>' + esc(path.thinking) + '</p></div>'
+      : '';
+    const ev = path.evidence || {};
+    const out = path.output || {};
+    const budget = path.budget || {};
+    const facts = [];
+    if (path.model) facts.push('<b>' + esc(path.model) + '</b>');
+    if (path.backend) facts.push(path.backend === 'wasm' ? 'WebAssembly runtime' : 'WebGPU runtime');
+    if (out.chars) facts.push(out.chars + ' chars');
+    if (out.tokens) facts.push('~' + out.tokens + ' tokens');
+    if (out.rate) facts.push(out.rate + ' tok/s');
+    if (path.ms) facts.push((path.ms / 1000).toFixed(1) + 's end to end');
+    if (budget.context) facts.push(budget.context + '-token context');
+    if (ev.cards && ev.cards.length) facts.push(ev.cards.length + ' local card' + (ev.cards.length === 1 ? '' : 's'));
+    if (ev.sources) facts.push(ev.sources + ' live source' + (ev.sources === 1 ? '' : 's'));
+    if (ev.memories) facts.push(ev.memories + ' saved memor' + (ev.memories === 1 ? 'y' : 'ies'));
+    const factLine = facts.length ? '<div class="answer-trace-facts">' + facts.map(f => '<span>' + f + '</span>').join('') + '</div>' : '';
+    return '<details class="answer-trace"' + open + '>'
+      + '<summary><span class="answer-trace-summary">Thought process · answer path</span>' + tag + '</summary>'
+      + '<div class="answer-trace-body">'
+      + think
+      + '<ul>' + steps.map(step => '<li>' + esc(step) + '</li>').join('') + '</ul>'
+      + factLine
       + (path.note ? '<p class="answer-trace-note">' + esc(path.note) + '</p>' : '')
       + '</div></details>';
   }
 
-  function makeAnswerPath({ usedModel, searchRequested, sources, memories }) {
-    const steps = ['Checked the request against Archiver’s local tools and stored knowledge.'];
-    if (searchRequested) {
-      steps.push(sources.length
-        ? 'Read ' + sources.length + ' live source' + (sources.length === 1 ? '' : 's') + ' because WEB was on.'
-        : 'WEB was on, but no live source was returned; no source was invented.');
-    } else {
-      steps.push('WEB was off, so no live search was used.');
+  /* The engine records what it actually did for this prompt — every prompt, not
+     only the ones that reached a model. This only shapes that record for
+     display and adds the two things the engine cannot see: whether the reader
+     had asked for WEB, and how many saved memories the page chose to pass. */
+  function makeAnswerPath({ trace, searchRequested, memories, usedModel }) {
+    if (!trace || !Array.isArray(trace.steps)) {
+      /* No engine record (an old cached turn, or an error before the pipeline
+         started). Say so rather than inventing a plausible-looking trail. */
+      return {
+        runtime: usedModel ? 'on-device gpu' : 'instant local',
+        steps: ['This answer was produced before the audit trail was recorded, so only the runtime is known.'],
+        note: 'Thought process records start with Archiver 3.2.'
+      };
     }
-    if (memories) steps.push('Selected ' + memories + ' relevant saved memor' + (memories === 1 ? 'y' : 'ies') + ' for context.');
-    if (usedModel) {
-      steps.push('Generated the response with the small language model in this browser worker.');
-    } else {
-      steps.push('Returned a deterministic local result: retrieval, calculation, comparison or text extraction.');
+    const steps = trace.steps.slice();
+    if (searchRequested && !(trace.evidence || {}).sources) {
+      steps.push('WEB was requested for this turn; the trail above says whether a source came back.');
     }
+    const ev = Object.assign({}, trace.evidence || {});
+    if (!ev.memories && memories) ev.memories = memories;
     return {
-      runtime: usedModel ? 'on-device' : searchRequested && sources.length ? 'web + local' : 'instant local',
+      runtime: trace.runtime || (usedModel ? 'on-device gpu' : 'instant local'),
+      route: trace.route || '',
+      backend: trace.backend || '',
+      model: trace.model || '',
+      thinking: trace.thinking || '',
+      ms: trace.ms || 0,
       steps,
-      note: 'This is a concise audit trail of the tools used, not a verbatim private reasoning transcript.'
+      evidence: ev,
+      output: trace.output || {},
+      budget: trace.budget || {},
+      note: trace.note || 'A record of what actually ran for this prompt.'
     };
   }
 
@@ -1819,10 +1987,22 @@ button, a, input, textarea, select { touch-action: manipulation; }
     const body = $('.msg-body', aEl);
     body.innerHTML = '<span class="typing-dots"><i></i><i></i><i></i></span>';
 
+    /* Thinking is visible on every prompt, not just the ones that reach a model:
+       this line names the step the pipeline is on while it works, and is
+       replaced by the permanent Thought process disclosure when it finishes. */
+    const thinkEl = document.createElement('div');
+    thinkEl.className = 'think-live';
+    thinkEl.setAttribute('aria-live', 'polite');
+    thinkEl.innerHTML = '<span class="spark" aria-hidden="true"></span><span class="txt">Thinking\u2026</span>';
+    aEl.insertBefore(thinkEl, body);
+    const setThinking = txt => { const t = $('.txt', thinkEl); if (t && txt) t.textContent = txt; };
+    const dropThinking = () => { if (thinkEl.parentNode) thinkEl.parentNode.removeChild(thinkEl); };
+
     state.streaming = true; updateSend();
     state.abort = new AbortController();
     const signal = state.abort.signal;
     $('#composerStatus').textContent = state.search ? 'Searching…' : 'Working locally…';
+    setThinking(state.search ? 'Searching the web and reading the request…' : 'Reading the request…');
     const A = window.Archiver;
     let acc = '', ctx = [], frame = null, usedModel = false, answerPath = null;
     const onDelta = piece => {
@@ -1859,6 +2039,7 @@ button, a, input, textarea, select { touch-action: manipulation; }
         onGeneration: () => { usedModel = true; },
         onStatus: (s) => {
           $('#composerStatus').textContent = s;
+          setThinking(s);
           paintEngine();
           if (s && s.toLowerCase().includes('search')) {
             $('#toggleSearch').classList.add('searching'); $('#cbSearch').classList.add('searching');
@@ -1872,9 +2053,9 @@ button, a, input, textarea, select { touch-action: manipulation; }
       if (signal.aborted) throw new DOMException('Stopped', 'AbortError');
       const sources = A.sources ? A.sources() : [];
       answerPath = makeAnswerPath({
+        trace: typeof A.trace === 'function' ? A.trace() : null,
         usedModel,
         searchRequested: state.search || /^(?:search|lookup|look up|google|find out about|find me|browse)\b/i.test(text),
-        sources,
         memories: usedModel ? ctx.length : 0
       });
 
@@ -1885,6 +2066,7 @@ button, a, input, textarea, select { touch-action: manipulation; }
       }
       cleanAnswer = cleanAnswer.replace(/^\*\*Archiver reads this as[^\n]*\*\*\n+/i, '').trim();
 
+      dropThinking();
       body.innerHTML = md(cleanAnswer);
 
       if (sources.length) {
@@ -1927,6 +2109,7 @@ button, a, input, textarea, select { touch-action: manipulation; }
       syncTurn(sid, text, answer, ctx, answerPath);
 
     } catch (err) {
+      dropThinking();
       if (err.name === 'AbortError') {
         body.innerHTML = md(acc) + '<p style="color:var(--ink-3);font-size:12px">— stopped —</p>';
         LocalStore.addMessage(sid, { role: 'archiver', content: (acc || '') + '\n\n— stopped —', created_at: Date.now() / 1000 });
@@ -1935,6 +2118,7 @@ button, a, input, textarea, select { touch-action: manipulation; }
         toast(err.message, 'err');
       }
     } finally {
+      dropThinking();
       if (frame !== null) cancelAnimationFrame(frame);
       $('#toggleSearch').classList.remove('searching'); $('#cbSearch').classList.remove('searching');
       $('#composerStatus').textContent = signal.aborted ? 'Stopped' : '';
@@ -1985,7 +2169,15 @@ button, a, input, textarea, select { touch-action: manipulation; }
   function grow() {
     const ta = $('#chatInput');
     ta.style.height = 'auto';
-    ta.style.height = Math.min(ta.scrollHeight, 200) + 'px';
+    /* Read the cap from the stylesheet rather than repeating 200 here: the
+       cramped-keyboard rule lowers it, and an inline height would win. */
+    let cap = 200;
+    try {
+      const cm = getComputedStyle(ta).maxHeight;
+      const px = cm && cm.indexOf('px') === cm.length - 2 ? parseFloat(cm) : NaN;
+      if (px > 40) cap = px;
+    } catch (_) {}
+    ta.style.height = Math.min(ta.scrollHeight, cap) + 'px';
     updateSend();
   }
 
@@ -2086,14 +2278,22 @@ button, a, input, textarea, select { touch-action: manipulation; }
     const A = window.Archiver;
     if (!A) return;
     const st = A.status();
+    /* Say which runtime is actually serving generation. "active" on a GPU
+       browser and "active" on Safari's CPU path are very different experiences
+       and the reader is entitled to know which one they got. */
+    const backendWord = st.backend === 'wasm' ? 'on this device’s CPU'
+      : st.backend === 'webgpu' ? 'on this device’s GPU' : '';
     const labels = {
-      ready: 'Browser generation · active',
+      ready: 'Browser generation · active' + (backendWord ? ' ' + backendWord : ''),
       loading: 'Preparing browser generation…',
       error: 'Browser generation unavailable · instant tools ready',
       paused: 'Browser generation · waiting for support or connection',
       idle: 'Browser generation · enabled when needed'
     };
     const label = labels[st.aiState] || labels.idle;
+    const candidates = (st.backendCandidates || []).slice();
+    const planWord = candidates.indexOf('webgpu') === 0 ? 'WebGPU'
+      : candidates.length ? 'WebAssembly (CPU)' : 'none';
     const confirm = $('#aiConfirmation');
     const confirmTitle = $('#aiConfirmationTitle');
     const confirmDetail = $('#aiConfirmationDetail');
@@ -2101,7 +2301,9 @@ button, a, input, textarea, select { touch-action: manipulation; }
     $('#idxMeter').textContent = st.cards;
     $('#engineDot').className = 'dot ' + (st.aiState === 'error' || st.aiState === 'paused' ? 'warn' : 'on');
     $('#engineMode').textContent = label;
-    $('#engineModel').textContent = st.modelPretty ? st.modelPretty : '';
+    $('#engineModel').textContent = st.modelPretty
+      ? st.modelPretty + (st.backend === 'wasm' ? ' · WASM' : st.backend === 'webgpu' ? ' · WebGPU' : '')
+      : '';
     $('#aiRuntimeStatus').textContent = label;
     $('#aiRuntimeStatus').title = st.aiReason || 'Browser generation is reserved for open-ended writing, explanations, coding and plans.';
     if (confirm) {
@@ -2115,12 +2317,16 @@ button, a, input, textarea, select { touch-action: manipulation; }
             ? 'Browser generation is currently unavailable'
             : 'Browser generation is enabled';
       confirmDetail.textContent = st.aiState === 'ready'
-        ? 'Writing and explanations can now run on-device; lookup and note tools remain instant.'
-        : (st.aiReason || 'It will activate only for requests that need writing or explanations.');
+        ? (st.backend === 'wasm'
+          ? 'Running the WebAssembly runtime on this device’s CPU because WebGPU is not available here. Writing and explanations work; expect slower output than a GPU browser. Lookup and note tools remain instant.'
+          : 'Writing and explanations can now run on-device through WebGPU; lookup and note tools remain instant.')
+        : st.aiState === 'idle'
+          ? 'It will activate only for requests that need writing or explanations. This browser will use ' + planWord + '; no manual download or settings change is needed.'
+          : (st.aiReason || 'It will activate only for requests that need writing or explanations.');
     }
     /* Keep Retry available for a failed load or a temporary offline/WebGPU
        limitation. It is disabled only while an attempt is actually running. */
-    const retryablePause = st.aiState === 'paused' && st.aiEnabled && /offline|Data Saver|WebGPU/i.test(st.aiReason || '');
+    const retryablePause = st.aiState === 'paused' && st.aiEnabled && /offline|Data Saver|WebGPU|WebAssembly/i.test(st.aiReason || '');
     retry.hidden = !(st.aiState === 'error' || retryablePause);
     retry.disabled = st.loading;
     $('#engineProgress').style.display = st.loading || st.aiReason ? 'block' : 'none';
@@ -2227,18 +2433,39 @@ button, a, input, textarea, select { touch-action: manipulation; }
     }
   }
 
+  /* ---------- viewport + software keyboard (iOS Safari) ----------
+     The shell is sized from the layout viewport; the keyboard is tracked as
+     separate state. Sizing the shell from visualViewport.height — what this
+     used to do — is exactly what makes the thread collapse while you type and
+     leaves the document scrolled, with a blank gutter under the composer, once
+     the keyboard goes away. See archiver-viewport.js and tests/viewport.js. */
+  let viewportManager = null;
   function initKeyboard() {
-    if (!window.visualViewport) return;
-    const vv = window.visualViewport;
-    const fit = () => {
-      if (vv.scale === 1) document.documentElement.style.setProperty('--viewport-height', vv.height + 'px');
-      const open = window.innerHeight - vv.height > 120;
-      if (open) {
-        scrollDown();
+    const V = window.ArchiverViewport;
+    if (!V) return;
+    viewportManager = V.createViewportManager({
+      window: window,
+      document: document,
+      shell: $('#shell'),
+      thread: $('#chatContainer'),
+      // Follow the newest line only if the reader is already near the bottom;
+      // yanking someone back down mid-scroll is worse than the keyboard.
+      scrollThread: () => scrollDown(),
+      onState: st => {
+        /* On a short screen with the keyboard up, the hint row and the runtime
+           line are worth less than the extra room. */
+        document.documentElement.classList.toggle('kb-cramped', !!st.keyboardOpen && st.visualHeight < 460);
       }
-    };
-    vv.addEventListener('resize', fit);
-    fit();
+    });
+    /* Any field under 16px makes iOS Safari zoom the page on focus and then
+       leave it zoomed, which also invalidates every measurement above. The
+       stylesheet fixes this on touch devices; warn if a new field forgets. */
+    if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) {
+      const small = V.auditFieldSizes(document);
+      if (small.length && window.console) {
+        console.warn('[archiver] fields under 16px will make iOS zoom on focus:', small.map(f => f.id || f.name).join(', '));
+      }
+    }
   }
 
   /* ---------- events binding ---------- */
@@ -2458,7 +2685,7 @@ button, a, input, textarea, select { touch-action: manipulation; }
     $('#exportBtn').onclick = () => {
       if (!state.sessionId) { toast('No active session', 'err'); return; }
       const messages = LocalStore.getMessages(state.sessionId);
-      const text = '# Archiver 3.1 conversation\n\n' + messages.map(m => '## ' + (m.role === 'user' ? 'You' : 'Archiver') + '\n\n' + m.content).join('\n\n');
+      const text = '# Archiver 3.2 conversation\n\n' + messages.map(m => '## ' + (m.role === 'user' ? 'You' : 'Archiver') + '\n\n' + m.content).join('\n\n');
       const url = URL.createObjectURL(new Blob([text], { type: 'text/markdown;charset=utf-8' }));
       const link = document.createElement('a'); link.href = url; link.download = 'archiver-conversation.md'; link.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
@@ -2715,6 +2942,12 @@ button, a, input, textarea, select { touch-action: manipulation; }
     var closeBtn = document.getElementById('closeChangelog');
     if(!overlay) return;
     function openCl(){
+      /* Count what is rendered. A hard-coded "43 releases" next to a panel with
+         a different number of entries is the same mistake as a hard-coded card
+         count, and it drifts the moment an entry is added. */
+      var count = document.querySelectorAll('#changelogOverlay .cl-entry').length;
+      var badge = document.getElementById('changelogCount');
+      if (badge) badge.textContent = count + ' entries shown · full notes in CHANGELOG.md';
       overlay.classList.add('on');
       overlay.setAttribute('aria-hidden','false');
       document.body.style.overflow='hidden';

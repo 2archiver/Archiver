@@ -2,3 +2,4 @@
 web/vendor/*.js -text linguist-vendored whitespace=-blank-at-eol,-blank-at-eof
 web/vendor/*.LICENSE -text linguist-vendored
 web/vendor/*.gz binary linguist-vendored
+web/vendor/*.wasm binary linguist-vendored

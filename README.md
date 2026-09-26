@@ -1,8 +1,16 @@
-# Archiver 3.1
+# Archiver 3.2
 
 **An everyday assistant with instant local tools, browser generation for open-ended work, and live web search when you ask.**
 
-No account or model-provider API key. The inference runtime is bundled with the website; model assets are fetched and cached automatically in the browser when needed. No model server, deployment-time npm step, or model weights in Git.
+No account or model-provider API key. Two inference runtimes are bundled with the website — WebGPU where a browser offers it, WebAssembly where it does not — and model assets are fetched and cached automatically in the browser when needed. No model server, deployment-time npm step, or model weights in Git.
+
+## New in 3.2
+
+- **Generation works on Safari.** A second runtime, `wllama` 3.6.1 (llama.cpp compiled to WebAssembly), is bundled alongside WebLLM. When the browser has no usable WebGPU adapter — most iOS and iPadOS Safari versions, gated desktop Firefox — the same Qwen2.5 0.5B family runs on the CPU instead. Nothing to enable, install, or download by hand; it is slower, and the interface says so.
+- **iOS keyboard behavior rewritten.** The shell is sized from the layout viewport rather than the visual one, so the thread no longer collapses while you type and no blank gutter is left under the composer. Pinch-zoom and a collapsing toolbar are no longer mistaken for a keyboard, overlays make room for it, focused fields are revealed, and every field is 16px on touch so iOS does not zoom the page on focus.
+- **Thinking on every prompt.** Each answer carries an audit trail built from what the pipeline actually did — matched card and match strength, comparison, arithmetic, search query and hosts, chosen backend and why, prompt, tokens, seconds — including `hi` and `2 + 3 * 4`. Generated answers also open with one visible `Thinking:` planning line, lifted out of the reply into the disclosure. Route names are rendered in plain words.
+- **Better output from a small model.** Eight task-specific response approaches instead of five, a persona written for a 0.5B model, `top_p` and presence-penalty tuning against looping, and output cleanup performed *inside* the stream (filler openers, padding, sign-offs, unclosed fences) so the deltas still add up to the final answer.
+- **Data Saver is actually honored.** Generation pauses and reports why. Offline state still pauses it too.
 
 ## New in 3.1
 
@@ -15,7 +23,7 @@ No account or model-provider API key. The inference runtime is bundled with the 
 - **Accurate capability reporting:** ask “who are you?” or “are you self-aware?” to see what is actually running, what is stored where, and its limits. This is software introspection, **not consciousness**.
 - **Server regression fixes:** completed answers and extracted memories retain their owner, prepare-time recall is scoped to that browser, and the automatic-memory setting is respected.
 
-3.1 is not a claim of Meta AI parity or a measured 10× comprehension improvement. The instant path is deterministic retrieval and text processing. Requests beyond it automatically try a small language model, which broadens the supported tasks but can still make mistakes.
+3.2 is not a claim of Meta AI parity or a measured 10× comprehension improvement. The instant path is deterministic retrieval and text processing. Requests beyond it automatically try a small language model, which broadens the supported tasks but can still make mistakes. Earlier releases are described in [CHANGELOG.md](CHANGELOG.md); the in-app changelog panel carries the same recent entries plus older releases, newest-first, and counts what it actually renders.
 
 ## Try it
 
@@ -40,23 +48,25 @@ The bundled corpus has 1,329 cards across history, science, language, technology
 ## Browser generation is part of the website
 
 Just ask, for example, `write a short email asking to reschedule a meeting`.
-On a supported device, Archiver initializes the model and answers the original
-request—without a manual download button. Greetings, calculations, stored-topic
-answers, and text extraction do not trigger an expensive model download.
+Archiver initializes a model and answers the original request—without a manual
+download button. Greetings, calculations, stored-topic answers, and text
+extraction do not trigger an expensive model download.
 
-- **Bundled runtime:** `web/vendor/web-llm-0.2.80.js`, shared by the page and worker, with its license and checksum-verified reproduction script. It is served precompressed with long-lived versioned caching. No inference-library CDN dependency at runtime.
-- **Compact model:** Qwen2.5 **0.5B** Instruct Q4. Archiver chooses f16 or f32 based on the GPU's capabilities; it does not try a larger model.
-- **Automatic assets:** the first generative request fetches a few hundred MB of weights, tokenizer, and GPU library directly from the upstream model/library hosts, not through Render. WebLLM uses the browser Cache API to reuse assets when storage permits. Clearing browser data or cache eviction can require another transfer.
-- **Device requirements:** WebGPU in a supported browser, HTTPS (or localhost), and sufficient GPU memory. A small download does not imply an equally small runtime memory footprint; some phones will not support it.
-- **Graceful fallback:** Data Saver, offline state, no usable GPU, or initialization errors leave instant tools available. Initialization is bounded; failed initialization is isolated and **Try browser generation again** starts a fresh worker. Stop cancels initialization as well as generation.
-- **Browser generation:** always enabled and started on demand for open-ended tasks. Settings shows whether it is enabled, loading, active, or unavailable; a retry action is available when initialization fails. The first-use model download requires a supported WebGPU browser and a network connection. On mobile Safari, initialization is allowed up to eight minutes to accommodate slower downloads and compilation.
-- **iPhone/Safari:** the interface uses safe-area insets, visual-viewport keyboard sizing, touch-sized controls, storage guards and an instant fallback when iOS Safari does not expose usable WebGPU. Add Archiver to the Home Screen for standalone mode.
-- **Bounded context:** this is a small, 4K-context model. Very long generation requests may need splitting. History and notes are bounded rather than pretending to provide unlimited recall.
+- **Two bundled runtimes, chosen automatically:** `web/vendor/web-llm-0.2.80.js` when the browser exposes a usable WebGPU adapter, otherwise `web/vendor/wllama-3.6.1.js` plus `wllama-3.6.1.wasm` on the CPU. Both are unmodified upstream builds, shared by the page and worker, served same-origin, precompressed, with long-lived versioned caching, their licenses, and checksum-verified reproduction scripts. The WASM binary is served as `application/wasm` so streaming compilation works. No inference-library CDN dependency at runtime.
+- **Compact model:** Qwen2.5 **0.5B** Instruct Q4 on both paths. The GPU path chooses f16 or f32 by adapter capability; the WASM path uses a GGUF of the same model, tried from three upstream artifacts in order so one renamed file cannot disable the fallback. It never tries a larger model.
+- **Automatic assets:** the first generative request fetches weights directly from the upstream model/library hosts, not through Render — a few hundred MB on GPU, ~490 MB of GGUF on CPU. Each runtime caches them in browser storage and reuses them when storage permits. Clearing browser data or cache eviction can require another transfer.
+- **Device requirements:** HTTPS (or localhost) and enough free memory. The GPU path additionally needs WebGPU and sufficient GPU memory; the WASM path needs neither, only WebAssembly workers, which every current browser has. Without `Cross-Origin-Opener-Policy`/`Cross-Origin-Embedder-Policy` headers, wllama detects that and runs single-threaded — intended here, since COEP would put every cross-origin model fetch behind a CORP requirement.
+- **Graceful fallback:** offline, Data Saver, or initialization errors leave instant tools available and say why. A missing or unusable GPU is no longer a dead end — it selects the WASM runtime. Initialization is bounded, failed initialization is isolated, and **Try browser generation again** starts a fresh worker. Stop cancels initialization as well as generation.
+- **Browser generation:** always enabled and started on demand for open-ended tasks. Settings shows which runtime is enabled, loading, active, or unavailable; a retry action is available when initialization fails. The first-use model download requires a network connection. Initialization is allowed up to eight minutes on mobile Safari's GPU path and twelve on the WASM path, which compiles an 8 MB module before it can start on the weights.
+- **iPhone/Safari:** safe-area insets, layout-viewport shell sizing with the keyboard tracked separately (`--kb-height`, `kb-open`, `kb-cramped`), document-scroll restoration only on a genuine keyboard close, pinch-zoom and toolbar-collapse guards, frame-batched and debounced measurement, overlays that make room for the keyboard, 16px fields on touch, storage guards, and CPU generation when iOS Safari does not expose usable WebGPU. Add Archiver to Home Screen for standalone mode. The logic lives in `web/archiver-viewport.js` and is tested in `tests/viewport.js`.
+- **Bounded context:** this is a small model with a 4K context on GPU and 2K on CPU. Very long generation requests may need splitting, and reference notes are dropped before your request is ever truncated. History and notes are bounded rather than pretending to provide unlimited recall.
 
-The actual bundled runtime is imported in Chromium in the browser tests. Weight
+The bundled runtimes are imported in Chromium in the browser tests. Weight
 loading and generation are stubbed in automated lifecycle tests; those tests
-verify integration, not live GPU performance or answer quality. External asset
-hosts and browser storage policies remain dependencies.
+verify integration, not live GPU performance or answer quality. Neither backend
+has been benchmarked on a physical iOS device, and the GGUF fetch is an external
+dependency that cannot be exercised from a sandbox without outbound access to the
+model host. External asset hosts and browser storage policies remain dependencies.
 
 ### Why this fits a free Render web service
 
@@ -121,7 +131,7 @@ Node 18+ and Python 3.10+:
 make test
 ```
 
-Runs the existing conversation/search smoke checks, 3.1 offline and cancellation regressions, stub browser-generation lifecycle tests, and FastAPI storage/isolation tests. The VM-module test uses Node’s experimental VM modules; no model is downloaded.
+Runs the conversation/search smoke checks, offline and cancellation regressions, viewport and iOS-keyboard lifecycle checks (`tests/viewport.js`), stub browser-generation lifecycle tests covering both runtimes, and FastAPI storage/isolation/vendor-serving tests. The VM-module test uses Node's experimental VM modules; no model is downloaded.
 
 Optional browser checks (with the app running): install Playwright in your development environment and run `node tests/browser.js` and `node tests/browser-ai.js`. `BASE_URL` defaults to `http://127.0.0.1:8000`; `CHROMIUM_EXECUTABLE` can select an existing browser. These cover a blocked sync server, five viewport sizes, themes, text escaping, Stop/recovery, local export, real bundled-runtime import, and browser-generation initialization/reuse/cancellation with stub inference. Playwright is not a runtime dependency.
 

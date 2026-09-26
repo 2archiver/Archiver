@@ -1,4 +1,4 @@
-"""3.1 browser-chat sync regression tests; no external requests or model calls."""
+"""3.2 browser-chat sync regression tests; no external requests or model calls."""
 import pytest
 from fastapi.testclient import TestClient
 from app import main
@@ -13,14 +13,44 @@ def client(tmp_path, monkeypatch):
 
 
 def test_release_assets(client):
-    assert client.get("/api/health").json()["version"] == "3.1"
-    for asset in ("archiver-comprehension.js", "archiver-engine.js", "archiver-worker.js"):
+    assert client.get("/api/health").json()["version"] == "3.2"
+    for asset in ("archiver-comprehension.js", "archiver-engine.js", "archiver-worker.js",
+                  "archiver-viewport.js"):
         assert client.get("/static/" + asset).status_code == 200
     page = client.get("/").text
     assert 'maximum-scale=1' not in page
     assert 'id="autoAI"' not in page
     assert 'id="retryModel"' in page
     assert 'Browser generation is always enabled' in page
+
+
+def test_both_inference_runtimes_are_shipped(client):
+    """The GPU runtime alone means 'no generation' on most Safari installs, so
+    the WASM runtime has to be served from the same origin with the MIME type
+    WebAssembly.instantiateStreaming requires."""
+    for name, media in (
+        ("web-llm-0.2.80.js", "application/javascript"),
+        ("wllama-3.6.1.js", "application/javascript"),
+        ("wllama-3.6.1.wasm", "application/wasm"),
+    ):
+        plain = client.get(f"/static/vendor/{name}", headers={"accept-encoding": "identity"})
+        assert plain.status_code == 200, name
+        assert plain.headers["content-type"].startswith(media), name
+        assert plain.headers["cache-control"] == "public, max-age=31536000, immutable"
+        assert len(plain.content) > 1000, name
+        gzipped = client.get(f"/static/vendor/{name}", headers={"accept-encoding": "gzip"})
+        assert gzipped.status_code == 200, name
+        assert gzipped.headers["vary"] == "Accept-Encoding"
+        assert gzipped.headers.get("content-encoding") == "gzip", name
+        assert len(gzipped.content) == len(plain.content), name
+    # The engine must point at exactly the assets this server ships.
+    engine = client.get("/static/archiver-engine.js").text
+    for name in ("web-llm-0.2.80.js", "wllama-3.6.1.js", "wllama-3.6.1.wasm"):
+        assert f"/static/vendor/{name}" in engine, name
+    assert client.get("/static/vendor/does-not-exist.js").status_code == 404
+    # Licenses and notes in the same directory still come from the static mount.
+    assert client.get("/static/vendor/README.md").status_code == 200
+    assert client.get("/static/vendor/wllama-3.6.1.LICENSE").status_code == 200
 
 
 def test_completed_turn_is_visible_to_its_owner(client):
@@ -67,7 +97,7 @@ def test_default_migration_preserves_custom_persona(client):
     store.set_setting("model", "Archiver 2.5 (in-browser)", uid)
     store.set_setting("persona", "My custom persona", uid)
     main.apply_defaults(store, uid)
-    assert store.get_setting("model", user_id=uid) == "Archiver 3.1 (in-browser)"
+    assert store.get_setting("model", user_id=uid) == "Archiver 3.2 (in-browser)"
     assert store.get_setting("persona", user_id=uid) == "My custom persona"
     store.set_setting("persona", main.RETIRED_PERSONAS[0], uid)
     main.apply_defaults(store, uid)

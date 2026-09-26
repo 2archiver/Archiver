@@ -11,10 +11,25 @@ file in a code fence long enough to survive nested backticks.
 
 Only files tracked by git are included, so the memory bank (*.db) and anything
 gitignored can never leak into a bundle.
+
+Binary and vendored files need care, because this repository ships both:
+
+* Every digest is of the **raw bytes on disk**, exactly what `sha256sum` prints
+  and what the vendor scripts pin. Reading text first and hashing the result
+  would silently disagree with them.
+* Text is decoded without newline translation. `web/vendor/web-llm-0.2.80.js`
+  contains CRLF line endings upstream; translating them would produce a file
+  that is not the vendored build and would not match its checksum.
+* Small binaries are embedded as base64. Large vendored artifacts — the 8.5 MB
+  WebAssembly module and the precompressed runtimes — are listed with their
+  checksum and the exact command that reproduces them, because ~15 MB of base64
+  would make a document meant to be read unusable. `BINARY_RECIPES` says where
+  each one comes from.
 """
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import subprocess
 import sys
@@ -23,6 +38,18 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "dist" / "ARCHIVER_BUNDLE.md"
+
+# Binaries at or below this size are embedded as base64 rather than referenced.
+EMBED_BINARY_MAX_BYTES = 1024 * 1024
+
+# Large binaries we deliberately do not inline, with the command that rebuilds
+# them byte-identically. Anything binary and *not* listed here is embedded
+# regardless of size, so an unreproducible asset can never be dropped.
+BINARY_RECIPES = {
+    "web/vendor/web-llm-0.2.80.js.gz": "python scripts/vendor_webllm.py",
+    "web/vendor/wllama-3.6.1.wasm": "python scripts/vendor_wllama.py",
+    "web/vendor/wllama-3.6.1.wasm.gz": "python scripts/vendor_wllama.py",
+}
 
 HEADER = """<!--
   ARCHIVER — single-file repository bundle
@@ -37,11 +64,19 @@ HEADER = """<!--
      you truncated or altered it — redo that file.
   4. The fences use a variable number of backticks because some files contain
      triple-backtick blocks. Strip only the outer fence, never inner ones.
-  5. Files ending in a newline must keep it. `run.sh`, `publish.sh` and the
+  5. Text blocks are UTF-8. Reproduce line endings exactly: one vendored file
+     uses CRLF, and translating it breaks its checksum.
+  6. Blocks marked "(binary, base64)" are base64 of the file's bytes. Decode
+     them, do not paste them: `base64 -d block.txt > path` (macOS/Linux) or
+     `certutil -decode block.txt path` (Windows).
+  7. Files marked "(binary, fetch)" are not inlined — they are large vendored
+     artifacts. Run the command in the "Binary assets" section to reproduce
+     them; it verifies a pinned SHA-256 and refuses to write a mismatch.
+  8. Files ending in a newline must keep it. `run.sh`, `publish.sh` and the
      Makefile matter; keep their executable bits (chmod +x run.sh publish.sh).
-  6. Do NOT create archiver.db — it is the user's private memory bank and is
+  9. Do NOT create archiver.db — it is the user's private memory bank and is
      deliberately absent. The app creates it on first run.
-  7. Then: see "Publish commands" at the end of this file.
+ 10. Then: see "Publish commands" at the end of this file.
 -->
 """
 
@@ -67,16 +102,32 @@ def main() -> int:
         print("no tracked files", file=sys.stderr)
         return 1
 
-    blobs: dict[str, tuple[str, str]] = {}
+    # path -> (kind, payload, digest, size)
+    #   kind "text"  : payload is the decoded string, embedded verbatim
+    #   kind "b64"   : payload is base64 text, embedded verbatim
+    #   kind "fetch" : payload is None, reproduced by a command instead
+    blobs: dict[str, tuple[str, str | None, str, int]] = {}
     for rel in files:
-        text = (ROOT / rel).read_text()
-        digest = hashlib.sha256(text.encode()).hexdigest()
-        blobs[rel] = (text, digest)
+        raw = (ROOT / rel).read_bytes()
+        digest = hashlib.sha256(raw).hexdigest()
+        try:
+            text = raw.decode("utf-8")  # no newline translation, on purpose
+        except UnicodeDecodeError:
+            if len(raw) > EMBED_BINARY_MAX_BYTES and rel in BINARY_RECIPES:
+                blobs[rel] = ("fetch", None, digest, len(raw))
+            else:
+                blobs[rel] = ("b64", base64.b64encode(raw).decode("ascii"), digest, len(raw))
+        else:
+            blobs[rel] = ("text", text, digest, len(raw))
 
     commit = sh("git", "rev-parse", "--short", "HEAD").strip()
     log = sh("git", "log", "--pretty=format:%h %s", "-n", "20").strip()
-    total_bytes = sum(len(t.encode()) for t, _ in blobs.values())
-    total_lines = sum(t.count("\n") + 1 for t, _ in blobs.values())
+    total_bytes = sum(size for _, _, _, size in blobs.values())
+    total_lines = sum(
+        payload.count("\n") + 1 for kind, payload, _, _ in blobs.values() if kind == "text"
+    )
+    n_fetch = sum(1 for kind, *_ in blobs.values() if kind == "fetch")
+    n_b64 = sum(1 for kind, *_ in blobs.values() if kind == "b64")
 
     out: list[str] = [HEADER]
     out.append(f"""
@@ -91,11 +142,12 @@ def main() -> int:
 | **Topics** | `llm`, `memory`, `rag`, `sqlite`, `fastapi`, `chatgpt`, `grok`, `personal-knowledge` |
 | **Visibility** | public (your call) |
 | **Generated** | {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')} from commit `{commit}` |
-| **Files** | {len(files)} |
+| **Files** | {len(files)} ({n_b64} embedded as base64, {n_fetch} reproduced by command) |
 | **Lines** | {total_lines:,} |
 | **Bytes** | {total_bytes:,} |
 
-Nothing here is a diff or a summary. Every file is reproduced in full below.
+Nothing here is a diff or a summary. Every file is reproduced in full below, or
+named with the exact command that reproduces it byte-for-byte.
 
 ---
 
@@ -103,15 +155,17 @@ Nothing here is a diff or a summary. Every file is reproduced in full below.
 
 Recreate exactly these paths. Relative to the repository root.
 
-| # | Path | Lines | Bytes | SHA-256 | Executable |
-| --: | --- | --: | --: | --- | :---: |""")
+| # | Path | Kind | Lines | Bytes | SHA-256 | Executable |
+| --: | --- | --- | --: | --: | --- | :---: |""")
 
     for i, rel in enumerate(sorted(files), 1):
-        text, digest = blobs[rel]
+        kind, payload, digest, size = blobs[rel]
         exe = "yes" if rel in ("run.sh", "publish.sh") else ""
+        lines = f"{payload.count(chr(10)) + 1}" if kind == "text" else "—"
+        label = {"text": "text", "b64": "binary, base64", "fetch": "binary, fetch"}[kind]
         out.append(
-            f"| {i} | `{rel}` | {text.count(chr(10)) + 1} | "
-            f"{len(text.encode()):,} | `{digest}` | {exe} |"
+            f"| {i} | `{rel}` | {label} | {lines} | "
+            f"{size:,} | `{digest}` | {exe} |"
         )
 
     out.append(f"""
@@ -122,7 +176,34 @@ created automatically on first run), `__pycache__/`, `.venv/`, `.pytest_cache/`,
 `dist/`.
 
 ---
+""")
 
+    if n_fetch:
+        out.append("""
+## Binary assets not inlined
+
+These are large vendored runtime artifacts. Each command downloads the pinned
+upstream package, verifies a SHA-256, and refuses to write anything that does
+not match — so the result is byte-identical to what this repository ships.
+They need outbound access to `registry.npmjs.org`; nothing else in the
+recreation does.
+
+| Path | Bytes | SHA-256 | Reproduce with |
+| --- | --: | --- | --- |""")
+        for rel in sorted(files):
+            kind, _, digest, size = blobs[rel]
+            if kind != "fetch":
+                continue
+            out.append(f"| `{rel}` | {size:,} | `{digest}` | `{BINARY_RECIPES[rel]}` |")
+        out.append("""
+The uncompressed runtimes they derive from (`web/vendor/*.js`) *are* inlined
+above as text, so a recreation without network access still has working source
+and can serve the app — it just will not have the precompressed copies.
+
+---
+""")
+
+    out.append("""
 ## File tree
 
 ```text
@@ -133,7 +214,7 @@ Archiver/
     for rel in tree:
         parts = rel.split("/")
         for i in range(1, len(parts)):
-            dirs.add("/" .join(parts[:i]))
+            dirs.add("/".join(parts[:i]))
     for d in sorted(dirs):
         out.append(f"{d}/")
     for rel in tree:
@@ -146,17 +227,21 @@ Archiver/
 ## File contents
 
 Each block below is the complete, byte-exact content of one file. The opening
-fence states the target path. Copy everything between the outer fences.
+fence states the target path. Copy everything between the outer fences. Blocks
+labelled base64 must be decoded; see the instructions at the top of this file.
 
 """)
 
     for rel in sorted(files):
-        text, digest = blobs[rel]
-        fence = fence_for(text)
-        out.append(f"### `{rel}`\n")
+        kind, payload, digest, _ = blobs[rel]
+        if kind == "fetch":
+            continue
+        label = " (binary, base64)" if kind == "b64" else ""
+        fence = fence_for(payload)
+        out.append(f"### `{rel}`{label}\n")
         out.append(f"Path: `{rel}` · SHA-256: `{digest}`\n")
         out.append(f"{fence}{rel}")
-        out.append(text.rstrip("\n"))
+        out.append(payload.rstrip("\n"))
         out.append(fence)
         out.append("")
 
@@ -185,8 +270,7 @@ git push -u origin main
 ```bash
 python3 -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
-python -m pytest tests/ -q          # expect: 58 passed
-uvicorn app.main:app --host 0.0.0.0 --port 8000
+make test                   # four Node suites, then pytest; all must pass
 ```
 
 ---
@@ -203,14 +287,15 @@ final state.
 ---
 
 *Bundle generated from commit `{commit}`. {len(files)} files, {total_bytes:,} bytes.
-Every SHA-256 above is of the exact file content between its fences.*
+Every SHA-256 above is of the file's exact bytes, matching `sha256sum` on disk.*
 """)
 
     out_path = Path(sys.argv[1]).expanduser() if len(sys.argv) > 1 else OUT
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text("\n".join(out).lstrip("\n"))
     size = out_path.stat().st_size
-    print(f"wrote {out_path} — {size:,} bytes, {len(files)} files")
+    print(f"wrote {out_path} — {size:,} bytes, {len(files)} files "
+          f"({n_b64} base64, {n_fetch} by command)")
     return 0
 
 
