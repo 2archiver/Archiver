@@ -12,5 +12,6 @@ dev:
 test:
 	node tests/smoke.js
 	node tests/offline.js
+	node tests/viewport.js
 	node --experimental-vm-modules tests/model.js
 	.venv/bin/python -m pytest tests/ -q

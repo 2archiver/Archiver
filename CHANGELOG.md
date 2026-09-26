@@ -1,9 +1,70 @@
 # Changelog
 
+## 3.2 — 2026-09-26
+
+### Generation on Safari without WebGPU
+
+- **Ship a second inference runtime and choose between them automatically.** `wllama` 3.6.1 — llama.cpp compiled to WebAssembly — is vendored next to WebLLM and served same-origin, precompressed, as `application/wasm` so `instantiateStreaming` works instead of Safari buffering 8 MB before it can compile. When the browser returns no usable WebGPU adapter, generation runs on the CPU instead of not running at all. **No flag to enable, nothing to install, no download button.**
+- This is the actual Safari fix. WebGPU is off by default on most iOS/iPadOS Safari versions and gated on desktop Firefox, so 3.1's only answer for those visitors was a message explaining that their browser could not help.
+- Same model family on both paths: Qwen2.5 0.5B Instruct, as GGUF from `Qwen/Qwen2.5-0.5B-Instruct-GGUF`. Three published artifacts are tried in order, so one renamed file cannot disable the fallback. Weights land in the runtime's own browser cache.
+- Loaded with `n_gpu_layers: 0` (no WebGPU shim on the fallback path), a 2048-token context, quantized unified KV cache and bounded threads — chosen so the model fits an iPhone's Safari tab instead of being killed.
+- The runtime in use is reported everywhere it matters: Settings, the composer status line, `who are you?`, and every answer's audit trail. The CPU path is labelled slower rather than pretending to be the same thing.
+- Reproducible vendoring with per-file SHA-256 verification: `scripts/vendor_wllama.py`.
+
+### iOS keyboard, properly
+
+- **The shell is now sized from the layout viewport, not the visual one.** Sizing it from `visualViewport.height` — what 3.1 did — is what made the thread collapse while typing and left the document scrolled after the keyboard closed, producing the blank gutter under the composer.
+- The keyboard is tracked as separate state: `--kb-height`, `kb-open`, and a `kb-cramped` mode that gives up the runtime line and shortcut hint when the visible height drops under 460px.
+- The document scroll iOS leaves behind is undone after an open→close transition, and only then, so it cannot fight the browser's own scroll restoration on reload.
+- Pinch-zoom and a collapsing toolbar are no longer mistaken for a keyboard. The old `vv.scale === 1` guard froze the shell height at a stale value after any zoom.
+- Fixed overlays (Settings, Changelog) give the keyboard its space back instead of letting it cover the focused field, and a focused field is scrolled into view once the keyboard settles.
+- Events are frame-batched and settled on a debounce — the old handler called `scrollDown()` on every event of a 250 ms animation.
+- All fields are 16px on touch devices. Anything smaller makes iOS Safari zoom the page on focus and leave it zoomed, which invalidates every measurement above. Zoom remains available; clamping the viewport scale would not be an accessibility trade worth making.
+- Extracted to `web/archiver-viewport.js` as a factory over injected dependencies, with `tests/viewport.js` covering eleven keyboard, zoom and toolbar sequences in Node. This class of bug is a sequence of measurements over time and cannot be caught by reading CSS.
+
+### Thinking on every prompt
+
+- **Every answer now carries a real audit trail**, including `hi`, `2 + 3 * 4` and `help`. It is built from what the pipeline actually did: the matched card and its match strength, the comparison it assembled, the arithmetic it ran, the query it searched and which hosts answered, the backend it chose and why, the prompt it built, and tokens and seconds measured.
+- **Generated answers start with one planning line.** The model is asked for a single `Thinking: …` sentence naming the task, the binding constraint and the plan. It is held out of the streamed reply, lifted into the Thought process panel, and the answer follows as normal. A model that ignores the instruction costs one short delay and nothing else.
+- This is a deliberate, bounded change from 3.1.1's "no chain-of-thought at all": one visible line of planning per generated answer, disclosed as what it is. It is still not an unbounded reasoning transcript.
+- A live "Thinking · …" line names the current step while a response is being produced, then is replaced by the permanent disclosure.
+- Route names are translated into plain words — "answered from an honest capability limit", not "answered from local capability path".
+
+### Better output from a small model
+
+- Eight task-specific response approaches (code, writing, planning, comparison, numerical, extraction, explanation, translation) instead of five, each naming what to do rather than what to be.
+- Persona rewritten for a 0.5B model: short imperative lines, explicit markdown policy, explicit "never invent a source", explicit stop condition.
+- `top_p` 0.9 and a mild presence penalty. Small models loop; this breaks the loop without drifting off-topic.
+- **Output cleanup happens inside the stream**, so the deltas still add up to the final answer: filler openers ("Sure!", "As an AI…"), blank-line padding, trailing sign-offs and unclosed code fences. The head is held until it can be judged and the tail until it settles, so nothing already shown to the reader is contradicted.
+- Context budget follows the backend (4096 on GPU, 2048 on CPU), and reference notes are dropped before the reader's request is ever truncated.
+
+### Corrections to earlier entries
+
+Reviewing the changelog against the code turned up claims that were not true as shipped. They are corrected here rather than quietly edited out of the old entries:
+
+- **3.1 claimed Data Saver was honored. It was not** — nothing read `navigator.connection.saveData`. It is honored now: generation pauses and the reason is reported.
+- **3.1's "persistent instant-only preference" was removed in 3.1.2** and the stored value is migrated away. The 3.1 bullet describes a feature that no longer exists.
+- **3.1's 90-second initialization ceiling was raised to eight minutes in 3.1.2**; the WASM path gets twelve, because it compiles an 8 MB module before it can start on the weights.
+- **3.1.1's "does not expose a private chain-of-thought transcript" is narrowed by 3.2** to one bounded, visible planning line per generated answer.
+- The in-app changelog panel claimed "43 releases" beside ten entries, listed 3.1.1 as latest while `CHANGELOG.md` was already at 3.1.2, and put 2.5 above 2.6. It now counts what it actually renders, is ordered newest-first, and carries 3.2, 3.1.2 and 3.1.
+
+### Tests
+
+- `tests/viewport.js` (new): keyboard open/close, document-scroll restoration, pinch-zoom, toolbar collapse, event batching, field reveal, browsers without `visualViewport`, disposal, and the sub-16px field audit.
+- `tests/model.js` extended: WASM backend selection and its load parameters, source retry, CPU/GPU context budgets, thinking-line extraction, output shaping under streaming, and audit trails for six prompt classes.
+- `tests/test_api.py` extended: both runtimes served same-origin with the right media type, gzip and immutable caching, engine URLs matching the route table, licenses still reachable, unknown vendor paths 404.
+
+### Limits
+
+- The WASM path is **slower** — single-threaded llama.cpp on a phone, a few tokens per second. It is a real answer, not a fast one, and the UI says which path you are on.
+- Neither backend has been benchmarked on a physical iOS device by these tests; the lifecycle is verified with stubs. Model-host availability remains an external dependency, and a GGUF that moves breaks that path until `WASM_SOURCES` is updated.
+- Vendoring the WASM runtime adds ~8.5 MB (~2.3 MB gzipped) to the repository. It is served only to devices that need it.
+- Nothing here changes the Render Free constraints: no model, no GPU and no inference on the server, and SQLite there is still not durable storage.
+
 ## 3.1.2 — 2026-09-26
 - Fixed mobile Settings dialog scrolling and tap targets; opening Settings refreshes the runtime status and close/backdrop actions work on touch devices.
 - Browser generation is now always enabled (no optional toggle); legacy instant-only preferences are migrated back to enabled. Settings continues to show live ready/loading/unavailable status and retry controls.
-- Improved mobile Safari WebGPU adapter selection, including a retry without power hints, and extended the first-load timeout to eight minutes for slower downloads and compilation.
+- Improved mobile Safari WebGPU adapter selection, including a retry without power hints, and extended the first-load timeout from 3.1's 90 seconds to eight minutes for slower downloads and compilation (the WASM path added in 3.2 allows twelve).
 - Added task-specific response guidance for generated answers while keeping hidden chain-of-thought private.
 
 
