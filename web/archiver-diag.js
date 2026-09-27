@@ -1,4 +1,4 @@
-/* Archiver 4.2 — client diagnostics and storage-reset notice.
+/* Archiver 4.3 — client diagnostics and storage-reset notice.
 
    Opens with #diag in the URL, Ctrl/Cmd+Shift+D, or the "Diagnostics" button
    in Settings. Prints what a bug report needs: browser, WebGPU adapter info and
@@ -114,7 +114,7 @@
     try { persisted = JSON.parse(localStorage.getItem('archiver.engine.v1') || 'null'); } catch (_) {}
     const lines = [];
     const push = (k, v) => lines.push(k + ': ' + (typeof v === 'object' ? JSON.stringify(v) : v));
-    push('Archiver', (window.Archiver && window.Archiver.version) || '4.2');
+    push('Archiver', (window.Archiver && window.Archiver.version) || '4.3');
     push('Browser', b.name + (b.ios ? ' (iOS/iPadOS WebKit)' : ''));
     push('User agent', b.ua);
     push('Secure context', window.isSecureContext);
@@ -152,14 +152,20 @@
   async function open() {
     if (panel) { panel.remove(); panel = null; }
     panel = el('div', { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'diagTitle', id: 'archiverDiag' });
-    panel.style.cssText = 'position:fixed;inset:5vh 5vw;z-index:9999;background:var(--paper,#fff);color:var(--ink,#111);' +
-      'border:1px solid var(--rule,#999);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:10px;box-shadow:0 10px 40px rgba(0,0,0,.3)';
+    /* 4.3: use the app's theme tokens (surface/ink/line/accent) instead of
+       hardcoded light colours — the old panel was blinding white in dark and
+       OLED mode. Fallbacks keep it readable if the stylesheet failed to load. */
+    panel.style.cssText = 'position:fixed;inset:5vh 5vw;z-index:9999;background:var(--surface,#FFFCF6);color:var(--ink,#202521);' +
+      'border:1px solid var(--line-strong,#C9CEC5);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:10px;' +
+      'box-shadow:0 10px 40px rgba(0,0,0,.35);font-family:var(--sans,system-ui,sans-serif)';
     const h = el('h2', { id: 'diagTitle' }, 'Diagnostics');
-    h.style.cssText = 'margin:0;font-size:18px';
+    h.style.cssText = 'margin:0;font-size:18px;font-family:var(--serif,Georgia,serif);letter-spacing:-.01em';
     const note = el('p', {}, 'Paste this into bug reports. It stays on your device until you copy it.');
-    note.style.cssText = 'margin:0;font-size:13px;opacity:.8';
+    note.style.cssText = 'margin:0;font-size:13px;color:var(--ink-2,#626B63)';
     const pre = el('pre', { tabindex: '0', 'aria-live': 'polite' }, 'Collecting…');
-    pre.style.cssText = 'flex:1;overflow:auto;white-space:pre-wrap;word-break:break-word;font-size:12px;margin:0;padding:10px;border-radius:6px;background:rgba(127,127,127,.12)';
+    pre.style.cssText = 'flex:1;overflow:auto;white-space:pre-wrap;word-break:break-word;font-size:12px;margin:0;padding:12px;' +
+      'border-radius:8px;border:1px solid var(--line,#DDDCD4);background:var(--surface-2,#ECE9E1);color:var(--ink,#202521);' +
+      'font-family:var(--mono,monospace);line-height:1.6';
     const row = el('div'); row.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap';
     const copy = el('button', { type: 'button', class: 'btn sm' }, 'Copy report');
     const clear = el('button', { type: 'button', class: 'btn sm' }, 'Clear cached model weights');
@@ -187,7 +193,8 @@
   function banner(text) {
     const b = el('div', { role: 'status', 'aria-live': 'polite', id: 'archiverResetBanner' });
     b.style.cssText = 'position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:9998;max-width:560px;' +
-      'background:var(--accent,#315D4D);color:#fff;padding:10px 14px;border-radius:8px;font-size:13px;display:flex;gap:10px;align-items:center';
+      'background:var(--accent,#315D4D);color:var(--accent-ink,#FFFCF6);padding:10px 14px;border-radius:8px;font-size:13px;' +
+      'display:flex;gap:10px;align-items:center;font-family:var(--sans,system-ui,sans-serif);box-shadow:0 4px 16px rgba(0,0,0,.3)';
     const t = el('span', {}, text);
     const x = el('button', { type: 'button', 'aria-label': 'Dismiss' }, '×');
     x.style.cssText = 'background:none;border:0;color:inherit;font-size:18px;cursor:pointer';

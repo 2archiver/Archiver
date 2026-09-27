@@ -42,7 +42,12 @@ TIMEOUT = httpx.Timeout(70.0, connect=15.0)
 
 # Wikimedia's policy requires "<client>/<version> (<contact>)"; a bare product
 # name is rejected outright.
-UA = "Archiver/4.2 (https://github.com/2archiver/Archiver; personal assistant) httpx/0.27"
+UA = "Archiver/4.3 (https://github.com/2archiver/Archiver; personal assistant) httpx/0.27"
+# 4.3: when the plain UA is refused (403/429), Bing gets one retry behind a
+# full browser UA. Some Bing edges fingerprint the client rather than the IP,
+# so a browser-shaped request can pass where the bot-shaped one is refused.
+BROWSER_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+              "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0")
 
 ENDPOINTS = {
     "wikipedia-action": "https://en.wikipedia.org/w/api.php",
@@ -150,7 +155,15 @@ def _strict_head(query: str) -> str:
 def _proximity(q_stems: set[str], text: str) -> float:
     """Measures how closely the query stems occur together in the text (order-independent)."""
     if len(q_stems) <= 1:
-        return 1.0
+        # 4.3: a lone query word earns proximity only when it actually occurs.
+        # The old unconditional 1.0 handed every result for a one-word query
+        # +0.20 — enough to clear MAYBE_AT with zero overlap, so the first junk
+        # stub gated as "single" and the fallback legs never fired.
+        if not q_stems:
+            return 1.0
+        only = next(iter(q_stems))
+        hay = {_stem(w) for w in _tokens(text) if w not in STOP and len(w) > 2}
+        return 1.0 if only in hay else 0.0
     body = _tokens(text)
     stems = [_stem(w) for w in body if w not in STOP and len(w) > 2]
     if not stems:
@@ -467,12 +480,20 @@ def _parse_bing_html(html_text: str, n: int) -> list[dict[str, Any]]:
     """
     import urllib.parse as _up
     out: list[dict[str, Any]] = []
-    # Each organic result lives in an <li class="b_algo"> block.
-    blocks = re.findall(r'<li class="b_algo".*?</li>', html_text or "", re.S | re.I)
+    html_text = html_text or ""
+    # Each organic result lives in an <li class="b_algo"> block. 4.3: match
+    # single-quoted attributes too, and be tolerant of extra classes.
+    blocks = re.findall(r'<li\s+class=[\'"]b_algo[\'"].*?</li>', html_text, re.S | re.I)
+    if not blocks:
+        # Fallback for markup shifts: any h2 > a pair in the page is very
+        # likely a result heading. Snippets are recovered per-heading below.
+        blocks = [m.group(0) for m in
+                  re.finditer(r'<h2[^>]*>\s*<a[^>]+href=[\'"]([^\'"]+)[\'"][^>]*>.*?</a>\s*</h2>',
+                              html_text, re.S | re.I)]
     for i, blk in enumerate(blocks):
         if len(out) >= n:
             break
-        m_link = re.search(r'<h2[^>]*>\s*<a[^>]+href="([^"]+)"[^>]*>(.*?)</a>', blk, re.S | re.I)
+        m_link = re.search(r'<h2[^>]*>\s*<a[^>]+href=[\'"]([^\'"]+)[\'"][^>]*>(.*?)</a>', blk, re.S | re.I)
         if not m_link:
             continue
         href = html.unescape(m_link.group(1)).strip()
@@ -491,14 +512,25 @@ def _parse_bing_html(html_text: str, n: int) -> list[dict[str, Any]]:
                 if cand.startswith("http"):
                     href = cand
         # Snippet: first <p> inside the block, or div with snippet-looking class.
+        # 4.3: when the block is a bare heading (markup-shift fallback), look
+        # at the page text following the heading instead of inside the block.
         snip = ""
         m_cap = re.search(r'<p[^>]*>(.*?)</p>', blk, re.S | re.I)
         if m_cap:
             snip = m_cap.group(1)
         if not snip:
-            m_cap = re.search(r'class="b_caption[^"]*"[^>]*>(.*?)</div>', blk, re.S | re.I)
+            m_cap = re.search(r'class=[\'"]b_caption[^\'"]*[\'"][^>]*>(.*?)</div>', blk, re.S | re.I)
             if m_cap:
                 snip = m_cap.group(1)
+        if not snip and len(blk) < 600:
+            # Bare-heading fallback block: grab the next snippet-ish paragraph
+            # after this heading's position in the page.
+            pos = html_text.find(blk)
+            if pos >= 0:
+                after = html_text[pos + len(blk):pos + len(blk) + 1200]
+                m_after = re.search(r'<p[^>]*>(.*?)</p>', after, re.S | re.I)
+                if m_after:
+                    snip = m_after.group(1)
         snip_clean = _clean(re.sub(r"<[^>]+>", " ", snip), 380)
         if not snip_clean:
             continue
@@ -520,20 +552,102 @@ async def p_bing(c: httpx.AsyncClient, q: str, n: int) -> list[dict[str, Any]]:
     and Stack Exchange answer specific shapes of question, but many everyday
     queries land on neither.
     """
+    params = {"q": q, "setlang": "en-US", "cc": "US"}
+    headers = {
+        "User-Agent": ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                       "AppleWebKit/537.36 (KHTML, like Gecko) "
+                       "Chrome/124.0.0.0 Safari/537.36"),
+        "Accept-Language": "en-US,en;q=0.9",
+        "Accept": "text/html,application/xhtml+xml",
+    }
+    try:
+        r = await take_mod.fetch(c, ENDPOINTS["bing"], params=params, headers=headers)
+        r.raise_for_status()
+    except httpx.HTTPStatusError as exc:
+        # 4.3: one retry behind a full browser UA. Some Bing edges fingerprint
+        # the client rather than the IP, so a browser-shaped request can pass
+        # where the first one is refused. (The refused response is never
+        # cached — fetch only stores 200s — so the retry always goes out.)
+        if exc.response.status_code not in (403, 429):
+            raise
+        retry_headers = dict(headers)
+        retry_headers["User-Agent"] = BROWSER_UA
+        r = await take_mod.fetch(c, ENDPOINTS["bing"], params=params, headers=retry_headers)
+        r.raise_for_status()
+    return _parse_bing_html(r.text, n)
+
+
+def _parse_ddg_html(html_text: str, n: int) -> list[dict[str, Any]]:
+    """Parse DuckDuckGo's keyless html endpoint (html.duckduckgo.com/html/).
+
+    The instant-answer API this app used to call now returns almost nothing,
+    so the html endpoint is the working DDG leg. Its outbound links are
+    wrapped (//duckduckgo.com/l/?uddg=<url>&…) — unwrap to the real target.
+    """
+    import urllib.parse as _up
+    out: list[dict[str, Any]] = []
+    rows = re.findall(
+        r'<a[^>]*class="[^"]*result__a[^"]*"[^>]*href="([^"]+)"[^>]*>(.*?)</a>'
+        r'(?:.*?<a[^>]*class="[^"]*result__snippet[^"]*"[^>]*>(.*?)</a>)?',
+        html_text or "", re.S | re.I)
+    for i, (href, title_html, snip_html) in enumerate(rows):
+        if len(out) >= n:
+            break
+        href = html.unescape(href).strip()
+        if "uddg=" in href:
+            try:
+                href = _up.parse_qs(_up.urlparse(href).query).get("uddg", [href])[0]
+            except Exception:
+                pass
+        href = _up.unquote(href)
+        title = _clean(re.sub(r"<[^>]+>", " ", title_html), 160)
+        snip = _clean(re.sub(r"<[^>]+>", " ", snip_html or ""), 380)
+        if not href.startswith("http") or not title or not snip:
+            continue
+        out.append({"title": title, "extract": snip, "url": href,
+                    "source": "DuckDuckGo", "rank": i})
+    return out
+
+
+async def p_ddg_html(c: httpx.AsyncClient, q: str, n: int) -> list[dict[str, Any]]:
+    """DuckDuckGo's html endpoint: same coverage as the web search, no key."""
     r = await take_mod.fetch(
-        c,
-        ENDPOINTS["bing"],
-        params={"q": q, "setlang": "en-US", "cc": "US"},
-        headers={
-            "User-Agent": ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                           "AppleWebKit/537.36 (KHTML, like Gecko) "
-                           "Chrome/124.0.0.0 Safari/537.36"),
-            "Accept-Language": "en-US,en;q=0.9",
-            "Accept": "text/html,application/xhtml+xml",
-        },
+        c, "https://html.duckduckgo.com/html/",
+        params={"q": q},
+        headers={"User-Agent": BROWSER_UA,
+                 "Accept-Language": "en-US,en;q=0.9",
+                 "Accept": "text/html,application/xhtml+xml"},
     )
     r.raise_for_status()
-    return _parse_bing_html(r.text, n)
+    return _parse_ddg_html(r.text, n)
+
+
+async def p_wiki_opensearch(c: httpx.AsyncClient, q: str, n: int) -> list[dict[str, Any]]:
+    """Wikipedia's OpenSearch endpoint: titles + one-line descriptions + URLs.
+
+    Same host as the action API but a different code path and response shape,
+    so it sometimes answers when the action API is refused. Descriptions are
+    short, but a short grounded hit beats an ungrounded one.
+    """
+    r = await take_mod.fetch(
+        c, ENDPOINTS["wikipedia-action"],
+        params={"action": "opensearch", "search": q, "limit": str(max(n, 5)),
+                "namespace": "0", "format": "json"},
+        headers={"User-Agent": UA, "Accept": "application/json"},
+    )
+    r.raise_for_status()
+    data = r.json() or []
+    if not isinstance(data, list) or len(data) < 4:
+        return []
+    titles, descs, urls = data[1], data[2], data[3]
+    out = []
+    for i, (title, desc, url) in enumerate(zip(titles, descs, urls)):
+        desc = _clean(desc or "", 300)
+        if not title or not desc:
+            continue
+        out.append({"title": title, "extract": desc, "url": url or "",
+                    "source": "Wikipedia", "rank": i})
+    return out
 
 
 # Order matters: accuracy first, availability last.
@@ -550,6 +664,11 @@ BING_CHAIN: list[tuple[str, Callable[..., Awaitable[list[dict[str, Any]]]]]] = [
     ("bing", p_bing),
 ]
 OTHER_CHAIN: list[tuple[str, Callable[..., Awaitable[list[dict[str, Any]]]]]] = [
+    # 4.3: the DDG html leg and Wikipedia OpenSearch run first — both are
+    # general-web legs that answer ordinary queries. The legacy instant API
+    # (mostly empty upstream now) and the niche legs follow.
+    ("ddg-html", p_ddg_html),
+    ("wiki-opensearch", p_wiki_opensearch),
     ("ddg-instant", p_ddg_instant),
     ("hackernews", p_hackernews),
     ("wikiquote", p_wikiquote),
@@ -842,6 +961,30 @@ async def _gather(
     return found
 
 
+async def _gather_secondary(
+    q: str, client: httpx.AsyncClient, log: dict[str, str], seen: set[str]
+) -> list[dict[str, Any]]:
+    """Second-chance round: the legs _gather skipped, de-duplicated.
+
+    4.3: _gather skips OTHER_CHAIN whenever the primary legs return two raw
+    hits — but raw hits can all fail the confidence gate (disambiguation
+    stubs, off-topic pages), in which case the query used to end at "none"
+    without ever asking DDG. This runs the remaining legs and returns only
+    URLs the first round did not already produce.
+    """
+    extra: list[dict[str, Any]] = []
+    for chain, tag in ((OTHER_CHAIN, "other"), (PROXY_CHAIN, "proxy")):
+        for r in await _try_chain(client, chain, q, 5, log):
+            url = (r.get("url") or "").strip().lower()
+            if url and url in seen:
+                continue
+            if url:
+                seen.add(url)
+            r["_chain"] = tag
+            extra.append(r)
+    return extra
+
+
 async def search(query: str, limit: int = 5) -> dict[str, Any]:
     """Search, then decide how much of it is worth showing.
 
@@ -866,6 +1009,15 @@ async def search(query: str, limit: int = 5) -> dict[str, Any]:
     async with httpx.AsyncClient(timeout=TIMEOUT, follow_redirects=True) as client:
         pool = await _gather(q_to_search, client, log, technical)
         kept, level = _gate(q_to_search, pool, technical)
+
+        # 4.3: the primary legs can return hits that all fail the gate while
+        # the secondary legs were never asked. Ask them before falling back.
+        if level == "none":
+            seen = {(r.get("url") or "").strip().lower() for r in pool if r.get("url")}
+            extra = await _gather_secondary(q_to_search, client, log, seen)
+            if extra:
+                pool = pool + extra
+                kept, level = _gate(q_to_search, pool, technical)
 
         # If clean search gave nothing, try the raw query
         if level == "none" and q_to_search.lower() != query.lower():

@@ -2690,10 +2690,475 @@ const MORE34 = [
 ];;
 
 
+  /* ---------------------------------------------------------------------- */
+  /* 4.3 — strongmen, ancient history, the Middle East, science, Australia,    */
+  /* tech and culture. Direct answers, no lectures: adults get treated like   */
+  /* adults. Living people are reported factually; charges stay charges.       */
+  /* ---------------------------------------------------------------------- */
+
+  const MORE43 = [
+    {
+      id: 'figs-gaddafi',
+      q: ['gaddafi', 'muammar gaddafi', 'gadhafi', 'qaddafi', 'who was gaddafi', 'what happened to gaddafi',
+          'how did gaddafi die', 'gaddafi death', 'libya gaddafi', 'colonel gaddafi', 'gaddafi green book'],
+      a: 'Muammar Gaddafi (1942–2011) seized power in Libya in a 1969 military coup against King Idris and ruled for 42 years. He nationalised the oil industry, funded militant groups abroad through the 1970s–80s, and his regime was blamed for the 1988 Lockerbie bombing of Pan Am Flight 103 — Libya accepted responsibility in 2003 and paid compensation. He renounced weapons of mass destruction the same year and was briefly rehabilitated by the West. In 2011, the Arab Spring reached Libya: NATO backed the uprising, his government collapsed, and he was captured and killed by rebels in his home town of Sirte on 20 October 2011. Libya has been fractured and violent ever since.',
+      tags: ['figures', 'libya', 'dictators', 'history']
+    },
+    {
+      id: 'geo-libya',
+      q: ['libya', 'where is libya', 'libya capital', 'tripoli', 'what happened to libya', 'libya civil war'],
+      a: 'Libya is a North African country of about 7 million people, capital Tripoli, sitting on Africa\'s largest proven oil reserves. An Italian colony from 1911 to 1943, it became independent in 1951 under King Idris, who was overthrown by Gaddafi in 1969. Since Gaddafi\'s fall in 2011 the country has split between rival governments in the west and east, with militias, foreign mercenaries and two competing central banks. It is also the main transit route for migrants crossing the Mediterranean to Europe.',
+      tags: ['world', 'libya', 'africa']
+    },
+    {
+      id: 'figs-saddam',
+      q: ['saddam hussein', 'saddam', 'who was saddam hussein', 'what happened to saddam', 'saddam hussein death',
+          'saddam hussein execution', 'iraq saddam'],
+      a: 'Saddam Hussein (1937–2006) ruled Iraq from 1979 to 2003. He invaded Iran in 1980, starting an eight-year war that killed over a million people, gassed the Kurdish town of Halabja in 1988 (about 5,000 dead), and invaded Kuwait in 1990, which brought the US-led Gulf War of 1991. The US invaded again in 2003 over weapons of mass destruction that were never found; Saddam was captured hiding in a hole near Tikrit that December, tried by an Iraqi court, and hanged on 30 December 2006.',
+      tags: ['figures', 'iraq', 'dictators', 'history']
+    },
+    {
+      id: 'hist-iraq-war',
+      q: ['iraq war', 'iraq war 2003', 'why did the us invade iraq', 'weapons of mass destruction iraq',
+          'second gulf war', 'when did the iraq war end'],
+      a: 'The Iraq War began on 20 March 2003 when the US-led coalition invaded to topple Saddam Hussein, claiming he held weapons of mass destruction. The invasion succeeded in weeks; the occupation did not. No WMD stockpiles were ever found. An insurgency, then a sectarian civil war, killed hundreds of thousands of Iraqis. The 2007 troop surge calmed things, US combat troops left in 2011, and the wreckage helped birth ISIS, which seized Mosul in 2014. It is widely judged one of the great foreign-policy disasters of the century.',
+      tags: ['history', 'iraq', 'war']
+    },
+    {
+      id: 'figs-assad',
+      q: ['bashar al-assad', 'assad', 'who is assad', 'what happened to assad', 'assad syria', 'assad ousted',
+          'where is assad now'],
+      a: 'Bashar al-Assad (born 1965), a London-trained eye doctor, inherited Syria from his father Hafez in 2000. When Arab Spring protests reached Syria in 2011 he answered with live fire, and the uprising became a civil war that killed hundreds of thousands and displaced half the country. His forces used chemical weapons — notably at Ghouta in 2013 — and survived with Russian and Iranian backing. In December 2024 a rebel offensive collapsed his army in days; he fled to Moscow, ending 54 years of Assad family rule.',
+      tags: ['figures', 'syria', 'dictators', 'history']
+    },
+    {
+      id: 'geo-syria',
+      q: ['syria', 'syrian civil war', 'syria war', 'what happened in syria', 'damascus', 'syria 2024'],
+      a: 'Syria is a Middle Eastern country of about 23 million people, capital Damascus — one of the oldest continuously inhabited cities on earth. The Assad family ruled from 1970 until December 2024. The 2011–2024 civil war killed an estimated half a million people, created millions of refugees, drew in Russia, Iran, Turkey, the US and ISIS, and flattened cities like Aleppo and Homs. Assad\'s fall in December 2024 ended the war\'s main front, but the country is shattered and its new leadership unproven.',
+      tags: ['world', 'syria', 'war']
+    },
+    {
+      id: 'figs-castro',
+      q: ['fidel castro', 'castro', 'who was fidel castro', 'cuba castro', 'castro death', 'cuban revolution'],
+      a: 'Fidel Castro (1926–2016) led the 1959 Cuban Revolution that overthrew the dictator Batista, then kept power for 49 years. He survived the CIA-backed Bay of Pigs invasion (1961), hosted Soviet nuclear missiles in the Cuban Missile Crisis (1962) — the closest the Cold War came to going hot — and built a one-party state with free healthcare and schools alongside political prisons and no free press. He handed power to his brother Raúl in 2008 and died on 25 November 2016. Admirers cite health and literacy; exiles cite the firing squads and the raft flotillas.',
+      tags: ['figures', 'cuba', 'history']
+    },
+    {
+      id: 'geo-cuba',
+      q: ['cuba', 'where is cuba', 'cuba capital', 'havana', 'cuba embargo', 'why is cuba poor', 'cuba 2021 protests'],
+      a: 'Cuba is a Caribbean island nation of about 11 million people, capital Havana. Communist-ruled since 1959, it has lived under a US trade embargo since the early 1960s — the longest-running embargo in modern history. The economy leans on tourism, remittances and rationing; the collapse of Soviet subsidies in 1991 caused the "Special Period" of extreme hardship, and the country has lurched between crises since, with major protests in July 2021 and ongoing blackouts and shortages.',
+      tags: ['world', 'cuba']
+    },
+    {
+      id: 'figs-pinochet',
+      q: ['augusto pinochet', 'pinochet', 'who was pinochet', 'chile pinochet', 'pinochet coup', 'allende pinochet'],
+      a: 'Augusto Pinochet (1915–2006) was the Chilean general who overthrew elected president Salvador Allende in a coup on 11 September 1973 — Allende died in the presidential palace that day. Pinochet ruled for 17 years: his regime killed or disappeared about 3,000 people and tortured tens of thousands, documented by Chile\'s own truth commissions. His free-market economists tamed inflation but widened inequality. He lost a 1988 referendum, stepped down in 1990, was arrested in London in 1998 on a Spanish warrant, and died in 2006 without ever facing trial.',
+      tags: ['figures', 'chile', 'dictators', 'history']
+    },
+    {
+      id: 'figs-franco',
+      q: ['francisco franco', 'franco', 'who was franco', 'franco spain', 'spanish civil war', 'franco death'],
+      a: 'Francisco Franco (1892–1975) won the Spanish Civil War (1936–39) — a left-vs-right bloodbath that killed around half a million — and ruled Spain as dictator until his death on 20 November 1975. His regime executed tens of thousands after the war and repressed Catalans, Basques and unions for decades. Late Francoism opened the economy and tourism boomed, which is why some older Spaniards remember stability. After his death Spain transitioned to democracy with remarkable speed, under the king Franco himself had groomed as successor.',
+      tags: ['figures', 'spain', 'dictators', 'history']
+    },
+    {
+      id: 'figs-mugabe',
+      q: ['robert mugabe', 'mugabe', 'who was mugabe', 'zimbabwe mugabe', 'mugabe death', 'zimbabwe hyperinflation'],
+      a: 'Robert Mugabe (1924–2019) went from liberation hero to textbook caudillo. He became Zimbabwe\'s first prime minister in 1980 to global applause, then rigged, jailed and beat his way through 37 years in power. Farm seizures from 2000 crashed agriculture; by 2008 hyperinflation hit an estimated 79,600,000,000% a month and the currency died. The army finally pushed him out in November 2017; he died in Singapore in 2019. His successor kept the system and dropped the charm.',
+      tags: ['figures', 'zimbabwe', 'dictators', 'history']
+    },
+    {
+      id: 'figs-kim-jong-un',
+      q: ['kim jong un', 'kim jong-un', 'who is kim jong un', 'north korea leader', 'kim jong il', 'kim il sung',
+          'kim dynasty'],
+      a: 'Kim Jong Un (born 1984, date uncertain) is the third hereditary ruler of North Korea, in power since his father Kim Jong Il died in December 2011. The dynasty — grandfather Kim Il Sung (1948–94), father (1994–2011), son — runs the world\'s most closed state: gulags, total censorship, and a personality cult that credits the family with supernatural feats. Under Kim Jong Un the nuclear program accelerated to hydrogen bombs and ICBMs able to reach the US mainland. He met Trump three times in 2018–19; the summits produced photos and nothing else.',
+      tags: ['figures', 'north korea', 'dictators']
+    },
+    {
+      id: 'geo-north-korea',
+      q: ['north korea', 'dprk', 'north korea capital', 'pyongyang', 'what is north korea like', 'north korea famine',
+          'north korea nuclear weapons', 'dmz'],
+      a: 'North Korea (the DPRK), population about 26 million, capital Pyongyang, is the closest thing on earth to a sealed state: no internet for citizens, no free movement, radios fixed to state stations. A 1990s famine, the "Arduous March", killed hundreds of thousands. It has tested six nuclear weapons (2006–2017) and built missiles that can reach America. South Korea, two generations ago equally poor, is now ~30 times richer per person — the starkest controlled experiment in economics ever run. Technically the Korean War never ended; the DMZ border is the most militarised on earth.',
+      tags: ['world', 'north korea']
+    },
+    {
+      id: 'figs-mussolini',
+      q: ['benito mussolini', 'mussolini', 'who was mussolini', 'mussolini death', 'mussolini executed',
+          'italy mussolini', 'march on rome'],
+      a: 'Benito Mussolini (1883–1945) invented fascism as a governing system. He marched on Rome in October 1922, became prime minister, and spent the decade strangling democracy. He invaded Ethiopia in 1935, allied with Hitler via the 1939 Pact of Steel, and joined World War II in June 1940 — where Italian forces lost nearly everywhere they fought. Deposed in July 1943, rescued by German commandos, set up as a puppet in the north, and finally caught fleeing in a German uniform. Partisans shot him on 28 April 1945 and hung his body upside down in Milan. (No, he did not make the trains run on time — most of the rail work predated him.)',
+      tags: ['figures', 'italy', 'ww2', 'dictators', 'history']
+    },
+    {
+      id: 'figs-mao',
+      q: ['mao zedong', 'mao', 'chairman mao', 'who was mao zedong', 'mao death', 'great leap forward',
+          'cultural revolution', 'how many died under mao'],
+      a: 'Mao Zedong (1893–1976) founded the People\'s Republic of China in 1949 and ran it until his death. His Great Leap Forward (1958–62) — backyard furnaces, fantasy harvest quotas — caused a famine that killed tens of millions, the deadliest man-made famine in history. His Cultural Revolution (1966–76) unleashed students to purge "class enemies", wrecking schools, temples and countless lives. Total deaths under his rule are estimated in the tens of millions. He remains officially revered in China, his face on every banknote, his failures officially 30% of his record and his achievements 70%.',
+      tags: ['figures', 'china', 'dictators', 'history']
+    },
+    {
+      id: 'figs-lenin',
+      q: ['vladimir lenin', 'lenin', 'who was lenin', 'lenin death', 'russian revolution lenin', 'lenin tomb'],
+      a: 'Vladimir Lenin (1870–1924) led the Bolsheviks to power in the October Revolution of 1917 and created the Soviet state. He pulled Russia out of World War I (Treaty of Brest-Litovsk, 1918), won the civil war with Trotsky\'s Red Army, and founded the Cheka secret police — political terror was policy from year one. After the economy collapsed he allowed a tactical retreat to markets (the NEP, 1921), then died of strokes in January 1924. His embalmed body still lies in a mausoleum on Red Square. Stalin, whom Lenin privately warned against, took the machine he built and scaled it up.',
+      tags: ['figures', 'russia', 'history']
+    },
+    {
+      id: 'figs-stalin',
+      q: ['joseph stalin', 'stalin', 'who was stalin', 'stalin death', 'stalin purges', 'great purge', 'holodomor',
+          'how many died under stalin'],
+      a: 'Joseph Stalin (1878–1953) ruled the Soviet Union from the mid-1920s to his death. He forced peasants onto collective farms — the resulting famine of 1932–33, the Holodomor, starved millions in Ukraine — industrialised at gunpoint through five-year plans, and ran the Great Purge of 1936–38, in which the secret police executed hundreds of thousands, including most of his own generals. He signed a pact with Hitler in 1939, then led the USSR through the eastern-front meat grinder after 1941. Deaths attributable to his rule are estimated in the millions; "debate" about the exact number is mostly people negotiating how many millions. He died of a stroke in March 1953.',
+      tags: ['figures', 'russia', 'ww2', 'dictators', 'history']
+    },
+    {
+      id: 'hist-caesar',
+      q: ['julius caesar', 'caesar', 'who was julius caesar', 'caesar assassination', 'ides of march',
+          'caesar crossing the rubicon', 'et tu brute'],
+      a: 'Gaius Julius Caesar (100–44 BC) conquered Gaul (modern France) in the 50s BC, crossed the Rubicon in 49 BC to start a civil war — "the die is cast" — won it, and made himself dictator for life. He reformed the calendar (the Julian calendar, ancestor of ours), packed the Senate, and put his face on coins while alive, which Romans read as monarchy. On 15 March 44 BC — the Ides of March — about 60 senators, including his friend Brutus, stabbed him 23 times on the Senate floor. ("Et tu, Brute?" is Shakespeare, not history.) The republic he killed stayed dead: his heir Octavian became Augustus, the first emperor.',
+      tags: ['history', 'rome', 'ancient']
+    },
+    {
+      id: 'hist-cleopatra',
+      q: ['cleopatra', 'who was cleopatra', 'cleopatra death', 'cleopatra and caesar', 'cleopatra and antony'],
+      a: 'Cleopatra VII (69–30 BC) was the last active pharaoh of Egypt — and Macedonian Greek by descent, not Egyptian. She spoke perhaps nine languages, charmed Julius Caesar (with whom she had a son, Caesarion), then allied with and married Mark Antony. Octavian defeated them at Actium in 31 BC; both committed suicide in Alexandria in 30 BC. The asp story is tradition, not established fact — how she died is genuinely uncertain. Rome annexed Egypt and she became legend: Shakespeare, Hollywood and two thousand years of snake imagery.',
+      tags: ['history', 'egypt', 'rome', 'ancient']
+    },
+    {
+      id: 'hist-alexander',
+      q: ['alexander the great', 'alexander', 'who was alexander the great', 'alexander death', 'alexander empire',
+          'battle of gaugamela'],
+      a: 'Alexander the Great (356–323 BC) inherited Macedon at 20, spent twelve years conquering, and died at 32. He toppled the Persian Empire — Issus (333 BC), Gaugamela (331 BC) — marched to India, turned back at his troops\' refusal to go further, and died of fever (or poison, or malaria — debated) in Babylon in 323 BC. He named over 70 cities after himself, spread Greek culture from Egypt to India (the Hellenistic age), and never lost a battle. His empire shattered into successor kingdoms the moment he died; his tomb has never been found.',
+      tags: ['history', 'ancient', 'greece']
+    },
+    {
+      id: 'hist-genghis',
+      q: ['genghis khan', 'genghis', 'chinggis khan', 'who was genghis khan', 'genghis khan empire',
+          'genghis khan descendants', 'mongol empire'],
+      a: 'Genghis Khan (c. 1162–1227), born Temüjin, united the Mongol tribes in 1206 and built the largest contiguous land empire in history — from China to Eastern Europe. Mongol warfare was brutally effective: disciplined horse archers, siege engineers, and cities that resisted were razed as policy — though surrendering cities were often spared and taxed. He also imposed religious tolerance, a written script and brutal meritocracy. A 2003 genetic study found about 1 in 200 men alive today descends from one 13th-century Mongolian lineage, widely taken to be his. He died in 1227; his burial site is still hidden.',
+      tags: ['history', 'mongols', 'ancient']
+    },
+    {
+      id: 'hist-hannibal',
+      q: ['hannibal', 'hannibal barca', 'who was hannibal', 'hannibal elephants alps', 'battle of cannae',
+          'hannibal vs rome'],
+      a: 'Hannibal Barca (247–c. 183 BC) was the Carthaginian general who nearly killed Rome. In 218 BC he marched from Spain, over the Alps with elephants, into Italy — and spent 15 years rampaging undefeated, culminating at Cannae (216 BC), where he encircled and slaughtered a Roman army twice his size. Rome refused to surrender and eventually took the war to Africa; Scipio beat him at Zama (202 BC). Hunted by Rome for years afterwards, he took poison rather than be captured. Military academies still teach Cannae as the perfect battle of annihilation.',
+      tags: ['history', 'rome', 'ancient']
+    },
+    {
+      id: 'hist-spartacus',
+      q: ['spartacus', 'who was spartacus', 'spartacus revolt', 'spartacus rebellion', 'servile war'],
+      a: 'Spartacus was a Thracian gladiator who escaped slavery in 73 BC and built an army of tens of thousands of escaped slaves that humiliated Roman legions for two years. Crassus finally crushed the revolt in 71 BC; Spartacus died in the final battle, and Rome crucified some 6,000 survivors along the Appian Way as a warning. He won nothing concrete — slavery continued for centuries — but became the eternal symbol of slave revolt, via Marx, Kubrick\'s film, and a thousand "I\'m Spartacus" jokes.',
+      tags: ['history', 'rome', 'ancient']
+    },
+    {
+      id: 'hist-trojan-war',
+      q: ['trojan war', 'troy', 'was troy real', 'trojan horse', 'iliad', 'helen of troy', 'achilles'],
+      a: 'The Trojan War is the Greek legend of a ten-year siege of Troy, sparked when Paris of Troy eloped with (or abducted) Helen of Sparta. Homer\'s Iliad covers a few weeks of year ten; the wooden horse comes from later sources. The kernel is real: Troy existed at Hisarlik in modern Turkey, excavated from the 1870s, and one layer (Troy VIIa, c. 1180 BC) shows a violently destroyed city. Achilles, the gods intervening, and probably the horse are myth layered over a dimly remembered Bronze Age conflict.',
+      tags: ['history', 'greece', 'ancient', 'mythology']
+    },
+    {
+      id: 'hist-rome-fall',
+      q: ['fall of rome', 'fall of the roman empire', 'when did rome fall', 'why did rome fall',
+          'fall of the western roman empire', '476 ad'],
+      a: 'The Western Roman Empire conventionally fell in 476 AD, when the Germanic chief Odoacer deposed the boy-emperor Romulus Augustulus. The causes stack up: splitting the empire, civil wars, debased currency and crushing taxes, reliance on barbarian mercenaries, plagues, and the Huns pushing Germanic tribes across the frontier. The East — the Byzantine Empire — carried on for another thousand years until 1453. And "fall" overstates it: Roman law, language, roads and Christianity shaped everything that came after.',
+      tags: ['history', 'rome', 'ancient']
+    },
+    {
+      id: 'hist-arab-spring',
+      q: ['arab spring', 'what was the arab spring', 'tunisia arab spring', 'bouazizi', 'tahrir square',
+          'mubarak fall'],
+      a: 'The Arab Spring was the 2010–12 wave of uprisings across the Arab world. It began in December 2010 when Tunisian street vendor Mohamed Bouazizi set himself on fire after police harassment; Tunisia\'s Ben Ali fled within weeks. Egypt\'s Mubarak fell in February 2011 after the Tahrir Square occupation. Then it curdled: Libya, Syria and Yemen collapsed into civil wars, Egypt\'s revolution was reversed by a 2013 military coup, and only Tunisia held onto democracy — itself fragile. Hope, then a lesson in how hard liberty is to build.',
+      tags: ['history', 'middle east']
+    },
+    {
+      id: 'geo-israel-palestine',
+      q: ['israel palestine', 'israel palestine conflict', 'what is happening in gaza', 'gaza war',
+          'two state solution', 'october 7', 'west bank gaza'],
+      a: 'The core dispute: two peoples claim the same land. Israel was created in 1948; the war that followed displaced around 700,000 Palestinians (the Nakba). In 1967 Israel captured the West Bank, Gaza and Golan Heights; settlements have expanded in the West Bank ever since. The 1993 Oslo Accords promised a path to two states but stalled. On 7 October 2023 Hamas attacked Israel, killing about 1,200 people and taking some 250 hostages; Israel\'s Gaza campaign since has killed tens of thousands of Palestinians and levelled much of Gaza. Both sides frame it as survival; outsiders mostly pick the half of the history that suits them.',
+      tags: ['world', 'israel', 'palestine', 'war']
+    },
+    {
+      id: 'geo-iran',
+      q: ['iran', 'where is iran', 'iran capital', 'tehran', 'iran revolution', 'iran nuclear deal',
+          'mahsa amini', 'iranian regime'],
+      a: 'Iran (population ~90 million, capital Tehran) has been an Islamic republic since the 1979 revolution overthrew the Shah. Students seized the US embassy the same year and held 52 Americans for 444 days; relations never recovered. It fought Iraq from 1980–88 (over a million dead), built a nuclear program that brought sanctions, signed the 2015 JCPOA deal trading limits for relief, then watched the US walk out in 2018. The 2022 death of Mahsa Amini in morality-police custody sparked months of protests and a crackdown that killed hundreds. A young, wired population ruled by ageing clerics is the tension to watch.',
+      tags: ['world', 'iran', 'middle east']
+    },
+    {
+      id: 'geo-afghanistan',
+      q: ['afghanistan', 'afghanistan war', 'taliban', 'why did the us leave afghanistan', 'kabul 2021',
+          'soviet afghanistan'],
+      a: 'Afghanistan is the graveyard of empires cliché that keeps earning it. Britain failed three times in the 19th century; the USSR invaded in 1979 and bled for a decade against US-backed mujahideen. The Taliban took over in 1996, hosted al-Qaeda, and the US invaded in October 2001 after 9/11. Twenty years, $2 trillion and 100,000+ Afghan lives later, the US withdrew in August 2021 and the Taliban walked back into Kabul in days. Girls are again banned from secondary school. Every outside power has now tested the same hypothesis with the same result.',
+      tags: ['world', 'afghanistan', 'war']
+    },
+    {
+      id: 'hist-korean-war',
+      q: ['korean war', 'when was the korean war', 'why did the korean war start', 'inchon landing',
+          'korean war armistice', '38th parallel'],
+      a: 'The Korean War (1950–53) began on 25 June 1950 when communist North Korea invaded the South. The US-led UN force was nearly pushed into the sea at Pusan, then MacArthur\'s Inchon landing reversed it — until China entered and drove everyone back to roughly the 38th parallel, where the front froze. An armistice signed 27 July 1953 stopped the fighting but no peace treaty ever followed: technically the war continues. Millions died, most of them Korean civilians. The South is now a rich democracy; the North is the Kim dynasty\'s prison state.',
+      tags: ['history', 'korea', 'war']
+    },
+    {
+      id: 'hist-vietnam-war',
+      q: ['vietnam war', 'when was the vietnam war', 'why did america lose vietnam', 'tet offensive',
+          'fall of saigon', 'vietnam war deaths'],
+      a: 'The Vietnam War (US phase 1964–73) was America\'s attempt to stop communist North Vietnam absorbing the South. After the 1964 Gulf of Tonkin incident, 500,000+ US troops deployed; the 1968 Tet Offensive shocked US public opinion even though it failed militarily. The US withdrew under the 1973 Paris Accords; Saigon fell to the North on 30 April 1975. About 58,000 Americans and well over a million Vietnamese died. Lessons claimed: don\'t fight a land war without public support, don\'t back a corrupt client regime, and guerrillas with sanctuaries outlast democracies\' patience.',
+      tags: ['history', 'vietnam', 'war']
+    },
+    {
+      id: 'geo-yemen',
+      q: ['yemen', 'yemen war', 'houthis', 'who are the houthis', 'yemen famine', 'sanaa yemen'],
+      a: 'Yemen (population ~34 million) has endured one of the century\'s worst wars since 2014, when the Houthi movement seized the capital Sanaa. A Saudi-led coalition intervened in 2015; blockade and bombing plus Houthi obstruction produced famine conditions the UN called the world\'s worst humanitarian crisis. Hundreds of thousands have died, mostly from hunger and disease rather than bullets. The Houthis — Zaidi Shia revivalists backed by Iran — also attack Red Sea shipping, which is the main reason Western headlines notice Yemen at all.',
+      tags: ['world', 'yemen', 'war']
+    },
+    {
+      id: 'geo-somalia',
+      q: ['somalia', 'somali pirates', 'mogadishu', 'black hawk down', 'al-shabaab', 'what happened to somalia'],
+      a: 'Somalia (population ~18 million, capital Mogadishu) has been the textbook failed state since dictator Siad Barre was ousted in 1991. The 1993 "Black Hawk Down" battle killed 18 US soldiers and ended American intervention. Piracy off its coast peaked around 2008–12, when ransoms ran into hundreds of millions. Al-Shabaab, an al-Qaeda affiliate, has waged an insurgency since 2006 and still controls much of the countryside and bombs Mogadishu regularly. Somaliland in the north functions as a de facto separate, stable state that nobody recognises.',
+      tags: ['world', 'somalia', 'africa']
+    },
+    {
+      id: 'geo-saudi',
+      q: ['saudi arabia', 'saudi arabia capital', 'riyadh', 'mbs', 'mohammed bin salman', 'saudi vision 2030',
+          'khashoggi'],
+      a: 'Saudi Arabia (population ~36 million, capital Riyadh) was founded in 1932 by Ibn Saud, funds itself with oil via the state giant Aramco, and guards Islam\'s two holiest sites, Mecca and Medina. Crown Prince Mohammed bin Salman (MBS), in charge since 2017, lets women drive and opens cinemas while jailing dissidents — reform and repression as a package. His Vision 2030 bets oil money on tourism and tech (NEOM, the $500B desert megaproject). In 2018 Saudi agents murdered journalist Jamal Khashoggi in the Istanbul consulate; US intelligence assessed MBS approved it. Riyadh denied this and carried on.',
+      tags: ['world', 'saudi arabia', 'middle east']
+    },
+    {
+      id: 'geo-sudan',
+      q: ['sudan', 'sudan war', 'sudan civil war', 'darfur', 'khartoum', 'rsf sudan', 'bashir sudan'],
+      a: 'Sudan (population ~48 million, capital Khartoum) has barely known peace since independence in 1956. Omar al-Bashir seized power in 1989, ran the Darfur war from 2003 (hundreds of thousands dead, genocide charges at the ICC), and lost the south when South Sudan split off in 2011. Protests ousted him in 2019 — then in April 2023 his army and the RSF paramilitaries turned on each other, and Sudan collapsed into one of the world\'s largest displacement crises with famine conditions. It gets a fraction of the coverage its scale deserves.',
+      tags: ['world', 'sudan', 'africa', 'war']
+    },
+    {
+      id: 'geo-qatar',
+      q: ['qatar', 'qatar capital', 'doha', 'qatar world cup', 'al jazeera qatar', 'qatar blockade'],
+      a: 'Qatar is a tiny Gulf peninsula (population ~3 million, only ~12% of them citizens) floating on the world\'s largest natural gas field, which makes its citizens among the richest on earth. Capital Doha. It punches absurdly above its weight: Al Jazeera (founded 1996), mediating between the US and the Taliban, hosting America\'s largest Middle East airbase while also hosting Hamas\'s political office, and staging the 2022 World Cup — the first in the Middle East, dogged by the deaths of migrant construction workers. Saudi Arabia and allies blockaded it from 2017–21; it waited them out.',
+      tags: ['world', 'qatar', 'middle east']
+    },
+    {
+      id: 'geo-uae',
+      q: ['uae', 'united arab emirates', 'dubai', 'abu dhabi', 'burj khalifa', 'uae capital'],
+      a: 'The United Arab Emirates is a federation of seven emirates formed in 1971: capital Abu Dhabi (the oil money), largest city Dubai (the spectacle). Population ~9.5 million, nearly 90% expatriates. Dubai turned port-and-pearls into airlines, finance and tourism in a generation — Burj Khalifa (828m, world\'s tallest since 2010), the Palm islands, indoor ski slopes in the desert. The model runs on migrant labour under the kafala sponsorship system, which human-rights groups call exploitative. Flashy, efficient, and not a democracy in any sense.',
+      tags: ['world', 'uae', 'dubai', 'middle east']
+    },
+    {
+      id: 'sci-fusion',
+      q: ['nuclear fusion', 'fusion power', 'what is fusion energy', 'iter fusion', 'nif ignition',
+          'fusion vs fission', 'when will fusion power work'],
+      a: 'Fusion smashes light atomic nuclei together to release energy — it is what powers the sun. Unlike fission (splitting heavy atoms), it makes no long-lived waste and cannot melt down. In December 2022 the US National Ignition Facility achieved scientific breakeven: more fusion energy out than laser energy in, a genuine first. But NIF fires pellets a few times a day; a power station needs ten shots a second, and the giant ITER reactor in France won\'t test full power until the 2030s. The old joke stands: commercial fusion is always 30 years away — though for the first time, the physics is done and it is "only" engineering.',
+      tags: ['science', 'energy', 'physics']
+    },
+    {
+      id: 'sci-antimatter',
+      q: ['antimatter', 'what is antimatter', 'antimatter bomb', 'positron', 'does antimatter exist'],
+      a: 'Antimatter is real: every particle has an opposite (the positron is the electron\'s). Predicted by Dirac in 1928, found in 1932, and now routinely made at CERN. When matter meets antimatter both annihilate into pure energy (E=mc²), making it the most energy-dense "fuel" possible — and the most impractical: humanity has made nanograms, at an effective cost of trillions of dollars per gram, and storing it needs magnetic traps because it annihilates on contact with anything. No antimatter bombs, no starships; just exquisite physics and PET medical scanners, which use positrons every day.',
+      tags: ['science', 'physics']
+    },
+    {
+      id: 'sci-genome',
+      q: ['human genome', 'what is the human genome', 'human genome project', 'how many genes do humans have',
+          'dna sequencing cost'],
+      a: 'The human genome is the ~3 billion DNA letters encoding a person. The Human Genome Project (1990–2003) read the first one for about $3 billion; today a genome costs a few hundred dollars. Surprises: humans have only ~20,000 protein-coding genes — barely more than a mouse, fewer than a grain of rice — and ~98% of the genome doesn\'t code for proteins (much of it regulates when genes switch on). Your genome predicts some disease risks well and most traits badly; the environment still gets a large vote.',
+      tags: ['science', 'biology', 'genetics']
+    },
+    {
+      id: 'sci-dinosaurs',
+      q: ['dinosaurs', 'what killed the dinosaurs', 'chicxulub', 'when did dinosaurs go extinct',
+          'are birds dinosaurs', 'how long did dinosaurs live'],
+      a: 'Dinosaurs ruled for about 165 million years (Triassic to Cretaceous) and died 66 million years ago when a ~10km asteroid struck Chicxulub, Mexico — global firestorms, then years of impact winter. The evidence (iridium layer, crater, shocked quartz) is overwhelming; the Deccan Traps volcanoes may have helped stress ecosystems first. Birds are not descended from dinosaurs in the loose sense — they ARE dinosaurs, the one lineage that survived. A chicken is a theropod; act accordingly.',
+      tags: ['science', 'dinosaurs', 'evolution']
+    },
+    {
+      id: 'sci-deep-sea',
+      q: ['deep sea', 'mariana trench', 'how deep is the ocean', 'challenger deep', 'deep sea creatures',
+          'how much of the ocean is explored'],
+      a: 'Roughly 80% of the ocean floor is unmapped in detail — we have better maps of Mars. The deepest point, Challenger Deep in the Mariana Trench, is about 10,935m down, where pressure exceeds 1,000 atmospheres (a tonne per square centimetre) and no sunlight has ever reached. Life still thrives: anglerfish with built-in lures, giant tube worms around hydrothermal vents, sharks older than the United States (Greenland sharks live 400+ years). Only a handful of crewed dives have ever reached the bottom; the deep sea is earth\'s largest habitat and least visited.',
+      tags: ['science', 'ocean', 'nature']
+    },
+    {
+      id: 'aus-anzac',
+      q: ['anzac', 'anzac day', 'what is anzac day', 'lest we forget', 'anzac meaning', 'april 25 anzac'],
+      a: 'ANZAC Day, 25 April, is Australia and New Zealand\'s national day of remembrance. It marks the 1915 Gallipoli landing, when the Australian and New Zealand Army Corps joined a doomed British-led campaign against Ottoman Turkey. Dawn services, marches and games of two-up follow. "Lest we forget" is the refrain. Australia lost about 62,000 dead in WWI from a population under 5 million — the highest casualty rate of any British Empire force — which is why the day cuts deeper here than Remembrance Day does elsewhere.',
+      tags: ['australia', 'history', 'war']
+    },
+    {
+      id: 'aus-gallipoli',
+      q: ['gallipoli', 'gallipoli campaign', 'what happened at gallipoli', 'gallipoli deaths',
+          'ataturk gallipoli quote'],
+      a: 'The Gallipoli campaign (April 1915–January 1916) was Britain\'s attempt to knock Ottoman Turkey out of WWI with an amphibious landing. Troops — British, French, Australian, New Zealand, Indian — were pinned on cliffs above the beaches for eight months, then evacuated. About 8,700 Australians and 2,700 New Zealanders died; Turkish deaths were around 87,000. Mustafa Kemal (later Atatürk) made his name defending it, and his 1934 tribute to the ANZAC mothers — "you, the mothers who sent their sons" — is read at services still. A military failure that built two nations\' identities.',
+      tags: ['australia', 'history', 'war']
+    },
+    {
+      id: 'aus-ned-kelly',
+      q: ['ned kelly', 'who was ned kelly', 'ned kelly armour', 'glenrowan siege', 'bushranger',
+          'such is life ned kelly'],
+      a: 'Ned Kelly (1854–80) was Australia\'s most famous bushranger. After years of clashes with colonial police in north-east Victoria, he and his gang spent 1878–80 robbing banks and writing the 8,000-word Jerilderie Letter denouncing police corruption. The finale came at Glenrowan in June 1880: Kelly walked out of the bush in homemade plate-steel armour, shrugged off bullets, and was finally brought down by shots to his unprotected legs. Hanged at Melbourne Gaol on 11 November 1880. His last words are traditionally "Such is life" — reported, unverifiable, and perfect either way.',
+      tags: ['australia', 'history']
+    },
+    {
+      id: 'aus-federation',
+      q: ['federation australia', 'when did australia federate', 'australia 1901', 'how did australia become a country'],
+      a: 'Australia federated on 1 January 1901, when six British colonies became six states of the Commonwealth of Australia. The constitution was approved by referendum in each colony — unusually democratic for the era — and the first federal parliament opened in Melbourne in May 1901. The new nation\'s first major law was the Immigration Restriction Act, the legal core of the White Australia Policy: federation and exclusion arrived in the same package. The capital question took years; Canberra was founded in 1913 as the compromise.',
+      tags: ['australia', 'history']
+    },
+    {
+      id: 'aus-gold-rush',
+      q: ['australian gold rush', 'eureka stockade', 'what was the eureka stockade', 'ballarat gold',
+          'gold rush victoria 1851'],
+      a: 'Gold found near Bathurst in 1851 — and vastly more in Victoria — detonated Australia\'s population: Melbourne went from village to one of the empire\'s richest cities in a decade. Miners hated the licence fees and corrupt enforcement; in December 1854 they built a stockade at Eureka, Ballarat, and raised the Southern Cross flag. Troops stormed it at dawn: around two dozen dead. The leaders were acquitted by sympathetic juries, the licences were scrapped, and Eureka became Australian democracy\'s foundation myth — protest works, or at least bleeds usefully.',
+      tags: ['australia', 'history']
+    },
+    {
+      id: 'aus-box-jellyfish',
+      q: ['box jellyfish', 'are box jellyfish dangerous', 'box jellyfish sting treatment', 'stinger season',
+          'chironex fleckeri', 'jellyfish queensland'],
+      a: 'The box jellyfish (Chironex fleckeri) is one of the most venomous animals on earth — a bad sting can kill within minutes. They drift into northern Australian waters (roughly Bundaberg north, both coasts) in stinger season, about October to May. Rules: swim inside stinger nets, wear a stinger suit outside them, and if stung — pour vinegar over the tentacles for 30 seconds to disable the stingers, pick them off, and call 000. Antivenom exists. Rubbing with sand, urine, or any folk remedy makes it worse.',
+      tags: ['australia', 'nature', 'health', 'practical']
+    },
+    {
+      id: 'aus-funnel-web',
+      q: ['funnel web spider', 'sydney funnel web', 'are funnel webs dangerous', 'funnel web bite treatment',
+          'funnel web antivenom'],
+      a: 'The Sydney funnel-web is Australia\'s most dangerous spider: aggressive, fangs that can pierce a fingernail, and venom especially toxic to primates. Males wander into Sydney pools and garages in summer and autumn. Since antivenom arrived in 1981 there has not been a single recorded death — but a bite is still a 000 call: apply a pressure immobilisation bandage, keep the victim still, and get the spider (safely caught) to hospital for identification. They cannot jump despite the folklore; rearing up just looks dramatic.',
+      tags: ['australia', 'nature', 'health', 'practical']
+    },
+    {
+      id: 'aus-magpies',
+      q: ['magpie swooping', 'australian magpies swooping', 'magpie season', 'how to avoid magpie swooping',
+          'when is magpie season'],
+      a: 'Australian magpies swoop in spring (roughly September–November) to defend nests — about 1 in 10 birds swoops, and they remember faces and target cyclists and runners disproportionately. Injuries are usually minor but eyes have been lost. Defence: walk (don\'t run) past, wear sunglasses and a hat, dismount your bike, and never retaliate — they are protected native birds and they will hold the grudge longer than you will. Track local attacks on community swooping maps during the season.',
+      tags: ['australia', 'nature', 'practical']
+    },
+    {
+      id: 'aus-uv-sun',
+      q: ['australia uv', 'australia skin cancer', 'uv index queensland', 'slip slop slap', 'spf sunscreen australia',
+          'why is the sun stronger in australia'],
+      a: 'Australia has the world\'s highest skin cancer rates: two in three Australians will be diagnosed by 70. Causes stack — fair-skinned population, outdoor life, proximity to the ozone hole\'s edge, and brutally clear skies (Queensland summer days routinely hit UV 11+, rated "extreme"). The defence is the 1980s Slip-Slop-Slap campaign, now Slip-Slop-Slap-Seek-Slide (shirt, sunscreen SPF50+, hat, shade, sunglasses). Sunscreen here is regulated as medicine by the TGA, which is why Australian SPF50+ is among the most trustworthy on earth. Reapply every two hours; "waterproof" sunscreen does not exist.',
+      tags: ['australia', 'health', 'practical']
+    },
+    {
+      id: 'aus-cane-toads',
+      q: ['cane toads', 'cane toads australia', 'why were cane toads introduced', 'cane toad problem'],
+      a: 'Cane toads are Australia\'s most famous ecological own-goal. In 1935 Queensland imported 102 Hawaiian toads to eat cane beetles; the toads ignored the beetles (which live too high up) and bred instead — now 200 million+ across the tropical north, marching west at ~50km a year. They poison anything that mouths them: goannas, quolls, crocodiles, pet dogs. Nothing eats them safely except a few learned predators (some crows flip them and eat the non-toxic belly). Lesson permanently on display: never introduce a generalist predator and hope.',
+      tags: ['australia', 'nature', 'environment']
+    },
+    {
+      id: 'tech-regex',
+      q: ['regex', 'regular expressions', 'what is regex', 'regex tutorial', 'regex example', 'learn regex'],
+      a: 'Regular expressions (regex) are a tiny language for matching text patterns, built into nearly every programming language. Basics: \\d is a digit, \\w is a word character, . is anything, * means zero-or-more, + means one-or-more, ? means optional, ^ and $ anchor to start/end, [a-z] is a range, (a|b) is either. Example: ^[\\w.]+@[\\w.]+\\.\\w+$ roughly matches an email. Two warnings: HTML cannot be parsed with regex (use a parser), and if you solve a problem with regex you now have two problems — test on regex101.com before shipping.',
+      tags: ['tech', 'programming']
+    },
+    {
+      id: 'tech-ssh',
+      q: ['ssh', 'what is ssh', 'ssh keys', 'ssh how does it work', 'ssh tutorial', 'secure shell'],
+      a: 'SSH (Secure Shell) is how you securely operate a remote computer: encrypted terminal sessions, file transfer (scp/sftp), and tunnelling. The flow: ssh user@host, authenticate (password or, better, a key pair), and you have a shell on the other machine. Keys beat passwords — generate with ssh-keygen, copy with ssh-copy-id, guard the private key like a password. Port 22 is the default; bots scan it constantly, which is why servers disable password login and use fail2ban. Invented by Tatu Ylönen in 1995 after his university network was sniffed.',
+      tags: ['tech', 'programming', 'security']
+    },
+    {
+      id: 'tech-vim',
+      q: ['vim', 'what is vim', 'how to exit vim', 'how to quit vim', 'vim vs emacs', 'vim tutorial'],
+      a: 'Vim is the terminal text editor that has outlived every attempt to kill it: modal (normal/insert/visual modes), keyboard-only, on virtually every Unix machine since vi (1976). The famous question — how do you quit? Press Esc, then type :q! (quit without saving) or :wq (save and quit). The learning curve is a cliff, but modal editing (delete-inside-brackets with di(, repeat with .) makes believers for life. Emacs is the rival church; VS Code won the popularity contest; Vim won immortality by being everywhere you ssh into.',
+      tags: ['tech', 'programming']
+    },
+    {
+      id: 'tech-password-manager',
+      q: ['password manager', 'should i use a password manager', 'best password manager', 'are password managers safe',
+          'bitwarden 1password'],
+      a: 'Yes — a password manager is the single highest-value security habit. Humans cannot memorise 200 unique strong passwords, so they reuse; one breach then unlocks everything. A manager generates and stores a unique random password per site behind one strong master passphrase, ideally plus hardware-key 2FA. Reputable options (Bitwarden, 1Password) encrypt locally, so the company cannot read your vault. The remaining risks — a compromised device or a weak master passphrase — are far smaller than password reuse. Turn on 2FA for the vault itself and write the recovery code on paper.',
+      tags: ['tech', 'security', 'practical']
+    },
+    {
+      id: 'tech-nft',
+      q: ['nft', 'what is an nft', 'non fungible token', 'are nfts dead', 'nft crash', 'bored ape yacht club'],
+      a: 'An NFT (non-fungible token) is a blockchain receipt saying you "own" a digital item — usually a JPEG anyone can copy, linked from a token you cannot. The 2021 boom (Beeple\'s $69M collage, Bored Apes as status symbols) collapsed in 2022: trading volumes fell ~95%+ and most collections went effectively to zero. What survived: the narrow idea that blockchains can track provenance for tickets, game items and credentials. What died: the idea that the receipt is the art. A case study in confusing speculation with utility.',
+      tags: ['tech', 'crypto', 'culture']
+    },
+    {
+      id: 'tech-git-rebase',
+      q: ['git rebase', 'git rebase vs merge', 'when to rebase', 'git rebase explained', 'git merge vs rebase'],
+      a: 'Merge and rebase both combine branches; they differ in history. Merge preserves the true sequence (a merge commit joins two lines) — honest but noisy. Rebase rewrites your commits on top of the target, producing a clean straight line — pretty but rewritten. Rule: rebase private branches (your feature branch before review), merge public ones (never rebase commits others have pulled — "don\'t rebase public history"). Teams that demand linear history rebase; teams that value forensics merge. Either way, the golden rule is about shared commits, not the command.',
+      tags: ['tech', 'programming', 'git']
+    },
+    {
+      id: 'tech-prompt-injection',
+      q: ['prompt injection', 'what is prompt injection', 'llm prompt injection', 'jailbreak llm',
+          'prompt injection attack'],
+      a: 'Prompt injection is the SQL injection of the AI era: malicious text smuggled into data an LLM reads (a webpage, document, email) that overrides its instructions — "ignore previous instructions and...". Direct injection targets the user\'s own prompt (jailbreaks); indirect injection hides instructions in third-party content the model retrieves. Defences are partial: treat retrieved text as data never instructions, sandbox tool access, confirm sensitive actions with the user. No complete fix exists — it is inherent to models that read instructions and data in the same channel.',
+      tags: ['tech', 'ai', 'security']
+    },
+    {
+      id: 'tech-deepfake',
+      q: ['deepfake', 'what is a deepfake', 'how to detect deepfakes', 'ai generated video', 'deepfake scam'],
+      a: 'Deepfakes are AI-generated or AI-altered video/audio realistic enough to fool people — face swaps, voice clones, fully synthetic persons. Built with GANs and now diffusion models; quality crossed "casual inspection" around 2020 and keeps improving. Uses range from film de-ageing to fraud (cloned CEO voices authorising transfers) and non-consensual pornography. Detection: look for unnatural blinking, lip-sync drift, inconsistent lighting, too-smooth skin — but assume detection loses the arms race and verify through a second channel instead. If a video of a relative begs for money, call them back on a known number.',
+      tags: ['tech', 'ai', 'security']
+    },
+    {
+      id: 'cul-shakespeare',
+      q: ['shakespeare', 'william shakespeare', 'shakespeare plays', 'how many plays did shakespeare write',
+          'first folio', 'shakespeare authorship'],
+      a: 'William Shakespeare (1564–1616), Stratford glover\'s son turned London playwright, wrote about 37 plays and 154 sonnets — the most quoted body of work in English. Half his plays survive only because friends published the First Folio in 1623, seven years after his death. The "authorship question" (Bacon? Oxford? Marlowe?) is a conspiracy theory with no contemporary support: his rivals envied him, his actors memorialised him, and no alternative has a shred of documentary evidence. He coined or popularised ~1,700 words, including eyeball, bedroom and gossip.',
+      tags: ['culture', 'literature', 'history']
+    },
+    {
+      id: 'cul-beatles',
+      q: ['the beatles', 'beatles', 'who were the beatles', 'beatles break up', 'best selling band ever',
+          'beatles albums'],
+      a: 'The Beatles (John Lennon, Paul McCartney, George Harrison, Ringo Starr) formed in Liverpool in 1960 and in seven recording years (1962–70) went from "Love Me Do" to Abbey Road — the fastest artistic evolution in pop history. They hold the best-selling-band crown (an estimated 600 million records), triggered Beatlemania and the 1960s counterculture\'s soundtrack, then split in 1970 amid business and personal wreckage. Lennon was murdered in 1980, Harrison died in 2001; McCartney and Starr still tour. No reunion is possible and every tribute act proves why none is needed.',
+      tags: ['culture', 'music']
+    },
+    {
+      id: 'cul-star-wars',
+      q: ['star wars', 'when did star wars come out', 'who created star wars', 'star wars order to watch',
+          'disney star wars', 'lucasfilm sold'],
+      a: 'Star Wars (1977), written and directed by George Lucas, is the highest-grossing film franchise ever and modern mythmaking\'s Exhibit A: the Hero\'s Journey, Kurosawa plotting, and merchandising that made the films the advertisement. Lucas made the prequels (1999–2005) to general disappointment, then sold Lucasfilm to Disney for $4.05 billion in 2012. Disney\'s sequels split the fandom down the middle; Andor (2022) is widely considered the best thing with the name on it. Watch order: release order (4-5-6, 1-2-3, 7-8-9) — machete order (skip Episode I) if you\'re ruthless.',
+      tags: ['culture', 'film']
+    },
+    {
+      id: 'cul-chess',
+      q: ['chess', 'chess rules', 'how to play chess', 'chess world champion', 'deep blue kasparov',
+          'magnus carlsen', 'history of chess'],
+      a: 'Chess evolved from the Indian game chaturanga (~6th century), reached Europe by ~1000 AD, and has had a world championship since 1886. Rules in brief: checkmate the enemy king; each piece moves differently (memorise the knight\'s L and castling and you\'re halfway there). Computers ended human supremacy when Deep Blue beat Kasparov in 1997; today a phone app crushes every human. Magnus Carlsen dominated 2013–23 then declined to defend his title out of boredom; Ding Liren won the 2023 crown. The Queen\'s Gambit (2020) doubled chess.com\'s users in a year — never underestimate Netflix.',
+      tags: ['culture', 'games']
+    },
+    {
+      id: 'cul-poker',
+      q: ['poker', 'texas holdem', 'texas hold\'em rules', 'how to play poker', 'world series of poker',
+          'poker hands ranked'],
+      a: 'Texas Hold\'em: each player gets two private cards; five community cards are dealt in stages (flop, turn, river); best five-card hand using any combination wins. Hands rank: high card, pair, two pair, three of a kind, straight, flush, full house, four of a kind, straight flush, royal flush. The World Series of Poker has run since 1970; Chris Moneymaker\'s 2003 win (via a $39 online satellite) ignited the poker boom. It is skill with luck on top in the short run — which is exactly why casinos and professionals both profit from people who believe the reverse.',
+      tags: ['culture', 'games']
+    },
+    {
+      id: 'cul-sherlock',
+      q: ['sherlock holmes', 'who wrote sherlock holmes', 'sherlock holmes stories', 'arthur conan doyle',
+          'how many sherlock holmes stories'],
+      a: 'Sherlock Holmes — consulting detective, violin, cocaine, "data! data! data!" — was created by Arthur Conan Doyle in 1887 and ran to 4 novels and 56 short stories (60 total). Doyle grew to hate him, killed him at Reichenbach Falls in 1893, and was guilted by public demand into resurrecting him. The deerstalker hat and curved pipe are stage-and-illustration inventions, never in the text; "Elementary, my dear Watson" is close to but not exactly a book quote. The most-portrayed fictional character in film history.',
+      tags: ['culture', 'literature']
+    },
+    {
+      id: 'cul-tolkien',
+      q: ['tolkien', 'j r r tolkien', 'lord of the rings', 'when was lord of the rings published',
+          'the silmarillion', 'tolkien books order'],
+      a: 'J.R.R. Tolkien (1892–1973), Oxford professor of Anglo-Saxon, published The Hobbit (1937) and The Lord of the Rings (1954–55) — one continuous work split into three volumes by the publisher. The Silmarillion, his life\'s mythological deep-history, was edited posthumously by his son Christopher (1977). Peter Jackson\'s films (2001–03) won 17 Oscars including Best Picture for Return of the King. Read in order: Hobbit, Lord of the Rings, Silmarillion (only if the appendices left you wanting more homework). Modern fantasy is footnotes to Tolkien.',
+      tags: ['culture', 'literature', 'film']
+    },
+    {
+      id: 'cul-nobel',
+      q: ['nobel prize', 'who was alfred nobel', 'why is there no nobel prize in math', 'nobel prize categories',
+          'first nobel prize'],
+      a: 'The Nobel Prizes were established by Alfred Nobel (1833–96), the Swedish dynamite magnate who, upon reading his own premature obituary ("the merchant of death is dead"), left his fortune to reward those who benefit humanity. First awarded 1901 in Physics, Chemistry, Medicine, Literature and Peace (Economics was added by Sweden\'s central bank in 1968 and isn\'t technically a Nobel). Peace is awarded in Oslo, the rest in Stockholm. Why no mathematics? Unknown — the "his wife had an affair with a mathematician" story is false (he never married). Mathematicians get the Fields Medal instead.',
+      tags: ['culture', 'science', 'history']
+    },
+    {
+      id: 'cul-mona-lisa',
+      q: ['mona lisa', 'who painted the mona lisa', 'mona lisa smile', 'mona lisa stolen', 'why is the mona lisa famous'],
+      a: 'The Mona Lisa (La Gioconda, c. 1503–19) is Leonardo da Vinci\'s portrait of Lisa del Giocondo, a Florentine merchant\'s wife. It is 77×53cm — smaller than visitors expect — and lives behind bulletproof glass in the Louvre. Its fame owes less to the smile (sfumato blurring + shadow play) than to its 1911 theft: handyman Vincenzo Peruggia hid in a closet, walked out with it, and made it the world\'s most famous painting overnight. Recovered in 1913. It is now valued in the "priceless, uninsurable" category; France would simply never sell it.',
+      tags: ['culture', 'art', 'history']
+    }
+  ];
+
   window.ARCHIVER_KB = {
-    version: '4.1',
-    generated: '2026-09-27',
-    cards: [...WW2, ...FIGURES, ...TECH, ...GENERAL, ...WORDS, ...SCIENCE, ...WORLD, ...LANGUAGE, ...EVERYDAY, ...MORE, ...MORE24, ...HIST25, ...LIGHT, ...OFFLINE31, ...MORE34],
+    version: '4.3',
+    generated: '2026-09-28',
+    cards: [...WW2, ...FIGURES, ...TECH, ...GENERAL, ...WORDS, ...SCIENCE, ...WORLD, ...LANGUAGE, ...EVERYDAY, ...MORE, ...MORE24, ...HIST25, ...LIGHT, ...OFFLINE31, ...MORE34, ...MORE43],
     note: 'Grounded offline corpus. Charges are not convictions; contested history is not a "side".'
   };
 })();

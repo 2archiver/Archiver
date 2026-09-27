@@ -1,10 +1,10 @@
-# Browser support matrix (Archiver 4.2)
+# Browser support matrix (Archiver 4.3)
 
 Archiver picks a runtime per device at the moment a request first needs the
 model. It never starts a model worker on page open (the Safari hotfix rule
 still applies everywhere).
 
-**Runtime choice (4.2):** WebLLM on WebGPU only when *all* of these pass,
+**Runtime choice (4.2, unchanged in 4.3):** WebLLM on WebGPU only when *all* of these pass,
 otherwise wllama (llama.cpp → WebAssembly, CPU):
 
 1. `navigator.gpu.requestAdapter()` returns an adapter (null or a throw → WASM);
