@@ -1,8 +1,16 @@
-# Archiver 3.3
+# Archiver 3.4
 
-**An everyday assistant with instant local tools, browser generation for open-ended work, and live web search when you ask.**
+**An everyday assistant with instant local tools, open-ended answers from Archiver 3.4 — our own model — and live web search when you ask.**
 
-No account or model-provider API key. Two inference runtimes are bundled with the website — WebGPU where a browser offers it, WebAssembly where it does not — and model assets are fetched and cached automatically in the browser when needed. No model server, deployment-time npm step, or model weights in Git.
+No account or model-provider API key. Two inference runtimes are bundled with the website — WebGPU where a browser offers it, WebAssembly where it does not — and model assets are fetched and cached automatically in the browser. No model server, deployment-time npm step, or model weights in Git.
+
+## New in 3.4
+
+- **Instant access for first-time visitors.** The model now starts preparing the moment the page opens — in the background, under the same offline and Data Saver guards as before (`Archiver.warm()` in `web/archiver-engine.js`, called from the page boot). A first open-ended question meets a model that is ready (or nearly so) instead of a cold, minutes-long download. No download button, no settings detour, no second visit needed.
+- **Our own model, clearly named.** Generation is branded **Archiver 3.4** in every user-facing label — top bar, status line, Settings, toasts, the thought-process panel — with the open Qwen 2.5 0.5B base named honestly in Settings. It still runs entirely in the visitor's browser; nothing runs on Render.
+- **Discord, tidied.** The Settings Community section is one small card: a bright, futuristic banner (`web/discord-banner.jpg`), one line of copy, the invite. The floating-button and auto-show toggles are gone — the button was already off everywhere, so the controls were dead.
+- **Migration gap closed.** Banks still on the shipped 3.3 persona and the `Archiver 3.3 (in-browser)` model label now upgrade in place on start, like 3.2 and earlier did.
+- Everything else stays as 3.3: grounded web reads, a plan line on every prompt, the Safari WebAssembly runtime, private per-browser archives.
 
 ## New in 3.3
 

@@ -1910,8 +1910,8 @@
 ];
 
   window.ARCHIVER_KB = {
-    version: '3.3',
-    generated: '2026-09-26',
+    version: '3.4',
+    generated: '2026-09-27',
     cards: [...WW2, ...FIGURES, ...TECH, ...GENERAL, ...WORDS, ...SCIENCE, ...WORLD, ...LANGUAGE, ...EVERYDAY, ...MORE, ...MORE24, ...HIST25, ...LIGHT, ...OFFLINE31],
     note: 'Grounded offline corpus. Charges are not convictions; contested history is not a "side".'
   };

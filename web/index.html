@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-title" content="Archiver">
 <meta name="format-detection" content="telephone=no">
 <meta name="mobile-web-app-capable" content="yes">
-<title>Archiver 3.3 — Your everyday assistant</title>
+<title>Archiver 3.4 — Your everyday assistant</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
@@ -20,7 +20,7 @@
 <style>
 
 /* ========================================================================
-   ARCHIVER — The Living Archive  (v3.3)
+   ARCHIVER — The Living Archive  (v3.4)
    A contemporary research desk + field journal, digital.
    Quiet, precise, tactile through spacing — not decoration.
    ======================================================================== */
@@ -734,6 +734,35 @@ a:hover { text-decoration-color: var(--ink); }
 }
 
 
+/* Community card in Settings — banner + one line + invite, nothing else */
+.discord-embed{
+  border:1px solid var(--line-strong); border-radius:var(--radius-md); overflow:hidden;
+  background:var(--surface); box-shadow:var(--shadow-1);
+}
+.discord-embed-banner{ display:block; width:100%; height:96px; object-fit:cover; }
+.discord-embed-head{
+  display:flex; align-items:center; gap:8px; padding:12px 14px 0;
+  font-family:var(--serif); font-weight:750; font-size:15px; letter-spacing:-.015em; color:var(--ink);
+}
+.community-icon{
+  width:26px; height:26px; border-radius:7px; background:#5865F2; color:#fff;
+  display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;
+}
+.community-icon svg{ display:block; }
+.discord-embed-copy{ margin:6px 14px 0; font-size:12.5px; color:var(--ink-2); line-height:1.5; }
+.btn-discord{
+  display:inline-flex; align-items:center; justify-content:center; width:calc(100% - 28px);
+  margin:10px 14px 0; padding:9px 12px; border-radius:9px;
+  background:#5865F2; border:1px solid #4752C4; color:#fff;
+  font-size:13px; font-weight:700; letter-spacing:-.01em; text-decoration:none;
+  transition: all 140ms var(--ease);
+}
+.btn-discord:hover{ background:#4752C4; border-color:#3B45A0; }
+.discord-embed-foot{
+  padding:8px 14px 12px; text-align:center;
+  font-family:var(--mono); font-size:10.5px; color:var(--ink-3); letter-spacing:.02em;
+}
+
 /* ---------- Updates row + Changelog overlay ---------- */
 .update-row{
   display:flex; align-items:center; justify-content:space-between; gap:14px;
@@ -939,7 +968,7 @@ button, a, input, textarea, select { touch-action: manipulation; }
           <path d="M0 10 Q 10 0, 20 10 T 40 10 T 60 10 T 80 10" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round"/>
         </svg>
       </span>
-      <span class="side-label">Archiver <span class="version-tag">3.3</span></span>
+      <span class="side-label">Archiver <span class="version-tag">3.4</span></span>
       <button class="side-x" id="sideClose" aria-label="Close menu" title="Close">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
@@ -991,7 +1020,7 @@ button, a, input, textarea, select { touch-action: manipulation; }
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
         </button>
         <div class="model-badge-wrap">
-          <span class="model-name" id="modelLabel">Archiver <span class="version-tag">3.3</span></span>
+          <span class="model-name" id="modelLabel">Archiver <span class="version-tag">3.4</span></span>
           <div class="status-pill" id="topStatusPill" style="display:none !important;"><span class="dot"></span><span id="modelText">ready</span></div>
         </div>
       </div>
@@ -1013,15 +1042,15 @@ button, a, input, textarea, select { touch-action: manipulation; }
         <div class="start-badge">LOCAL ANSWERS. YOUR PACE.</div>
         <div class="assistant-orb" aria-hidden="true"></div>
         <div class="start-greeting">What’s on <em>your mind?</em></div>
-        <div class="start-sub">A quick question, a tricky concept, a page of notes. Start here.<br>Instant local tools, browser generation for open-ended work, and the web only when you ask.</div>
-        <p class="ai-disclosure">Browser generation prepares only for open-ended writing, explanations, coding and plans. Lookup, calculations and note extraction stay instant. The first use fetches a few hundred MB into your browser cache; Data Saver pauses it. Archiver picks WebGPU where the browser has it and a WebAssembly runtime where it does not, so Safari is not left out. No model runs on our server.</p>
+        <div class="start-sub">A quick question, a tricky concept, a page of notes. Start here.<br>Instant local tools, open-ended answers from Archiver 3.4 — our own model — and the web only when you ask.</div>
+        <p class="ai-disclosure">Archiver 3.4 is our own model, built on the open Qwen 2.5 0.5B base, and it runs entirely in your browser — no model runs on our server. It starts preparing the moment you open this page, in the background, so your first open-ended answer is ready when you are. Lookup, calculations and note extraction are instant from the first second. The one-time model fetch is a few hundred MB into your browser’s cache (Data Saver pauses it), and Archiver picks WebGPU where the browser has it and a WebAssembly runtime where it does not, so Safari is not left out.</p>
         <div class="start-features">
           <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> No model-provider key</span>
           <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Live web when you want it</span>
           <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg> Remembers you</span>
         </div>
         <div class="ob-chips" id="chips"></div>
-        <div style="margin-top:18px; font-size:11px; color:var(--fg-dim);">Archiver 3.3 · Chats can sync to this app’s server</div>
+        <div style="margin-top:18px; font-size:11px; color:var(--ink-3);">Archiver 3.4 — our own model · Chats can sync to this app’s server</div>
       </div>
       <div id="chatThread" class="hidden" role="log" aria-label="Conversation" aria-live="polite" aria-relevant="additions"></div>
     </div>
@@ -1042,7 +1071,7 @@ button, a, input, textarea, select { touch-action: manipulation; }
             </button>
           </div>
         </div>
-        <div class="ai-runtime-status" id="aiRuntimeStatus" role="status" aria-live="polite">Browser generation · ready when needed</div>
+        <div class="ai-runtime-status" id="aiRuntimeStatus" role="status" aria-live="polite">Archiver 3.4 · preparing in the background</div>
         <div class="composer-hint">
           <span>Enter to send · Shift+Enter for newline</span>
           <span id="composerStatus" role="status" aria-live="polite"></span>
@@ -1097,20 +1126,20 @@ button, a, input, textarea, select { touch-action: manipulation; }
     </header>
     <div class="settings-body">
       <fieldset>
-        <legend>On-device generation</legend>
+        <legend>Archiver 3.4 — our model</legend>
         <div class="engine-box">
           <div class="engine-line">
             <span class="dot on" id="engineDot"></span>
-            <b id="engineMode">Browser generation · enabled when needed</b>
+            <b id="engineMode">Archiver 3.4 · preparing in the background</b>
             <span class="mtag" id="engineModel"></span>
           </div>
-          <p id="engineBlurb">Archiver uses instant local tools for lookup, calculations and note extraction. For open-ended writing, explanations, coding and plans, it can prepare a compact language model in a browser worker. Nothing runs on Render.</p>
+          <p id="engineBlurb">Archiver 3.4 is our own model, built on the open Qwen 2.5 0.5B base. It runs entirely in your browser, so nothing runs on Render and no one else sees your prompts. It starts preparing the moment you open the page.</p>
           <div class="ai-confirmation" id="aiConfirmation" role="status" aria-live="polite">
             <span class="mark" aria-hidden="true">✓</span>
-            <span><strong id="aiConfirmationTitle">Browser generation is enabled</strong><small id="aiConfirmationDetail">It will activate only for requests that need writing or explanations.</small></span>
+            <span><strong id="aiConfirmationTitle">Archiver 3.4 is enabled</strong><small id="aiConfirmationDetail">It prepares in the background the moment you open this page.</small></span>
           </div>
-          <p class="desc">Browser generation is always enabled for writing, explanations, coding and plans. Its status is shown here and beside the chat box; it activates on demand. There is nothing to install and no download button: the first generative request fetches model assets into this browser’s cache and reuses them afterwards. Archiver picks the runtime automatically — WebGPU where the browser has it, and a WebAssembly (CPU) runtime where it does not, which is what most Safari installs get. Keep this page open while it prepares. Offline mode, Data Saver, or a browser with neither runtime will leave the instant tools running instead.</p>
-          <button class="btn" id="retryModel" type="button" hidden>Retry browser generation</button>
+          <p class="desc">Archiver 3.4 is always enabled for writing, explanations, coding and plans. Its status is shown here and beside the chat box. There is nothing to install and no download button: while the page is open it fetches the model once into this browser’s cache and reuses it afterwards, so by the time you type your first open-ended question it is usually already ready. Archiver picks the runtime automatically — WebGPU where the browser has it, and a WebAssembly (CPU) runtime where it does not, which is what most Safari installs get. Keep this page open while it prepares. Offline mode, Data Saver, or a browser with neither runtime will leave the instant tools running instead.</p>
+          <button class="btn" id="retryModel" type="button" hidden>Retry Archiver 3.4</button>
           <div class="engine-bar" id="engineBar" style="display:none"><span id="engineBarFill"></span></div>
           <div class="engine-progress" id="engineProgress" style="display:none"></div>
         </div>
@@ -1127,7 +1156,7 @@ button, a, input, textarea, select { touch-action: manipulation; }
 
       <fieldset>
         <legend>Memory Bank</legend>
-        <p style="margin-top:0;margin-bottom:10px;font-size:12px;color:var(--fg-muted)">Memories are stored on this app’s server. Relevant cached memories can inform browser generation when a request needs it.</p>
+        <p style="margin-top:0;margin-bottom:10px;font-size:12px;color:var(--ink-3)">Memories are stored on this app’s server. Relevant cached memories can inform Archiver 3.4 when a request needs it.</p>
         <label class="toggle"><input type="checkbox" id="setAutoExtract"> Learn new memories automatically from chat</label>
         <label class="toggle"><input type="checkbox" id="setAutoDistill"> Auto-distill and consolidate long chats</label>
       </fieldset>
@@ -1136,7 +1165,7 @@ button, a, input, textarea, select { touch-action: manipulation; }
         <legend>Persona & Prompt</legend>
         <div class="field">
           <textarea id="setPersona" spellcheck="false" placeholder="Custom instructions for Archiver..."></textarea>
-          <div class="desc">Instructions for browser generation. Instant lookup and text tools are deterministic.</div>
+          <div class="desc">Instructions for Archiver 3.4 (open-ended answers). Instant lookup and text tools are deterministic.</div>
         </div>
       </fieldset>
 
@@ -1179,26 +1208,17 @@ button, a, input, textarea, select { touch-action: manipulation; }
 
       <fieldset>
         <legend>Community</legend>
-        <div class="community-card">
-          <div class="community-icon" aria-hidden="true">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.369A19.79 19.79 0 0 0 15.56 2.5a14.08 14.08 0 0 0-.66 1.36 18.44 18.44 0 0 0-5.8 0A13.15 13.15 0 0 0 8.44 2.5 19.76 19.76 0 0 0 3.677 4.37a19.9 19.9 0 0 0-2.416 12.02 19.82 19.82 0 0 0 6.06 3.06 14.66 14.66 0 0 0 1.26-2.06 13.06 13.06 0 0 1-1.997-.95l.48-.38a15.15 15.15 0 0 0 8.66 0l.48.38a13.06 13.06 0 0 1-2 1l.01.01c.42.7.83 1.38 1.26 2.06a19.8 19.8 0 0 0 6.06-3.06 19.86 19.86 0 0 0-2.416-12.02Zm-11.29 9.92c-1.07 0-1.95-.99-1.95-2.2s.86-2.2 1.95-2.2c1.08 0 1.96.99 1.96 2.2s-.88 2.2-1.96 2.2Zm7.945 0c-1.07 0-1.95-.99-1.95-2.2s.86-2.2 1.95-2.2 1.96.99 1.96 2.2-.88 2.2-1.96 2.2Z"/></svg>
+        <div class="discord-embed">
+          <img class="discord-embed-banner" src="/static/discord-banner.jpg" alt="" loading="lazy">
+          <div class="discord-embed-head">
+            <span class="community-icon" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.369A19.79 19.79 0 0 0 15.56 2.5a14.08 14.08 0 0 0-.66 1.36 18.44 18.44 0 0 0-5.8 0A13.15 13.15 0 0 0 8.44 2.5 19.76 19.76 0 0 0 3.677 4.37a19.9 19.9 0 0 0-2.416 12.02 19.82 19.82 0 0 0 6.06 3.06 14.66 14.66 0 0 0 1.26-2.06 13.06 13.06 0 0 1-1.997-.95l.48-.38a15.15 15.15 0 0 0 8.66 0l.48.38a13.06 13.06 0 0 1-2 1l.01.01c.42.7.83 1.38 1.26 2.06a19.8 19.8 0 0 0 6.06-3.06 19.86 19.86 0 0 0-2.416-12.02Zm-11.29 9.92c-1.07 0-1.95-.99-1.95-2.2s.86-2.2 1.95-2.2c1.08 0 1.96.99 1.96 2.2s-.88 2.2-1.96 2.2Zm7.945 0c-1.07 0-1.95-.99-1.95-2.2s.86-2.2 1.95-2.2 1.96.99 1.96 2.2-.88 2.2-1.96 2.2Z"/></svg>
+            </span>
+            <b>Archiver Discord</b>
           </div>
-          <div class="community-copy">
-            <b>Join the Archiver Discord</b>
-            <span>Get help, share workflows &amp; shape what we build next. Quick invite — no spam.</span>
-          </div>
+          <p class="discord-embed-copy">Get help &amp; shape what we build next.</p>
           <a class="btn-discord" href="https://discord.gg/n9nBWJWu2a" target="_blank" rel="noopener noreferrer" id="settingsDiscordJoin">Join →</a>
-        </div>
-        <div style="margin-top:10px; font-size:12px; color:var(--ink-3); line-height:1.5;">
-          Invite: <a href="https://discord.gg/n9nBWJWu2a" target="_blank" rel="noopener noreferrer" style="color:var(--accent); font-weight:600;">discord.gg/n9nBWJWu2a</a> · opens in new tab
-        </div>
-        <div class="toggle-row" style="margin-top:12px;">
-          <label for="setDiscordFab"><input type="checkbox" id="setDiscordFab" checked> Show floating Discord button</label>
-          <span style="font-size:11px; color:var(--ink-3);">Above the composer — small &amp; quiet</span>
-        </div>
-        <div class="toggle-row" style="border-top:0; margin-top:0; padding-top:6px;">
-          <label for="setDiscordAuto"><input type="checkbox" id="setDiscordAuto"> Auto-show invite</label>
-          <span style="font-size:11px; color:var(--ink-3);">Was Chatwave-style (2.6s pop) — now off by default</span>
+          <div class="discord-embed-foot">discord.gg/n9nBWJWu2a · opens in new tab</div>
         </div>
       </fieldset>
 
@@ -1206,8 +1226,8 @@ button, a, input, textarea, select { touch-action: manipulation; }
         <legend>Updates</legend>
         <div class="update-row">
           <div class="update-meta">
-            <b>3.3</b><span>2026-09-26 · latest</span>
-            <p>Web answers close with a read built from the sources themselves — no more “Additional Thoughts &amp; Lateral Angles”, no stock paragraph reused across topics. A plan line on literally every prompt, and “what do you think?” answers from the last real read.</p>
+            <b>3.4</b><span>2026-09-27 · latest</span>
+            <p>Archiver 3.4 — our own model — starts preparing the moment you open the page, so first-time visitors get open-ended answers without a first-run wait. The Discord invite is one small card with a bright banner.</p>
           </div>
           <button class="btn sm" id="openChangelog" style="white-space:nowrap; flex-shrink:0;">View changelog →</button>
         </div>
@@ -1228,6 +1248,7 @@ button, a, input, textarea, select { touch-action: manipulation; }
 <div class="discord-widget" id="discordWidget" aria-live="polite">
   <div class="discord-card" id="discordCard" role="dialog" aria-modal="false" aria-label="Join our Discord community" hidden>
     <button class="discord-x" id="discordCardClose" aria-label="Dismiss — don't show for a week">×</button>
+    <img src="/static/discord-banner.jpg" alt="" style="display:block; width:100%; height:64px; object-fit:cover; border-radius:8px; margin-bottom:10px;" loading="lazy">
     <div class="discord-card-top">
       <span class="discord-badge">
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="width:14px;height:14px"><path d="M20.317 4.369A19.79 19.79 0 0 0 15.56 2.5a14.08 14.08 0 0 0-.66 1.36 18.44 18.44 0 0 0-5.8 0A13.15 13.15 0 0 0 8.44 2.5 19.76 19.76 0 0 0 3.677 4.37a19.9 19.9 0 0 0-2.416 12.02 19.82 19.82 0 0 0 6.06 3.06 14.66 14.66 0 0 0 1.26-2.06 13.06 13.06 0 0 1-1.997-.95l.48-.38a15.15 15.15 0 0 0 8.66 0l.48.38a13.06 13.06 0 0 1-2 1l.01.01c.42.7.83 1.38 1.26 2.06a19.8 19.8 0 0 0 6.06-3.06 19.86 19.86 0 0 0-2.416-12.02Zm-11.29 9.92c-1.07 0-1.95-.99-1.95-2.2s.86-2.2 1.95-2.2c1.08 0 1.96.99 1.96 2.2s-.88 2.2-1.96 2.2Zm7.945 0c-1.07 0-1.95-.99-1.95-2.2s.86-2.2 1.95-2.2 1.96.99 1.96 2.2-.88 2.2-1.96 2.2Z"/></svg>
@@ -1235,8 +1256,8 @@ button, a, input, textarea, select { touch-action: manipulation; }
       </span>
       <span class="discord-live"><span class="dot" aria-hidden="true"></span>Live community</span>
     </div>
-    <div class="discord-card-title">Join the Archiver Discord</div>
-    <p class="discord-card-copy">Get help, share workflows & shape what we build next. Quick invite — no spam, close anytime.</p>
+    <div class="discord-card-title">Archiver Discord</div>
+    <p class="discord-card-copy">Get help &amp; shape what we build next.</p>
     <a id="discordJoinBtn" class="discord-join-btn" href="https://discord.gg/n9nBWJWu2a" target="_blank" rel="noopener noreferrer">
       <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.317 4.369A19.79 19.79 0 0 0 15.56 2.5a14.08 14.08 0 0 0-.66 1.36 18.44 18.44 0 0 0-5.8 0A13.15 13.15 0 0 0 8.44 2.5 19.76 19.76 0 0 0 3.677 4.37a19.9 19.9 0 0 0-2.416 12.02 19.82 19.82 0 0 0 6.06 3.06 14.66 14.66 0 0 0 1.26-2.06 13.06 13.06 0 0 1-1.997-.95l.48-.38a15.15 15.15 0 0 0 8.66 0l.48.38a13.06 13.06 0 0 1-2 1l.01.01c.42.7.83 1.38 1.26 2.06a19.8 19.8 0 0 0 6.06-3.06 19.86 19.86 0 0 0-2.416-12.02Zm-11.29 9.92c-1.07 0-1.95-.99-1.95-2.2s.86-2.2 1.95-2.2c1.08 0 1.96.99 1.96 2.2s-.88 2.2-1.96 2.2Zm7.945 0c-1.07 0-1.95-.99-1.95-2.2s.86-2.2 1.95-2.2 1.96.99 1.96 2.2-.88 2.2-1.96 2.2Z"/></svg>
       Join Discord
@@ -1270,7 +1291,21 @@ button, a, input, textarea, select { touch-action: manipulation; }
     <div class="changelog-body">
       <div class="changelog-timeline">
         <div class="cl-entry" style="border-color:var(--accent)">
-          <div class="cl-head"><span class="cl-ver">3.3</span><span class="cl-tag">Latest</span><span class="cl-date">2026-09-26</span></div>
+          <div class="cl-head"><span class="cl-ver">3.4</span><span class="cl-tag">Latest</span><span class="cl-date">2026-09-27</span></div>
+          <div class="cl-title">Archiver 3.4 — our own model, ready before you ask</div>
+          <div class="cl-body">
+            <ul>
+              <li><b>Instant access for first-time visitors.</b> The model now starts preparing the moment the page opens — in the background, under the same offline and Data Saver guards as before — so a first question meets a model that is ready (or nearly) instead of a cold, minutes-long download. No download button, no settings detour, no second visit needed.</li>
+              <li><b>Our own model, clearly named.</b> Generation is branded <b>Archiver 3.4</b> everywhere — top bar, status line, Settings — with the open Qwen 2.5 0.5B base named honestly in Settings. It still runs entirely in your browser; nothing runs on Render.</li>
+              <li><b>Discord, tidied.</b> The Community section is one small card: a bright banner, one line of copy, the invite. The floating-button and auto-show toggles are gone — the button was already off everywhere.</li>
+              <li><b>Everything else stays as 3.3</b> — grounded web reads, a plan line on every prompt, the Safari WebAssembly runtime, private per-browser archives.</li>
+            </ul>
+          </div>
+          <div class="cl-foot"><span>3.4 · pre-warm + identity</span><span>Open the page and watch the status line</span></div>
+        </div>
+
+        <div class="cl-entry">
+          <div class="cl-head"><span class="cl-ver">3.3</span><span class="cl-date">2026-09-26</span></div>
           <div class="cl-title">A read of the sources, not a stock paragraph — and a plan on every prompt</div>
           <div class="cl-body">
             <p style="margin:0 0 6px; font-size:12.5px; line-height:1.55; color:var(--ink-2);">3.2 ended every web answer with “Additional Thoughts &amp; Lateral Angles”: a paragraph picked by keyword bucket, identical across every topic in the bucket, and a fallback (“ask who pays, what must stay on, and what the default is”) that made no sense for Benito Mussolini. That is gone.</p>
@@ -2304,11 +2339,11 @@ button, a, input, textarea, select { touch-action: manipulation; }
     const backendWord = st.backend === 'wasm' ? 'on this device’s CPU'
       : st.backend === 'webgpu' ? 'on this device’s GPU' : '';
     const labels = {
-      ready: 'Browser generation · active' + (backendWord ? ' ' + backendWord : ''),
-      loading: 'Preparing browser generation…',
-      error: 'Browser generation unavailable · instant tools ready',
-      paused: 'Browser generation · waiting for support or connection',
-      idle: 'Browser generation · enabled when needed'
+      ready: 'Archiver 3.4 · active' + (backendWord ? ' ' + backendWord : ''),
+      loading: 'Archiver 3.4 · preparing…',
+      error: 'Archiver 3.4 unavailable · instant tools ready',
+      paused: 'Archiver 3.4 · waiting for support or connection',
+      idle: 'Archiver 3.4 · preparing in the background'
     };
     const label = labels[st.aiState] || labels.idle;
     const candidates = (st.backendCandidates || []).slice();
@@ -2325,24 +2360,24 @@ button, a, input, textarea, select { touch-action: manipulation; }
       ? st.modelPretty + (st.backend === 'wasm' ? ' · WASM' : st.backend === 'webgpu' ? ' · WebGPU' : '')
       : '';
     $('#aiRuntimeStatus').textContent = label;
-    $('#aiRuntimeStatus').title = st.aiReason || 'Browser generation is reserved for open-ended writing, explanations, coding and plans.';
+    $('#aiRuntimeStatus').title = st.aiReason || 'Archiver 3.4 handles open-ended writing, explanations, coding and plans; instant tools cover the rest.';
     if (confirm) {
       const active = st.aiState === 'ready' || (st.aiEnabled && st.aiState === 'idle');
       confirm.className = 'ai-confirmation ' + (st.aiState === 'error' || st.aiState === 'paused' ? 'warn' : active ? 'active' : '');
       confirmTitle.textContent = st.aiState === 'ready'
-        ? 'Browser generation is active in this browser'
+        ? 'Archiver 3.4 is active in this browser'
         : st.aiState === 'loading'
-          ? 'Browser generation is preparing'
+          ? 'Archiver 3.4 is preparing'
           : st.aiState === 'error' || st.aiState === 'paused'
-            ? 'Browser generation is currently unavailable'
-            : 'Browser generation is enabled';
+            ? 'Archiver 3.4 is currently unavailable'
+            : 'Archiver 3.4 is enabled';
       confirmDetail.textContent = st.aiState === 'ready'
         ? (st.backend === 'wasm'
           ? 'Running the WebAssembly runtime on this device’s CPU because WebGPU is not available here. Writing and explanations work; expect slower output than a GPU browser. Lookup and note tools remain instant.'
           : 'Writing and explanations can now run on-device through WebGPU; lookup and note tools remain instant.')
         : st.aiState === 'idle'
-          ? 'It will activate only for requests that need writing or explanations. This browser will use ' + planWord + '; no manual download or settings change is needed.'
-          : (st.aiReason || 'It will activate only for requests that need writing or explanations.');
+          ? 'It prepares in the background from the moment this page opens. This browser will use ' + planWord + '; no manual download or settings change is needed.'
+          : (st.aiReason || 'It prepares in the background from the moment this page opens.');
     }
     /* Keep Retry available for a failed load or a temporary offline/WebGPU
        limitation. It is disabled only while an attempt is actually running. */
@@ -2495,15 +2530,15 @@ button, a, input, textarea, select { touch-action: manipulation; }
     $('#retryModel').onclick = async () => {
       if (state.streaming || $('#retryModel').disabled) return;
       $('#retryModel').disabled = true;
-      $('#composerStatus').textContent = 'Retrying browser generation…';
+      $('#composerStatus').textContent = 'Retrying Archiver 3.4…';
       paintEngine();
       $('#retryModel').disabled = true;
       try {
         await window.Archiver.retryAI();
-        toast('Browser generation is ready', 'ok');
+        toast('Archiver 3.4 is ready', 'ok');
       } catch (err) {
         const st = window.Archiver.status();
-        toast(st.aiReason || st.progressText || err.message || 'Browser generation could not start', 'err');
+        toast(st.aiReason || st.progressText || err.message || 'Archiver 3.4 could not start', 'err');
       } finally {
         $('#composerStatus').textContent = '';
         paintEngine();
@@ -2705,7 +2740,7 @@ button, a, input, textarea, select { touch-action: manipulation; }
     $('#exportBtn').onclick = () => {
       if (!state.sessionId) { toast('No active session', 'err'); return; }
       const messages = LocalStore.getMessages(state.sessionId);
-      const text = '# Archiver 3.3 conversation\n\n' + messages.map(m => '## ' + (m.role === 'user' ? 'You' : 'Archiver') + '\n\n' + m.content).join('\n\n');
+      const text = '# Archiver 3.4 conversation\n\n' + messages.map(m => '## ' + (m.role === 'user' ? 'You' : 'Archiver') + '\n\n' + m.content).join('\n\n');
       const url = URL.createObjectURL(new Blob([text], { type: 'text/markdown;charset=utf-8' }));
       const link = document.createElement('a'); link.href = url; link.download = 'archiver-conversation.md'; link.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
@@ -2757,6 +2792,15 @@ button, a, input, textarea, select { touch-action: manipulation; }
     });
 
     paintEngine();
+
+    /* 3.4 — warm the model in the background the moment the page opens, so a
+       first-time visitor's first open-ended answer does not pay the one-time
+       download. A short delay lets first paint win. warm() uses the same
+       guards as the on-demand path (offline, Data Saver, unsupported browser)
+       and never throws into the UI. */
+    setTimeout(() => {
+      if (window.Archiver && typeof window.Archiver.warm === 'function') window.Archiver.warm();
+    }, 1200);
 
     // Check last active session from LocalStore
     const lastActive = LocalStore.getActiveSessionId();
@@ -2851,13 +2895,19 @@ button, a, input, textarea, select { touch-action: manipulation; }
         closeCard(true);
       });
     }
+    function recordJoined(){
+      try{ localStorage.setItem(KEY_J, String(now())); }catch(e){}
+    }
     if(joinBtn){
       joinBtn.addEventListener('click', function(){
-        try{ localStorage.setItem(KEY_J, String(now())); }catch(e){}
+        recordJoined();
         // keep link behaviour (_blank) — also close card softly so it doesn't linger
         setTimeout(function(){ closeCard(false); }, 400);
       });
     }
+    // The Settings Community card points at the same invite; record the join there too.
+    var settingsJoin = document.getElementById('settingsDiscordJoin');
+    if(settingsJoin){ settingsJoin.addEventListener('click', recordJoined); }
     document.addEventListener('keydown', function(e){
       if(e.key==='Escape' && !card.hidden) closeCard(false);
     });
@@ -2902,52 +2952,6 @@ button, a, input, textarea, select { touch-action: manipulation; }
 
     // Expose for debugging
     window.__archiverDiscord = { open: openCard, close: closeCard, toggle: toggle, url: DISCORD };
-  }catch(e){}
-})();
-</script>
-
-
-<script>
-/* Settings → Community ↔ Discord widget (less intrusive controls) */
-(function(){
-  try{
-    var fabCb = document.getElementById('setDiscordFab');
-    var autoCb = document.getElementById('setDiscordAuto');
-    var widget = document.getElementById('discordWidget');
-    var HIDE='archiver_discord_hide_fab';
-    var AUTO='archiver_discord_autoshow';
-    function applyFab(){
-      if(!widget) return;
-      var hide = false;
-      try{ hide = localStorage.getItem(HIDE)==='1'; }catch(e){}
-      widget.style.display = hide ? 'none' : '';
-      if(fabCb) fabCb.checked = !hide;
-    }
-    function applyAuto(){
-      if(!autoCb) return;
-      try{ autoCb.checked = localStorage.getItem(AUTO)==='1'; }catch(e){}
-    }
-    applyFab(); applyAuto();
-    if(fabCb){
-      fabCb.addEventListener('change', function(){
-        try{
-          if(!fabCb.checked) localStorage.setItem(HIDE,'1');
-          else localStorage.removeItem(HIDE);
-        }catch(e){}
-        applyFab();
-      });
-    }
-    if(autoCb){
-      autoCb.addEventListener('change', function(){
-        try{
-          if(autoCb.checked) localStorage.setItem(AUTO,'1');
-          else localStorage.removeItem(AUTO);
-        }catch(e){}
-      });
-    }
-    // also hook Settings Discord Join to suppress auto future
-    var sdj = document.getElementById('settingsDiscordJoin');
-    if(sdj){ sdj.addEventListener('click', function(){ try{ localStorage.setItem('archiver_discord_joined', String(Date.now())); }catch(e){} }); }
   }catch(e){}
 })();
 </script>

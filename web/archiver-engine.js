@@ -1,12 +1,13 @@
-/* Archiver 3.3: instant retrieval and text tools, plus browser generation on
-   whichever runtime this device can actually run — WebGPU where it exists,
-   WebAssembly where it does not (which is most of Safari). */
+/* Archiver 3.4: instant retrieval and text tools, plus generation on whichever
+   runtime this device can actually run — WebGPU where it exists, WebAssembly
+   where it does not (which is most of Safari). 3.4 brands the model as
+   Archiver 3.4 and starts preparing it the moment the page opens. */
 (function () {
   'use strict';
 
   /* One definition of the version, so the label in the sidebar, the persona, the
      self-description, the API and the tests cannot disagree with each other. */
-  const VERSION = '3.3';
+  const VERSION = '3.4';
   const NAME = 'Archiver ' + VERSION;
 
   /* ======================================================================== */
@@ -282,7 +283,7 @@
   /* ---- commands ---------------------------------------------------------- */
 
 const HELP = [
-    "I'm **" + NAME + "** — your private research desk, instant local knowledge + browser generation for open-ended work. Chats can sync to the app server.",
+    "I'm **" + NAME + "** — your private research desk: instant local knowledge, plus Archiver 3.4, our own model, for open-ended work. Chats can sync to the app server.",
     '',
     '**Ask me anything.** History, science, health, tech, philosophy, nature, culture, practical life — plus **Render.com** (I know the host inside-out) and **intuition**. With **WEB** on I read live sources and give you a short read first, with 1–3 compact sources.',
     '',
@@ -839,7 +840,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       if (matches.every(m => m.entry && m.score >= ANSWER_AT) && matches[0].entry !== matches[1].entry) {
         return { text: matches.map((m, i) => '**' + understood.compare[i] + '**\n\n' + comprehension.excerpt(m.entry.a, 3, false)).join('\n\n') + '\n\n_Compared from local knowledge cards; this is not an exhaustive comparison._', kind: 'comparison', score: Math.min(...matches.map(m => m.score)) };
       }
-      return { text: 'I need a reliable local match for both sides of that comparison. Try more specific names or use WEB. Browser generation starts for open-ended requests when this device supports it.', kind: 'clarify', score: 0 };
+      return { text: 'I need a reliable local match for both sides of that comparison. Try more specific names or use WEB. Archiver 3.4 starts for open-ended requests when this device supports it.', kind: 'clarify', score: 0 };
     }
     const tl = tool(t);
     if (tl) return { text: tl, kind: 'tool', score: 1 };
@@ -852,7 +853,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     if (LIVE_RE.test(t) && !/^(?:what is|define|explain|difference between|compare)\b/i.test(t)) return { text: "Live data — weather, news, prices, scores — needs web search. Turn on **WEB** and I will fetch it rather than guess.", kind: 'live', score: 0 };
 
     if (/^(?:write|draft|rewrite|rephrase|translate|compose|brainstorm|create|debug)\b/i.test(understood.query || t)) {
-      return { text: 'That needs browser generation rather than a stored answer. ' + (aiReason() || 'Browser generation starts automatically for this request in chat; the first use downloads a few hundred MB.') + ' I can still extract key sentences (`summarize: …`), compare known topics, or calculate in instant mode.', kind: 'capability', score: 1 };
+      return { text: 'That needs Archiver 3.4 rather than a stored answer. ' + (aiReason() || 'Archiver 3.4 starts automatically for this request in chat; the one-time download is a few hundred MB.') + ' I can still extract key sentences (`summarize: …`), compare known topics, or calculate in instant mode.', kind: 'capability', score: 1 };
     }
     const r = resolve(understood.query || t);
     const best = search(r.text, 5);
@@ -902,7 +903,10 @@ I can describe my capabilities and limitations; that is not consciousness or fee
   // the weights, so it gets a longer ceiling than the GPU path.
   const WASM_TIMEOUT_MS = 12 * 60 * 1000;
 
-  /* Small, fixed model family; never silently select a larger catalogue model. */
+  /* Small, fixed model family; never silently select a larger catalogue model.
+     This is Archiver's own model — branded "Archiver 3.4" in every label —
+     built on the open Qwen 2.5 0.5B Instruct base. Settings names the base
+     honestly; the product surface says Archiver 3.4. */
   const PREFERRED = ['Qwen2.5-0.5B-Instruct-q4f16_1-MLC', 'Qwen2.5-0.5B-Instruct-q4f32_1-MLC'];
 
   /* The same model family on the WASM path, as GGUF from its publisher. Tried in
@@ -920,13 +924,15 @@ I can describe my capabilities and limitations; that is not consciousness or fee
   const GPU_CONTEXT = 4096;
   const WASM_CONTEXT = 2048;
 
-  /* Human-readable model labels. */
+  /* Human-readable model labels. The 0.5B family is Archiver's own model,
+     branded Archiver 3.4; the other entries are guards so an unexpected model
+     id still renders as something a reader can act on. */
   const NICE = [
     [/Qwen2\.5-7B/, 'Qwen 2.5 7B'],
     [/Qwen2\.5-3B/, 'Qwen 2.5 3B'],
     [/Qwen2\.5-1\.5B/, 'Qwen 2.5 1.5B'],
-    [/Qwen2\.5-0\.5B/, 'Qwen 2.5 0.5B'],
-    [/qwen2\.5-0\.5b/, 'Qwen 2.5 0.5B'],
+    [/Qwen2\.5-0\.5B/, 'Archiver 3.4'],
+    [/qwen2\.5-0\.5b/, 'Archiver 3.4'],
     [/Hermes-3/, 'Hermes 3 8B'],
     [/Phi-3\.5/, 'Phi 3.5 mini'],
     [/gemma-2-2b/, 'Gemma 2 2B']
@@ -1108,11 +1114,11 @@ I can describe my capabilities and limitations; that is not consciousness or fee
   function blockReason() {
     if (generationReady()) return '';
     if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-      return 'You are offline; connect to the internet to prepare browser generation.';
+      return 'You are offline; connect to the internet to prepare Archiver 3.4.';
     }
     try {
       const c = navigator.connection;
-      if (c && c.saveData) return 'Data Saver is on, so browser generation is paused. Turn it off to prepare the model.';
+      if (c && c.saveData) return 'Data Saver is on, so Archiver 3.4 is paused. Turn it off to prepare the model.';
     } catch (_) {}
     if (!webgpu() && !wasmSupported()) {
       return 'This browser supports neither WebGPU nor WebAssembly workers; instant tools remain available.';
@@ -1156,8 +1162,22 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     // model that is loading/serving a response.
     try { localStorage.setItem('archiver.ai.enabled', '1'); } catch (_) {}
     loadFailure = '';
-    emitProgress('Browser generation is enabled when needed', 0);
+    emitProgress('Archiver 3.4 is enabled when needed', 0);
     return true;
+  }
+
+  /* 3.4 — page-load pre-warm. Starts the same load the first open-ended
+     request would start, but the moment the page opens, in the background,
+     and never throws into the UI: a first-time visitor's first question meets
+     a model that is ready (or nearly so) instead of a cold, minutes-long
+     download. Respects the same guards — offline, Data Saver, no usable
+     runtime — so a metered connection is never surprised. Idempotent: a
+     load already in flight is shared, and a ready model is returned at once. */
+  function warm() {
+    if (generationReady()) return Promise.resolve(true);
+    if (loading) return loading.then(() => true).catch(() => false);
+    if (blockReason()) return Promise.resolve(false);
+    return load().then(() => true).catch(() => false);
   }
 
   /* ---- WebGPU backend ----------------------------------------------------- */
@@ -1169,7 +1189,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     if (!PREFERRED.includes(selected) || (!halfPrecision && selected.includes('f16'))) {
       throw new Error('That model is not supported by this device.');
     }
-    emitProgress('Starting browser generation — first use fetches a few hundred MB…', 1);
+    emitProgress('Fetching Archiver 3.4 into this browser’s cache — one time, in the background…', 1);
     traceStep('Chose the WebGPU backend (' + choice.why + ').');
     const mod = await import(/* webpackIgnore: true */ WEBLLM_RUNTIME);
     ctx.stopped();
@@ -1181,7 +1201,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       appConfig: { model_list: [record], useIndexedDBCache: false },
       initProgressCallback: r => {
         if (!ctx.controller.signal.aborted && ctx.generation === loadGeneration) {
-          emitProgress(r.text || 'Preparing browser generation…', Math.round((r.progress || 0) * 100));
+          emitProgress(r.text || 'Preparing Archiver 3.4…', Math.round((r.progress || 0) * 100));
         }
       }
     });
@@ -1284,7 +1304,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     let timedOut = false;
     let timeoutMs = LOAD_TIMEOUT_MS;
     const task = (async () => {
-      emitProgress('Checking this device for browser generation…', 0);
+      emitProgress('Checking this device for Archiver 3.4…', 0);
       const choice = await chooseBackend();
       ctx.stopped();
       if (!choice) {
@@ -1295,8 +1315,8 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       timeoutMs = choice.kind === 'wasm' ? WASM_TIMEOUT_MS : LOAD_TIMEOUT_MS;
       armTimeout();
       traceStep(choice.kind === 'wasm'
-        ? 'WebGPU is unavailable here, so browser generation falls back to the WebAssembly runtime automatically.'
-        : 'WebGPU is available, so browser generation uses the GPU runtime.');
+        ? 'WebGPU is unavailable here, so Archiver 3.4 falls back to the WebAssembly runtime automatically.'
+        : 'WebGPU is available, so Archiver 3.4 uses the GPU runtime.');
       const selected = choice.kind === 'wasm'
         ? await loadWASM(choice, wanted, ctx)
         : await loadWebGPU(choice, wanted, ctx);
@@ -1304,8 +1324,8 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       activeModel = selected;
       activeBackend = choice.kind;
       emitProgress(choice.kind === 'wasm'
-        ? 'Browser generation is active on the CPU (WebAssembly)'
-        : 'Browser generation is active', 100);
+        ? 'Archiver 3.4 is active on this device’s CPU (WebAssembly)'
+        : 'Archiver 3.4 is active', 100);
       return { model: selected, pretty: pretty(selected), backend: choice.kind };
     })();
     let timer = null;
@@ -1338,12 +1358,12 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       if (!controller.signal.aborted) controller.abort();
       const stoppedByUser = loadAbortReason && loadAbortReason !== 'timeout' && loadAbortReason !== 'retry';
       if (timedOut) {
-        loadFailure = 'Browser generation timed out. Instant tools still work; try again on a faster connection.';
+        loadFailure = 'Archiver 3.4 timed out. Instant tools still work; try again on a faster connection.';
       } else if (err.name !== 'AbortError' || !stoppedByUser) {
         const detail = err && err.message ? ' ' + err.message : '';
-        loadFailure = 'Browser generation could not start.' + detail + ' Try again in Settings.';
+        loadFailure = 'Archiver 3.4 could not start.' + detail + ' Try again in Settings.';
       }
-      emitProgress(loadFailure || 'Browser generation stopped; instant tools are ready', 0);
+      emitProgress(loadFailure || 'Archiver 3.4 stopped; instant tools are ready', 0);
       throw err;
     } finally {
       clearTimeout(timer);
@@ -1370,7 +1390,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     releaseBackend();
     loadFailure = '';
     loadAbortReason = '';
-    emitProgress('Retrying browser generation…', 0);
+    emitProgress('Retrying Archiver 3.4…', 0);
     return load(wanted);
   }
 
@@ -1888,12 +1908,12 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     if (!generationReady() && !searchEnabled && opts.autoAI !== false) {
       const local = _reply(t);
       if (['capability', 'miss', 'fuzzy', 'related', 'clarify'].includes(local.kind)) {
-        traceStep('Local tools could not answer this (' + local.kind + '), so browser generation was prepared automatically.');
-        if (opts.onStatus) opts.onStatus('Preparing browser generation…');
+        traceStep('Local tools could not answer this (' + local.kind + '), so Archiver 3.4 was prepared automatically.');
+        if (opts.onStatus) opts.onStatus('Preparing Archiver 3.4…');
         await ensureAI(opts);
         checkStopped();
         if (!generationReady()) {
-          traceStep('Browser generation could not start: ' + (aiReason() || 'unknown reason') + ' The answer below comes from local tools and any sources already fetched.');
+          traceStep('Archiver 3.4 could not start: ' + (aiReason() || 'unknown reason') + ' The answer below comes from local tools and any sources already fetched.');
         }
       }
     }
@@ -2106,6 +2126,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     reply,
     chat,
     load,
+    warm,
     onProgress,
     setAIEnabled,
     cancelLoad,
