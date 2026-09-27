@@ -1,5 +1,31 @@
 # Changelog
 
+## 3.4 — 2026-09-27
+
+### Pre-warm: instant access for first-time visitors
+
+- **The model prepares the moment the page opens.** A new `Archiver.warm()` starts the same load the first open-ended request would start, but immediately on page boot (after first paint, 1.2 s in), in the background, and never throws into the UI. `load()` is idempotent, so the on-demand path from `chat()` shares the same in-flight load — no double download.
+- **Same guards, no surprises.** `warm()` respects `blockReason()` exactly like the on-demand path: offline pauses it, Data Saver pauses it (and says so), a browser with neither WebGPU nor a WebAssembly worker simply keeps the instant tools.
+- **Status is visible the whole time.** The line under the composer, the sidebar health dot and Settings all render the preparation progress as it happens, so a slow first load reads as "getting ready", not "stuck".
+
+### Archiver 3.4 — our own model, clearly named
+
+- Generation is branded **Archiver 3.4** in every user-facing surface: page title, sidebar and top-bar version tags, the status line, Settings, toasts, the thought-process panel and the export header. The model the visitor actually gets is the Qwen 2.5 0.5B Instruct base — Settings names that honestly; the product surface says Archiver 3.4.
+- Version 3.4 everywhere a version is stated: engine, corpus, page title, manifest, `/api/health`, API schema, default model label (`Archiver 3.4 (in-browser)`, with migration), server persona, README and this changelog.
+
+### Migration gap closed
+
+- The 3.3 release upgraded banks still on the 3.2 and 3.1 default personas but did not list the 3.3 persona as retired, so a bank seeded on 3.3 would have kept the old persona (and the old model label) forever. Both are now in the retired lists and upgrade in place on start; customised personas are still never touched.
+
+### Discord, tidied
+
+- The Settings Community section is one compact card: a bright, futuristic banner (`web/discord-banner.jpg`), one line of copy — “Get help & shape what we build next.” — the Join button, and the invite line (`discord.gg/n9nBWJWu2a · opens in new tab`). Nothing after that.
+- The “Show floating Discord button” and “Auto-show invite” toggles are removed. They were dead controls: the floating widget is hidden by a `!important` stylesheet rule that an inline style cannot override, so toggling them changed nothing. The hidden widget markup stays (with shortened copy and the same banner), and the “joined” recording from the Settings join link now lives in the widget script.
+
+### Tests
+
+- `tests/model.js`, `tests/offline.js` and `tests/test_api.py` assert the 3.4 runtime, corpus, health and page copy (including the new “Archiver 3.4 is always enabled” wording).
+
 ## 3.3 — 2026-09-26
 
 ### A read of the sources, not a stock paragraph

@@ -1,7 +1,7 @@
 {
-  "name": "Archiver 3.3 — Your everyday assistant",
+  "name": "Archiver 3.4 — Your everyday assistant",
   "short_name": "Archiver",
-  "description": "Instant local tools, browser generation on WebGPU or WebAssembly, and live web when you ask. Every answer shows what it did. Chats can sync to the app server.",
+  "description": "Archiver 3.4 — our own model, in your browser. Instant local tools, open-ended answers on WebGPU or WebAssembly, and live web when you ask. Every answer shows what it did.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
