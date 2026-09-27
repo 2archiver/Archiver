@@ -1909,10 +1909,791 @@
   }
 ];
 
+
+  /* New cards for 3.4 — food, sports, brands, geography, science, culture, everyday */
+/* ========================================================================
+   MORE34 — 100 new knowledge cards for Archiver 3.4
+   Food & drink, sports, brands, modern life, geography, and more.
+   ========================================================================== */
+
+const MORE34 = [
+  /* ------------------------------------------------------------------ */
+  /* FOOD & DRINK                                                        */
+  /* ------------------------------------------------------------------ */
+  {
+    id: 'food-haagen-dazs',
+    q: ['what is haagen-dazs', 'haagen dazs', 'who made haagen dazs', 'is haagen dazs really danish',
+        'where is haagen dazs from', 'haagen dazs origin'],
+    a: 'Häagen-Dazs is an American ice cream brand founded in 1961 by Reuben Mattus in the Bronx, New York. The name is meaningless — Mattus invented it to sound Danish or Scandinavian, giving the brand a European sophistication it never had. There is no umlaut in any Scandinavian language, and the company has no Danish origin. It started with three flavours — vanilla, chocolate and coffee — and pioneered super-premium ice cream with high butterfat content and no artificial ingredients. It is now owned by General Mills (US and Canada) and Froneri (rest of world).',
+    tags: ['food', 'brands', 'ice-cream']
+  },
+  {
+    id: 'food-espresso',
+    q: ['what is espresso', 'espresso meaning', 'how does espresso work', 'espresso vs coffee'],
+    a: 'Espresso is coffee brewed by forcing hot water (90–96 °C) through finely ground beans under high pressure (~9 bar), producing a small, concentrated shot with crema on top. It originated in early 20th-century Italy. The word comes from Italian "expressed" — pressed out. A shot is typically 25–30 ml and forms the base for lattes, cappuccinos, and flat whites.',
+    tags: ['food', 'drink']
+  },
+  {
+    id: 'food-sourdough',
+    q: ['what is sourdough', 'sourdough bread', 'how does sourdough work'],
+    a: 'Sourdough bread uses wild yeast and lactic acid bacteria instead of commercial yeast. A starter — flour and water left to ferment — captures these microbes from the environment and the flour itself. The long fermentation (12–24 hours) produces a tangy flavour, chewy texture, and better keeping quality. It is one of the oldest forms of leavened bread, dating back thousands of years.',
+    tags: ['food', 'cooking']
+  },
+  {
+    id: 'food-kimchi',
+    q: ['what is kimchi', 'kimchi meaning', 'how is kimchi made'],
+    a: 'Kimchi is a Korean fermented vegetable dish, most commonly made with napa cabbage, radish, garlic, ginger, and gochugaru (red chilli flakes). The lacto-fermentation produces lactic acid, giving it a sour, umami-rich flavour. It has been a staple of Korean cuisine for centuries and was added to UNESCO\'s Intangible Cultural Heritage list in 2013.',
+    tags: ['food', 'culture']
+  },
+  {
+    id: 'food-sushi',
+    q: ['what is sushi', 'sushi meaning', 'history of sushi'],
+    a: 'Sushi is a Japanese dish of vinegared rice combined with seafood, vegetables, and sometimes tropical fruits. The word "sushi" refers to the rice, not the fish. Originally a preservation method from Southeast Asia (fermenting fish in rice), it evolved in Edo (Tokyo) in the early 19th century into the hand-pressed nigiri form. Sushi as we know it — raw fish on rice — is relatively modern.',
+    tags: ['food', 'culture', 'japan']
+  },
+  {
+    id: 'food-kombucha',
+    q: ['what is kombucha', 'kombucha meaning', 'is kombucha healthy'],
+    a: 'Kombucha is a fermented tea made by adding a SCOBY (symbiotic culture of bacteria and yeast) to sweetened tea and letting it ferment for 1–3 weeks. It produces a slightly fizzy, tart drink with trace amounts of alcohol. Health claims (gut health, immunity) are largely unproven in rigorous studies, though the fermentation does produce organic acids and probiotics.',
+    tags: ['food', 'health']
+  },
+  {
+    id: 'food-matcha',
+    q: ['what is matcha', 'matcha tea', 'matcha vs green tea'],
+    a: 'Matcha is finely ground powder of specially grown and processed green tea leaves. The plants are shade-grown for 3–4 weeks before harvest, increasing chlorophyll and L-theanine. Unlike regular green tea where you steep and discard leaves, with matcha you consume the whole leaf, which means more caffeine (~70 mg per cup) and more antioxidants.',
+    tags: ['food', 'drink', 'japan']
+  },
+  {
+    id: 'food-sourdough-starter',
+    q: ['how to make a sourdough starter', 'sourdough starter', 'what is a sourdough starter'],
+    a: 'Mix equal parts flour and water in a jar, leave loosely covered at room temperature, and feed daily by discarding half and adding fresh flour and water. After 5–7 days wild yeast and bacteria colonise the mixture, creating a bubbly, tangy culture. It is alive — it needs regular feeding or refrigeration to survive.',
+    tags: ['food', 'cooking', 'practical']
+  },
+  {
+    id: 'food-umami',
+    q: ['what is umami', 'umami meaning', 'fifth taste', 'umami flavour'],
+    a: 'Umami is the fifth basic taste (after sweet, sour, salty, bitter), identified by Japanese chemist Kikunae Ikeda in 1908. It is triggered by glutamate and nucleotides found in aged cheese, soy sauce, tomatoes, mushrooms, and meat. The word means "pleasant savoury taste" in Japanese. MSG (monosodium glutamate) is its concentrated form.',
+    tags: ['food', 'science']
+  },
+  {
+    id: 'food-cold-brew',
+    q: ['what is cold brew coffee', 'cold brew vs iced coffee', 'how to make cold brew'],
+    a: 'Cold brew steeps coarsely ground coffee in cold water for 12–24 hours, then strains. The slow extraction produces a smoother, less acidic concentrate than hot-brewed coffee poured over ice (which is iced coffee, a different thing). Cold brew typically has more caffeine per volume because the concentrate is stronger.',
+    tags: ['food', 'drink']
+  },
+  {
+    id: 'food-oat-milk',
+    q: ['what is oat milk', 'oat milk vs regular milk', 'is oat milk healthy'],
+    a: 'Oat milk is made by blending oats with water and straining. It has a naturally sweet, creamy taste and froths well for coffee. Nutritionally it is lower in protein than cow\'s milk and soy milk but often fortified with calcium and vitamins. Some brands add oil for texture. It has a lower environmental footprint than dairy and almond milk in water use.',
+    tags: ['food', 'health', 'environment']
+  },
+  {
+    id: 'food-kombucha-scoby',
+    q: ['what is a scoby', 'scoby meaning'],
+    a: 'SCOBY stands for Symbiotic Culture Of Bacteria and Yeast — a rubbery, cellulose-based biofilm that floats on fermenting tea. It houses the microorganisms that convert sugar into the acids, carbon dioxide, and trace alcohol that make kombucha tangy. Each batch grows a new layer, so a single starter can produce kombucha indefinitely.',
+    tags: ['food', 'science']
+  },
+  {
+    id: 'food-champagne',
+    q: ['what is champagne', 'champagne vs sparkling wine', 'how is champagne made'],
+    a: 'Champagne is sparkling wine produced exclusively in the Champagne region of France using the méthode champenoise: a second fermentation in the bottle creates the bubbles. The name is legally protected — sparkling wine from anywhere else cannot be called Champagne. The three main grapes are Chardonnay, Pinot Noir, and Pinot Meunier.',
+    tags: ['food', 'drink', 'culture']
+  },
+  {
+    id: 'food-kobe-beef',
+    q: ['what is kobe beef', 'kobe beef meaning', 'is kobe beef worth it'],
+    a: 'Kobe beef comes from Tajima-gyu cattle raised in Japan\'s Hyōgo Prefecture, slaughtered in Kobe. It must meet strict marbling scores (BMS 6+), carcass weight limits, and fat quality standards. Authentic Kobe is rarely exported; most "Kobe beef" sold internationally is Wagyu (a broader category) or mislabelled. The high marbling gives it a buttery texture and rich umami.',
+    tags: ['food', 'japan']
+  },
+  {
+    id: 'food-fermentation',
+    q: ['what is fermentation', 'fermentation meaning', 'how does fermentation work'],
+    a: 'Fermentation is a metabolic process where microorganisms (yeast, bacteria) convert sugars into acids, gases, or alcohol in the absence of oxygen. It preserves food, creates complex flavours, and can produce beneficial compounds. Examples: bread (yeast), yogurt (lactic bacteria), beer (yeast), sauerkraut (lactic bacteria), wine (yeast).',
+    tags: ['food', 'science']
+  },
+
+  /* ------------------------------------------------------------------ */
+  /* SPORTS                                                              */
+  /* ------------------------------------------------------------------ */
+  {
+    id: 'sport-cricket',
+    q: ['what is cricket', 'cricket rules', 'how does cricket work'],
+    a: 'Cricket is a bat-and-ball sport played between two teams of 11 on a grass field with a 22-yard pitch. One team bats, trying to score runs; the other bowls and fields, trying to dismiss batters. Formats range from Test matches (up to 5 days) to T20 (about 3 hours). It is most popular in India, Australia, England, Pakistan, and the West Indies.',
+    tags: ['sport']
+  },
+  {
+    id: 'sport-formula1',
+    q: ['what is formula 1', 'formula 1 rules', 'f1 racing'],
+    a: 'Formula 1 is the highest class of single-seater auto racing, governed by the FIA. Teams design and build their own cars within strict technical regulations. A season consists of Grand Prix races held worldwide on purpose-built circuits and street tracks. Drivers compete for the World Championship; teams compete for the Constructors\' Championship. Lewis Hamilton and Michael Schumacher share the record of 7 drivers\' titles.',
+    tags: ['sport', 'technology']
+  },
+  {
+    id: 'sport-rugby',
+    q: ['what is rugby', 'rugby rules', 'rugby vs football'],
+    a: 'Rugby is a contact sport played with an oval ball. Two main codes exist: Rugby Union (15 players, continuous play) and Rugby League (13 players, set of six tackles). Points come from tries (5 in union, 4 in league), conversions, penalties, and drop goals. The Rugby World Cup is held every four years; New Zealand, South Africa, and England are traditional powers.',
+    tags: ['sport']
+  },
+  {
+    id: 'sport-tennis-grand-slam',
+    q: ['what are the grand slams in tennis', 'tennis grand slams', 'four grand slams'],
+    a: 'The four Grand Slam tournaments are the Australian Open (January, hard court, Melbourne), the French Open (May–June, clay, Paris), Wimbledon (June–July, grass, London), and the US Open (August–September, hard court, New York). Winning all four in a calendar year is a Grand Slam — achieved by only five players in singles.',
+    tags: ['sport']
+  },
+  {
+    id: 'sport-basketball',
+    q: ['what is basketball', 'basketball rules', 'nba meaning'],
+    a: 'Basketball is a team sport where two teams of five try to score by shooting a ball through the opponent\'s hoop (3.05 m high). A field goal inside the three-point line is worth 2 points, beyond it 3, and a free throw 1. The NBA (National Basketball Association) in North America is the world\'s premier league. The sport was invented by James Naismith in 1891 in Springfield, Massachusetts.',
+    tags: ['sport']
+  },
+  {
+    id: 'sport-tour-de-france',
+    q: ['what is the tour de france', 'tour de france meaning'],
+    a: 'The Tour de France is the most prestigious cycling stage race, held annually since 1903. It covers roughly 3,500 km over 21 stages in July, traversing France and sometimes neighbouring countries. Riders compete for the overall leader\'s yellow jersey (maillot jaune), plus classifications for sprinters (green), climbers (polka dot), and young riders (white).',
+    tags: ['sport']
+  },
+  {
+    id: 'sport-olympics-history',
+    q: ['when did the olympics start', 'history of the olympics', 'ancient olympics'],
+    a: 'The ancient Olympics began in 776 BCE at Olympia, Greece, and ran every four years for nearly 12 centuries until Roman Emperor Theodosius I banned them in 393 CE. The modern Olympics were revived by Pierre de Coubertin in 1896 in Athens. The first Games had 241 athletes from 14 nations; the 2024 Paris Games had over 10,000 from 206 nations.',
+    tags: ['sport', 'history']
+  },
+  {
+    id: 'sport-world-cup',
+    q: ['what is the fifa world cup', 'when is the world cup', 'world cup history'],
+    a: 'The FIFA World Cup is the most-watched sporting event on Earth, held every four years since 1930 (except 1942 and 1946). Brazil has won it five times, Germany and Italy four each. The 2022 tournament in Qatar was the first held in winter (November–December). The 2026 World Cup in the US, Canada, and Mexico will be the first with 48 teams.',
+    tags: ['sport']
+  },
+
+  /* ------------------------------------------------------------------ */
+  /* BRANDS & COMPANIES                                                  */
+  /* ------------------------------------------------------------------ */
+  {
+    id: 'brand-apple',
+    q: ['who founded apple', 'apple history', 'when was apple founded'],
+    a: 'Apple Inc. was founded on 1 April 1976 by Steve Jobs, Steve Wozniak, and Ronald Wayne in a garage in Los Altos, California. The Apple I was a hand-built circuit board; the Apple II (1977) brought colour graphics and made the company. After near-bankruptcy in 1997 and Jobs\' return, the iMac, iPod, iPhone, and iPad made it the world\'s most valuable company.',
+    tags: ['tech', 'brands']
+  },
+  {
+    id: 'brand-tesla',
+    q: ['who founded tesla', 'tesla history', 'when was tesla founded'],
+    a: 'Tesla, Inc. was incorporated in 2003 by Martin Eberhard and Marc Tarpenning. Elon Musk joined as chairman and lead investor in the Series A round (2004) and later became CEO. The Roadster (2008) was the first production electric car with lithium-ion batteries to exceed 200 miles of range. The Model S (2012), Model 3 (2017), and Model Y (2020) made EVs mainstream.',
+    tags: ['tech', 'brands']
+  },
+  {
+    id: 'brand-google',
+    q: ['who founded google', 'google history', 'when was google founded'],
+    a: 'Google was founded in September 1998 by Larry Page and Sergey Brin while they were PhD students at Stanford. Their PageRank algorithm ranked web pages by the number and quality of links pointing to them, producing better search results than existing engines. The company restructured as Alphabet Inc. in 2015. Google processes roughly 8.5 billion searches per day.',
+    tags: ['tech', 'brands']
+  },
+  {
+    id: 'brand-nike',
+    q: ['who founded nike', 'nike history', 'nike meaning'],
+    a: 'Nike was founded in 1964 as Blue Ribbon Sports by Phil Knight and Bill Bowerman, a track coach at the University of Oregon. It became Nike, Inc. in 1978, named after the Greek goddess of victory. Bowerman\'s waffle-iron sole and the 1988 "Just Do It" campaign made it the world\'s largest sportswear company. The swoosh logo was designed by graphic design student Carolyn Davidson for $35.',
+    tags: ['brands', 'sport']
+  },
+  {
+    id: 'brand-starbucks',
+    q: ['who founded starbucks', 'starbucks history'],
+    a: 'Starbucks was founded in 1971 in Seattle by Jerry Baldwin, Zev Siegl, and Gordon Bowker as a coffee bean retailer. Howard Schultz joined in 1982, visited Milan espresso bars, and convinced the founders to serve drinks. After buying the company in 1987 he expanded it into a global chain popularising espresso-based drinks in countries with no café culture. It now has over 35,000 stores worldwide.',
+    tags: ['brands', 'food']
+  },
+
+  /* ------------------------------------------------------------------ */
+  /* GEOGRAPHY — MORE COUNTRIES & CITIES                                 */
+  /* ------------------------------------------------------------------ */
+  {
+    id: 'geo-south-korea-capital',
+    q: ['capital of south korea', 'what is the capital of south korea', 'seoul capital'],
+    a: 'Seoul, officially the Seoul Special City, is the capital of South Korea. With roughly 10 million people in the city proper and 25 million in the greater metropolitan area, it is one of the world\'s largest cities. It sits on the Han River in northwestern South Korea.',
+    tags: ['geography']
+  },
+  {
+    id: 'geo-mexico-capital',
+    q: ['capital of mexico', 'what is the capital of mexico'],
+    a: 'Mexico City (Ciudad de México), built on the ruins of the Aztec capital Tenochtitlan. At over 21 million in the metro area, it is the largest city in the Western Hemisphere and one of the highest major cities at 2,240 m elevation.',
+    tags: ['geography']
+  },
+  {
+    id: 'geo-thailand-capital',
+    q: ['capital of thailand', 'what is the capital of thailand', 'bangkok capital'],
+    a: 'Bangkok (Krung Thep Maha Nakhon), on the Chao Phraya River. Its ceremonial Thai name is the longest place name in the world. With about 10 million people, it is Thailand\'s political, economic, and cultural centre.',
+    tags: ['geography']
+  },
+  {
+    id: 'geo-kenya-capital',
+    q: ['capital of kenya', 'what is the capital of kenya'],
+    a: 'Nairobi, founded in 1899 as a rail depot during construction of the Uganda Railway. It became capital of British East Africa in 1907 and independent Kenya\'s capital in 1963. The Nairobi National Park, unique among world capitals, sits within the city limits.',
+    tags: ['geography']
+  },
+  {
+    id: 'geo-turkey-capital',
+    q: ['capital of turkey', 'capital of türkiye', 'what is the capital of turkey'],
+    a: 'Ankara, not Istanbul. Ankara became the capital in 1923 when Mustafa Kemal Atatürk founded the Republic of Turkey, choosing it over the Ottoman capital Istanbul for its central location and symbolic break with the empire.',
+    tags: ['geography']
+  },
+  {
+    id: 'geo-peru-capital',
+    q: ['capital of peru', 'what is the capital of peru'],
+    a: 'Lima, on the Pacific coast, founded by Francisco Pizarro in 1535 as the capital of the Spanish Viceroyalty of Peru. It is the country\'s political, cultural, and economic centre, with about 10 million in the metro area.',
+    tags: ['geography']
+  },
+  {
+    id: 'geo-argentina-capital',
+    q: ['capital of argentina', 'what is the capital of argentina'],
+    a: 'Buenos Aires, on the Río de la Plata. The "Paris of South America" is known for tango, wide boulevards, and a European architectural heritage. The city is an autonomous federal district; the metro area has about 15 million people.',
+    tags: ['geography']
+  },
+  {
+    id: 'geo-vietnam-capital',
+    q: ['capital of vietnam', 'what is the capital of vietnam'],
+    a: 'Hanoi, in the north on the Red River, has been Vietnam\'s capital for most of its history. The Old Quarter\'s narrow streets date to the 11th century. Ho Chi Minh City (Saigon) is the largest city but not the capital.',
+    tags: ['geography']
+  },
+  {
+    id: 'geo-nigeria-capital',
+    q: ['capital of nigeria', 'what is the capital of nigeria'],
+    a: 'Abuja, a planned city that replaced Lagos as capital in 1991, chosen for its central location in a country divided between a Muslim north and Christian south. Lagos remains the largest city and economic hub.',
+    tags: ['geography']
+  },
+  {
+    id: 'geo-philippines-capital',
+    q: ['capital of philippines', 'what is the capital of philippines'],
+    a: 'Manila, on the island of Luzon. The Manila metropolitan area (Metro Manila) includes Quezon City and has about 14 million people, making it one of the most densely populated urban areas in the world.',
+    tags: ['geography']
+  },
+  {
+    id: 'geo-portugal-capital',
+    q: ['capital of portugal', 'what is the capital of portugal'],
+    a: 'Lisbon (Lisboa), on the Tagus River near the Atlantic coast. Western Europe\'s oldest capital city after Athens, it was devastated by a massive earthquake in 1755 and rebuilt on a grid plan by the Marquis of Pombal.',
+    tags: ['geography']
+  },
+  {
+    id: 'geo-greece-capital',
+    q: ['capital of greece', 'what is the capital of greece'],
+    a: 'Athens, one of the world\'s oldest cities with recorded history spanning 3,400 years. The Acropolis and Parthenon date to the 5th century BCE, when Athens was the birthplace of democracy, Western philosophy, and theatre.',
+    tags: ['geography']
+  },
+  {
+    id: 'geo-nz-capital',
+    q: ['capital of new zealand', 'what is the capital of new zealand'],
+    a: 'Wellington, at the south-western tip of the North Island, replaced Auckland as capital in 1865 for its more central location. It is one of the windiest cities in the world and has a compact, walkable downtown.',
+    tags: ['geography']
+  },
+
+  /* ------------------------------------------------------------------ */
+  /* SCIENCE & NATURE                                                    */
+  /* ------------------------------------------------------------------ */
+  {
+    id: 'sci-neutron-star',
+    q: ['what is a neutron star', 'neutron star meaning'],
+    a: 'A neutron star is the collapsed core of a massive star after a supernova — a city-sized ball (about 20 km diameter) so dense that a teaspoon weighs about 6 billion tonnes. They spin rapidly (some hundreds of times per second) and have magnetic fields trillions of times Earth\'s. Those that emit beams of radiation are called pulsars.',
+    tags: ['science', 'astronomy']
+  },
+  {
+    id: 'sci-dark-matter',
+    q: ['what is dark matter', 'dark matter meaning', 'does dark matter exist'],
+    a: 'Dark matter is a hypothetical form of matter that does not emit, absorb, or reflect light, making it invisible to telescopes. It is inferred from its gravitational effects on visible matter — galaxies rotate too fast for the matter we can see. It is estimated to make up about 27% of the universe, but its nature remains unknown despite decades of experiments.',
+    tags: ['science', 'astronomy']
+  },
+  {
+    id: 'sci-dark-energy',
+    q: ['what is dark energy', 'dark energy meaning'],
+    a: 'Dark energy is the name given to whatever is causing the expansion of the universe to accelerate. Discovered in 1998 through observations of distant supernovae, it makes up roughly 68% of the universe. Its nature is one of the biggest open questions in physics — it could be a property of space itself (the cosmological constant) or something more exotic.',
+    tags: ['science', 'astronomy']
+  },
+  {
+    id: 'sci-crispr',
+    q: ['what is crispr', 'crispr meaning', 'crispr gene editing'],
+    a: 'CRISPR-Cas9 is a molecular tool that can cut DNA at a specific location, allowing genes to be deleted, inserted, or replaced. Adapted from a bacterial immune system, it was developed as a gene-editing tool by Jennifer Doudna and Emmanuelle Charpentier (Nobel Prize 2020). It is cheaper, faster, and more precise than previous methods, with applications from disease treatment to agriculture.',
+    tags: ['science', 'biology', 'tech']
+  },
+  {
+    id: 'sci-mrna',
+    q: ['what is mrna', 'mrna vaccine', 'how do mrna vaccines work'],
+    a: 'mRNA (messenger ribonucleic acid) carries genetic instructions from DNA to the cell\'s protein-making machinery. mRNA vaccines deliver synthetic mRNA that instructs cells to produce a viral protein (e.g., the spike protein of SARS-CoV-2), training the immune system without using the actual virus. The Pfizer-BioNTech and Moderna COVID-19 vaccines were the first approved mRNA vaccines.',
+    tags: ['science', 'health']
+  },
+  {
+    id: 'sci-gut-brain',
+    q: ['gut brain connection', 'gut brain axis', 'does gut health affect brain'],
+    a: 'The gut-brain axis is a bidirectional communication network linking the enteric nervous system (gut) with the central nervous system. The vagus nerve, immune signalling, and gut microbiome metabolites all influence mood, cognition, and stress response. About 95% of serotonin is produced in the gut. Research links gut microbiome diversity to mental health, though clinical applications are still emerging.',
+    tags: ['science', 'health', 'biology']
+  },
+  {
+    id: 'sci-plastic-pollution',
+    q: ['what is plastic pollution', 'how much plastic is in the ocean', 'plastic in ocean'],
+    a: 'An estimated 8–12 million tonnes of plastic enter the ocean each year, with about 150 million tonnes already circulating. Microplastics (fragments under 5 mm) have been found in human blood, placenta, breast milk, and the deepest ocean trenches. Only about 9% of all plastic ever produced has been recycled. The Great Pacific Garbage Patch is a concentration zone, not a solid island.',
+    tags: ['science', 'nature', 'environment']
+  },
+  {
+    id: 'sci-renewable-energy',
+    q: ['what is renewable energy', 'types of renewable energy', 'solar vs wind energy'],
+    a: 'Renewable energy comes from sources that replenish naturally: solar (photovoltaic panels), wind (turbines), hydroelectric (dams), geothermal (Earth\'s heat), and biomass (organic matter). Solar and wind are now the cheapest new electricity sources in most of the world. The main challenge is intermittency — the sun does not always shine and the wind does not always blow — requiring storage or backup.',
+    tags: ['science', 'environment', 'tech']
+  },
+  {
+    id: 'sci-carbon-capture',
+    q: ['what is carbon capture', 'carbon capture meaning', 'does carbon capture work'],
+    a: 'Carbon capture and storage (CCS) removes CO₂ from industrial emissions or directly from the atmosphere (DAC — direct air capture) and stores it underground. Current technology works but is expensive ($250–600/tonne for DAC) and scales slowly. The world emits about 37 billion tonnes of CO₂ per year; current CCS capacity captures about 45 million tonnes — roughly 0.1%.',
+    tags: ['science', 'environment']
+  },
+  {
+    id: 'sci-permafrost',
+    q: ['what is permafrost', 'permafrost thawing', 'permafrost climate'],
+    a: 'Permafrost is ground that stays frozen for at least two consecutive years, found across Siberia, Alaska, Canada, and the Arctic. It contains an estimated 1,500 billion tonnes of carbon — twice what is in the atmosphere. As it thaws from warming temperatures, it releases methane and CO₂, potentially creating a feedback loop that accelerates climate change.',
+    tags: ['science', 'nature', 'environment']
+  },
+  {
+    id: 'sci-electron',
+    q: ['what is an electron', 'define electron'],
+    a: 'An electron is a subatomic particle with a negative charge, found orbiting the nucleus of an atom. It is about 1/1836th the mass of a proton. Electrons are responsible for chemical bonding, electricity, and magnetism. The flow of electrons through a conductor is electric current.',
+    tags: ['science', 'physics']
+  },
+  {
+    id: 'sci-proton',
+    q: ['what is a proton', 'define proton'],
+    a: 'A proton is a subatomic particle in the nucleus of an atom with a positive charge equal in magnitude to the electron\'s negative charge. The number of protons defines the element (hydrogen has 1, carbon has 6). Protons are made of two up quarks and one down quark, bound by the strong force.',
+    tags: ['science', 'physics']
+  },
+
+  /* ------------------------------------------------------------------ */
+  /* TECHNOLOGY                                                          */
+  /* ------------------------------------------------------------------ */
+  {
+    id: 'tech-5g',
+    q: ['what is 5g', '5g meaning', '5g vs 4g'],
+    a: '5G is the fifth generation of mobile network technology, offering peak speeds up to 10 Gbps (10–100× faster than 4G), lower latency (~1 ms), and the ability to connect many more devices per cell tower. It uses higher-frequency radio waves (including millimetre wave) alongside traditional bands. Rollout has been uneven; mmWave is fast but has very short range.',
+    tags: ['tech']
+  },
+  {
+    id: 'tech-quantum-computing',
+    q: ['what is quantum computing', 'quantum computer meaning', 'how do quantum computers work'],
+    a: 'Quantum computers use qubits instead of classical bits. A qubit can be in a superposition of 0 and 1 simultaneously, and qubits can be entangled — measuring one instantly affects the other. This lets certain algorithms (factoring, simulation) run exponentially faster than classical machines. Current quantum computers are noisy and small (100–1,000 qubits); practical, error-corrected machines are years away.',
+    tags: ['tech', 'science']
+  },
+  {
+    id: 'tech-ev',
+    q: ['what is an electric vehicle', 'ev meaning', 'how do electric cars work'],
+    a: 'An electric vehicle (EV) uses one or more electric motors powered by a battery pack, charged from the grid. No internal combustion engine, no tailpipe emissions. Modern EVs typically use lithium-ion batteries with ranges of 250–400 miles. Charging times vary: DC fast charging (150–350 kW) can add 200 miles in 20–30 minutes; home charging (7–11 kW) takes overnight.',
+    tags: ['tech', 'environment']
+  },
+  {
+    id: 'tech-self-driving',
+    q: ['what is self driving', 'autonomous vehicles', 'how do self driving cars work'],
+    a: 'Self-driving cars use sensors (cameras, LiDAR, radar) and AI to perceive their environment and navigate without human input. The SAE defines six levels (0–5); most current systems are Level 2 (driver assists like Tesla Autopilot) or Level 3 (conditional automation in limited areas). Full Level 5 autonomy — any road, any weather, no human — does not yet exist commercially.',
+    tags: ['tech']
+  },
+  {
+    id: 'tech-cybersecurity',
+    q: ['what is cybersecurity', 'cybersecurity meaning'],
+    a: 'Cybersecurity is the practice of protecting systems, networks, and data from digital attacks, unauthorised access, and damage. It covers network security, application security, information security, disaster recovery, and end-user education. The field grows as everything connects to the internet; global cybercrime costs are estimated at $8–10 trillion per year.',
+    tags: ['tech']
+  },
+  {
+    id: 'tech-wifi',
+    q: ['what is wifi', 'wifi meaning', 'how does wifi work'],
+    a: 'Wi-Fi is a wireless networking technology using radio waves (2.4 GHz and 5 GHz bands, with 6 GHz added in Wi-Fi 6E) to connect devices to a local network and the internet. The name is a trademark of the Wi-Fi Alliance, not an abbreviation of "wireless fidelity" — that is a common misconception. Wi-Fi 7 (802.11be) offers theoretical speeds up to 46 Gbps.',
+    tags: ['tech']
+  },
+  {
+    id: 'tech-vpn',
+    q: ['what is a vpn', 'vpn meaning', 'how does a vpn work'],
+    a: 'A VPN (Virtual Private Network) creates an encrypted tunnel between your device and a VPN server, hiding your IP address and encrypting your internet traffic. It protects data on public Wi-Fi, masks your location, and can bypass geographic content restrictions. It does not make you anonymous — the VPN provider can still see your traffic unless combined with other privacy measures.',
+    tags: ['tech']
+  },
+
+  /* ------------------------------------------------------------------ */
+  /* PSYCHOLOGY & MENTAL HEALTH                                          */
+  /* ------------------------------------------------------------------ */
+  {
+    id: 'psych-burnout',
+    q: ['what is burnout', 'burnout meaning', 'how to deal with burnout'],
+    a: 'Burnout is chronic workplace stress that has not been successfully managed, characterised by exhaustion, cynicism about work, and reduced professional efficacy. The WHO recognises it as an occupational phenomenon, not a medical condition. Recovery requires addressing workload, autonomy, and reward — not just relaxation techniques.',
+    tags: ['psychology', 'health']
+  },
+  {
+    id: 'psych-imposter-syndrome',
+    q: ['what is imposter syndrome', 'imposter syndrome meaning'],
+    a: 'Imposter syndrome is the persistent feeling of being a fraud despite evidence of competence. First described by Pauline Clance and Suzanne Imes in 1978, it affects an estimated 70% of people at some point. It is not a psychiatric diagnosis but a pattern of thinking — attributing success to luck rather than ability and fearing exposure.',
+    tags: ['psychology']
+  },
+  {
+    id: 'psych-cognitive-distortions',
+    q: ['what are cognitive distortions', 'cognitive distortions examples'],
+    a: 'Cognitive distortions are habitual ways of thinking that are inaccurate and often negative, identified in cognitive behavioural therapy (CBT). Common types: all-or-nothing thinking, catastrophising, mind reading, personalisation, and overgeneralisation. Recognising them is the first step to challenging them — CBT treats them as habits that can be unlearned.',
+    tags: ['psychology']
+  },
+  {
+    id: 'psych-growth-mindset',
+    q: ['what is growth mindset', 'growth vs fixed mindset', 'carol dweck'],
+    a: 'Growth mindset, coined by psychologist Carol Dweck, is the belief that abilities can be developed through effort, learning, and persistence — as opposed to a fixed mindset that treats talent as innate. Research shows that praising effort (not ability) encourages resilience. However, the effect sizes in replication studies are smaller than originally claimed, and "just try harder" is not a substitute for good teaching.',
+    tags: ['psychology', 'education']
+  },
+  {
+    id: 'psych-trauma',
+    q: ['what is trauma', 'trauma meaning', 'ptsd meaning'],
+    a: 'Trauma is the emotional response to a deeply distressing event — accident, abuse, war, natural disaster. PTSD (Post-Traumatic Stress Disorder) is when the response persists: flashbacks, nightmares, hypervigilance, and avoidance. Not everyone who experiences trauma develops PTSD. Evidence-based treatments include CBT, EMDR, and medication.',
+    tags: ['psychology', 'health']
+  },
+  {
+    id: 'psych-dopamine',
+    q: ['what is dopamine', 'dopamine meaning', 'dopamine and motivation'],
+    a: 'Dopamine is a neurotransmitter associated with motivation, reward, and pleasure — but more accurately with wanting than liking. It drives seeking behaviour: the anticipation of reward, not the reward itself. Surges of dopamine from social media, gambling, or drugs can desensitise the system, making everyday pleasures feel dull by comparison.',
+    tags: ['science', 'psychology']
+  },
+
+  /* ------------------------------------------------------------------ */
+  /* ECONOMY & BUSINESS                                                  */
+  /* ------------------------------------------------------------------ */
+  {
+    id: 'econ-recession',
+    q: ['what is a recession', 'recession meaning', 'how is recession defined'],
+    a: 'A recession is a significant decline in economic activity lasting more than a few months, typically defined as two consecutive quarters of negative GDP growth. In the US the official determination is made by the NBER\'s Business Cycle Dating Committee, which considers employment, income, spending, and industrial production — not just GDP alone.',
+    tags: ['economy']
+  },
+  {
+    id: 'econ-crypto',
+    q: ['what is cryptocurrency', 'what is bitcoin', 'how does crypto work'],
+    a: 'Cryptocurrency is digital money that uses cryptography for security and operates on a decentralised network (blockchain) without a central bank. Bitcoin, created in 2009 by the pseudonymous Satoshi Nakamoto, was the first. It uses proof-of-work mining; Ethereum moved to proof-of-stake in 2022, using ~99.95% less energy. Thousands of cryptocurrencies exist; most have no practical use.',
+    tags: ['tech', 'economy']
+  },
+  {
+    id: 'econ-ai-jobs',
+    q: ['will ai replace jobs', 'ai and employment', 'ai job impact'],
+    a: 'AI is more likely to change jobs than eliminate them wholesale. Tasks that are routine, pattern-based, and text-heavy (data entry, basic writing, customer service scripts) are most exposed. Jobs requiring physical dexterity, emotional intelligence, or complex real-world judgement are harder to automate. Historically, technology has created more jobs than it destroyed, but the transition is painful and uneven.',
+    tags: ['tech', 'economy']
+  },
+  {
+    id: 'econ-startup',
+    q: ['what is a startup', 'startup meaning', 'how do startups work'],
+    a: 'A startup is a company designed to grow fast, typically building a scalable technology product. Unlike a small business (which aims for steady profit), a startup prioritises rapid user/revenue growth, often burning cash to capture market share before competitors. Funding comes from angel investors and venture capital in exchange for equity. Most fail — about 90% of venture-backed startups do not return investor capital.',
+    tags: ['economy', 'tech']
+  },
+
+  /* ------------------------------------------------------------------ */
+  /* EVERYDAY LIFE & PRACTICAL                                           */
+  /* ------------------------------------------------------------------ */
+  {
+    id: 'life-how-to-file-taxes',
+    q: ['how to file taxes', 'filing taxes basics'],
+    a: 'Gather income documents (W-2, 1099 forms), decide between standard deduction and itemising, then file electronically (IRS Free File for incomes under $79k, or paid software like TurboTax). Deadlines vary by country — in the US it is usually April 15. If you owe money, pay by the deadline to avoid penalties and interest even if you file an extension.',
+    tags: ['practical', 'economy']
+  },
+  {
+    id: 'life-how-to-change-tire',
+    q: ['how to change a tire', 'changing a flat tire', 'flat tire steps'],
+    a: 'Pull over safely on level ground, engage the parking brake, and place wheel chocks. Loosen lug nuts slightly, jack up the car at the designated point, remove the nuts and flat tire, mount the spare, hand-tighten nuts in a star pattern, lower the car, then fully tighten. Drive to a tyre shop — spares are temporary, rated for ~80 km and usually under 80 km/h.',
+    tags: ['practical']
+  },
+  {
+    id: 'life-cpr-basics',
+    q: ['how to do cpr', 'cpr steps', 'cpr on adults'],
+    a: 'Check responsiveness and call emergency services. Place the heel of one hand on the centre of the chest (between nipples), lock both hands, and push hard (5–6 cm deep) and fast (100–120 compressions per minute). If trained, give 2 rescue breaths every 30 compressions. Use an AED if available. Push hard, push fast, and don\'t stop until help arrives.',
+    tags: ['health', 'practical']
+  },
+  {
+    id: 'life-credit-score',
+    q: ['what is a credit score', 'credit score meaning', 'how to improve credit score'],
+    a: 'A credit score is a number (typically 300–850) that estimates how likely you are to repay debt. It is based on payment history (35%), amounts owed (30%), length of history (15%), new credit (10%), and credit mix (10%). To improve it: pay bills on time, keep credit card balances below 30% of limits, and avoid opening many new accounts at once.',
+    tags: ['economy', 'practical']
+  },
+  {
+    id: 'life-how-to-cook-rice',
+    q: ['how to cook rice', 'cooking rice', 'rice to water ratio'],
+    a: 'For long-grain white rice: use 1 part rice to 1.5–2 parts water. Bring to a boil, reduce to low heat, cover tightly, and cook 15–18 minutes without lifting the lid. Remove from heat and let stand 5 minutes, then fluff with a fork. For brown rice, use 2.5 parts water and cook 40–45 minutes. Rinsing rice before cooking removes excess starch.',
+    tags: ['food', 'practical']
+  },
+  {
+    id: 'life-negotiation-tips',
+    q: ['how to negotiate salary', 'negotiation tips', 'salary negotiation'],
+    a: 'Research the market rate (Glassdoor, Levels.fyi, industry reports). State your case with data, not need. Anchor slightly above your target. Negotiate the whole package — salary, bonus, equity, vacation, remote days, start date. Say "I\'d like to find a number that works for both of us" rather than giving ultimatums. Silence is a tool — after stating your ask, wait.',
+    tags: ['practical', 'psychology']
+  },
+
+  /* ------------------------------------------------------------------ */
+  /* CULTURE & ARTS                                                      */
+  /* ------------------------------------------------------------------ */
+  {
+    id: 'culture-afrobeats',
+    q: ['what is afrobeats', 'afrobeats music', 'afrobeats vs afrobeat'],
+    a: 'Afrobeats (with an "s") is a contemporary West African pop genre blending Nigerian and Ghanaian sounds with hip-hop, dancehall, and electronic music. Artists like Burna Boy, Wizkid, and Tems have made it globally dominant. It is distinct from Afrobeat (no "s"), which is Fela Kuti\'s 1970s Nigerian genre combining jazz, funk, and highlife with political lyrics.',
+    tags: ['culture', 'music']
+  },
+  {
+    id: 'culture-k-pop',
+    q: ['what is k-pop', 'k-pop meaning', 'korean pop music'],
+    a: 'K-pop is South Korean popular music, characterised by polished production, synchronised choreography, and a training system where trainees spend years before debuting. BTS, BLACKPINK, and EXE are among the biggest acts. The genre\'s global spread was enabled by social media, YouTube, and dedicated fandoms that organise streaming and voting campaigns.',
+    tags: ['culture', 'music']
+  },
+  {
+    id: 'culture-ai-art',
+    q: ['what is ai art', 'ai generated art', 'is ai art real art'],
+    a: 'AI art uses machine learning models (diffusion models, GANs) to generate images from text prompts or other inputs. Tools like Midjourney, DALL-E, and Stable Diffusion can produce convincing images in seconds. The debate: is it creativity or sophisticated pattern-matching? Copyright remains unsettled — in most jurisdictions, purely AI-generated works cannot be copyrighted, but human-directed works using AI tools may be.',
+    tags: ['culture', 'tech']
+  },
+  {
+    id: 'culture-tarot',
+    q: ['what is tarot', 'tarot cards meaning', 'how does tarot work'],
+    a: 'Tarot is a deck of 78 cards used since the 15th century, originally for games and later for divination. The Major Arcana (22 cards) represent archetypal themes (The Fool, Death, The Tower); the Minor Arcana (56 cards) are divided into four suits. Readings use card positions and spreads to prompt reflection — whether they "work" depends on whether you see them as psychological tools or supernatural ones.',
+    tags: ['culture', 'psychology']
+  },
+
+  /* ------------------------------------------------------------------ */
+  /* MORE HEALTH                                                         */
+  /* ------------------------------------------------------------------ */
+  {
+    id: 'health-intermittent-fasting',
+    q: ['what is intermittent fasting', 'intermittent fasting meaning', 'does fasting work'],
+    a: 'Intermittent fasting (IF) is an eating pattern that cycles between periods of eating and fasting. The most common method is 16:8 (16 hours fasting, 8 hours eating window). Research shows benefits for weight loss (primarily from eating less overall) and some metabolic markers, but it is not clearly superior to simple calorie restriction. It is not appropriate for everyone, especially those with eating disorders.',
+    tags: ['health']
+  },
+  {
+    id: 'health-probiotics',
+    q: ['what are probiotics', 'probiotics meaning', 'do probiotics work'],
+    a: 'Probiotics are live microorganisms intended to confer health benefits when consumed. Found in yogurt, kefir, kimchi, and supplements. Evidence supports specific strains for specific conditions (e.g., certain Lactobacillus strains for antibiotic-associated diarrhoea), but many commercial products make broad claims unsupported by research. The gut microbiome is individual — what works for one person may not work for another.',
+    tags: ['health']
+  },
+  {
+    id: 'health-stretching',
+    q: ['is stretching important', 'does stretching prevent injury', 'types of stretching'],
+    a: 'Static stretching (holding a position 15–60 s) improves flexibility but may briefly reduce power if done before exercise. Dynamic stretching (controlled movements through range of motion) is better as a warm-up. Stretching alone does not reliably prevent injury — strength, conditioning, and load management matter more. It does help maintain range of motion, especially with age.',
+    tags: ['health']
+  },
+
+  /* ------------------------------------------------------------------ */
+  /* SPACE                                                               */
+  /* ------------------------------------------------------------------ */
+  {
+    id: 'space-iss',
+    q: ['what is the iss', 'international space station', 'how big is the iss'],
+    a: 'The International Space Station is a modular space station in low Earth orbit (about 408 km up), a collaboration among NASA, Roscosmos, ESA, JAXA, and CSA. It has been continuously crewed since November 2000. It is roughly the size of a football field (109 m long), orbits Earth every 90 minutes at 28,000 km/h, and is the third-brightest object in the night sky. It is planned for deorbiting around 2030.',
+    tags: ['science', 'space']
+  },
+  {
+    id: 'space-mars',
+    q: ['can we live on mars', 'mars colonization', 'when will we go to mars'],
+    a: 'Mars has a thin atmosphere (95% CO₂), average temperature of −60 °C, no liquid surface water, and radiation levels far above Earth\'s. Living there would require pressurised habitats, radiation shielding, food production, and water extraction from ice or soil. NASA\'s Artemis programme aims for a crewed lunar presence as a stepping stone; SpaceX\'s Starship is being designed for Mars transit. A crewed landing is likely no earlier than the late 2030s.',
+    tags: ['science', 'space']
+  },
+  {
+    id: 'space-exoplanet',
+    q: ['what is an exoplanet', 'exoplanet meaning', 'how many exoplanets'],
+    a: 'An exoplanet is a planet orbiting a star other than our Sun. The first confirmed detection was in 1992 (pulsar planets) and 1995 (a sun-like star, 51 Pegasi b — Nobel Prize 2019). NASA\'s Kepler mission found thousands. Over 5,500 confirmed exoplanets exist, with estimates that most stars host at least one. Some are in the "habitable zone" where liquid water could exist.',
+    tags: ['science', 'space']
+  },
+
+  /* ------------------------------------------------------------------ */
+  /* LAW & RIGHTS                                                        */
+  /* ------------------------------------------------------------------ */
+  {
+    id: 'law-copyright',
+    q: ['what is copyright', 'copyright meaning', 'how does copyright work'],
+    a: 'Copyright is the legal right of a creator to control reproduction, distribution, and adaptation of their original work. It arises automatically upon creation (no registration required in most countries) and typically lasts the creator\'s life plus 50–70 years. Fair use / fair dealing allows limited use for criticism, education, and parody. It does not protect ideas — only their specific expression.',
+    tags: ['law', 'tech']
+  },
+  {
+    id: 'law-fair-use',
+    q: ['what is fair use', 'fair use meaning', 'fair use vs fair dealing'],
+    a: 'Fair use (US) / fair dealing (UK, Canada, Australia) is a legal doctrine allowing limited use of copyrighted material without permission. In the US, four factors are weighed: purpose of use, nature of the work, amount used, and effect on the market. There is no bright-line rule — each case is fact-specific. Parody, criticism, commentary, and education are common protected uses.',
+    tags: ['law']
+  },
+
+  /* ------------------------------------------------------------------ */
+  /* LANGUAGE — MORE                                                     */
+  /* ------------------------------------------------------------------ */
+  {
+    id: 'word-gaslighting',
+    q: ['what is gaslighting', 'gaslighting meaning', 'define gaslighting'],
+    a: 'Gaslighting is a form of psychological manipulation where someone makes another person question their own memory, perception, or sanity. Named after the 1944 film Gaslight, it involves persistent denial, contradiction, and misdirection. It occurs in personal relationships, workplaces, and politics. The term has become popular but is sometimes overused to describe any disagreement.',
+    tags: ['psychology', 'language']
+  },
+  {
+    id: 'word-neurodivergent',
+    q: ['what is neurodivergent', 'neurodivergent meaning', 'neurodivergent vs neurotypical'],
+    a: 'Neurodivergent describes people whose brain function differs from typical patterns — including ADHD, autism, dyslexia, and others. The term, coined by sociologist Judy Singer in 1998, frames these differences as natural human variation rather than deficits. Neurotypical is the counterpart. The neurodiversity movement advocates for acceptance and accommodation rather than cure.',
+    tags: ['psychology', 'language']
+  },
+  {
+    id: 'word-parasocial',
+    q: ['what is a parasocial relationship', 'parasocial meaning', 'parasocial relationship'],
+    a: 'A parasocial relationship is a one-sided emotional bond with a media figure — a celebrity, streamer, or influencer — who does not know you exist. Coined by Horton and Wohl in 1956, the concept describes how media creates an illusion of intimacy. Social media intensifies it through direct interaction (comments, DMs) that feels personal but is usually not.',
+    tags: ['psychology', 'culture']
+  },
+  {
+    id: 'word-aesthetic-life',
+    q: ['what does aesthetic mean on social media', 'aesthetic meaning gen z'],
+    a: 'On social media, "aesthetic" (noun) refers to a cohesive visual style or vibe — dark academia, cottagecore, clean girl. It is both a personal brand and a cultural mood, curated through colour palettes, clothing, room decor, and music. The word shifted from adjective ("pleasing to look at") to noun ("a curated look") in the 2010s internet.',
+    tags: ['culture', 'language']
+  },
+
+  /* ------------------------------------------------------------------ */
+  /* GEOGRAPHY — NATURAL WONDERS                                        */
+  /* ------------------------------------------------------------------ */
+  {
+    id: 'geo-grand-canyon',
+    q: ['what is the grand canyon', 'grand canyon facts', 'how old is the grand canyon'],
+    a: 'The Grand Canyon is a steep-sided gorge carved by the Colorado River in Arizona, USA. It is 446 km long, up to 29 km wide, and over 1,600 m deep. The exposed rock layers span nearly 2 billion years of Earth\'s geological history. The canyon itself is about 5–6 million years old, though some sections may be older. It became a national park in 1919.',
+    tags: ['geography', 'nature']
+  },
+  {
+    id: 'geo-great-barrier-reef',
+    q: ['what is the great barrier reef', 'great barrier reef facts'],
+    a: 'The Great Barrier Reef, off Queensland, Australia, is the world\'s largest coral reef system — 2,300 km long with over 2,900 individual reefs and 900 islands. It is the only living structure visible from space. It has lost about half its coral cover since 1995, mainly from mass bleaching events driven by warming ocean temperatures. UNESCO has considered listing it as "in danger".',
+    tags: ['geography', 'nature', 'environment']
+  },
+  {
+    id: 'geo-amazon-rainforest',
+    q: ['what is the amazon rainforest', 'amazon rainforest facts', 'how big is the amazon'],
+    a: 'The Amazon rainforest covers about 5.5 million km² across nine South American countries, mostly in Brazil. It contains 10% of all known species, produces about 6% of the world\'s oxygen (less than often claimed), and stores an estimated 150–200 billion tonnes of carbon. Deforestation — mainly for cattle ranching and soy — has destroyed about 17% of the original forest.',
+    tags: ['geography', 'nature', 'environment']
+  },
+
+  /* ------------------------------------------------------------------ */
+  /* MODERN CULTURE                                                      */
+  /* ------------------------------------------------------------------ */
+  {
+    id: 'culture-streaming-wars',
+    q: ['what are the streaming wars', 'streaming services comparison'],
+    a: 'The streaming wars refer to the competition among video-on-demand platforms — Netflix, Disney+, Amazon Prime Video, HBO Max (now Max), Apple TV+, and others — for subscribers. Netflix pioneered streaming in 2007; by 2024 most major studios had launched their own service. The market has consolidated somewhat, with ad-supported tiers becoming common as subscriber growth plateaued.',
+    tags: ['culture', 'tech']
+  },
+  {
+    id: 'culture-podcast',
+    q: ['what is a podcast', 'podcast meaning', 'history of podcasts'],
+    a: 'A podcast is a digital audio (or video) programme available for streaming or download. The term was coined in 2004 from "iPod" and "broadcast." Apple\'s inclusion of podcasts in iTunes (2005) popularised the format. Serial (2014) brought podcasts mainstream. As of 2024 there are over 4 million podcasts and 500 million listeners worldwide.',
+    tags: ['culture', 'tech']
+  },
+  {
+    id: 'culture-influencer',
+    q: ['what is an influencer', 'influencer meaning', 'how do influencers make money'],
+    a: 'An influencer is a person with a social media following large enough to affect others\' purchasing decisions. Revenue comes from brand partnerships (sponsored posts), affiliate links, ad revenue (YouTube), merchandise, and platform creator funds. The influencer marketing industry is worth about $21 billion globally. Micro-influencers (10k–100k followers) often have higher engagement rates than mega-influencers.',
+    tags: ['culture', 'economy']
+  },
+
+  /* ------------------------------------------------------------------ */
+  /* MISC / CATCH-ALL                                                    */
+  /* ------------------------------------------------------------------ */
+  {
+    id: 'gen-em-dash',
+    q: ['what is an em dash', 'em dash vs en dash', 'when to use em dash'],
+    a: 'An em dash (—) is the longest dash, used to set off a phrase — like this — for emphasis, interruption, or a sharp break in thought. An en dash (–) is shorter and connects ranges (pages 10–20, 2020–2024). A hyphen (-) joins compounds (well-known). In informal writing the em dash is overused; in formal writing it is a strong tool.',
+    tags: ['language']
+  },
+  {
+    id: 'gen-trolley-problem',
+    q: ['what is the trolley problem', 'trolley problem meaning'],
+    a: 'The trolley problem is a thought experiment: a trolley is about to kill five people on the track; you can pull a switch to divert it, killing one person instead. Do you? Most say yes (utilitarian: save more lives). The variant — push a large person off a bridge to stop the trolley — produces a different intuition for most people, which is the point: moral reasoning is not purely logical.',
+    tags: ['philosophy', 'psychology']
+  },
+  {
+    id: 'gen-confirmation-bias',
+    q: ['what is confirmation bias', 'confirmation bias meaning', 'confirmation bias examples'],
+    a: 'Confirmation bias is the tendency to seek, interpret, and remember information that confirms existing beliefs while ignoring contradictory evidence. It affects medical diagnosis, jury decisions, scientific research, and political opinions. It is strongest for deeply held beliefs and emotionally charged topics. The antidote is not willpower but structured methods: seek disconfirming evidence, use blind evaluation, and argue the other side.',
+    tags: ['psychology', 'philosophy']
+  },
+  {
+    id: 'gen-dunning-kruger',
+    q: ['what is the dunning kruger effect', 'dunning kruger meaning'],
+    a: 'The Dunning-Kruger effect is a cognitive bias where people with low ability in a domain overestimate their competence, while experts tend to underestimate theirs. First described by psychologists David Dunning and Justin Kruger in 1999. The original study has been questioned methodologically, but the basic observation — that ignorance is invisible to itself — remains widely accepted.',
+    tags: ['psychology', 'philosophy']
+  },
+  {
+    id: 'gen-survivorship-bias',
+    q: ['what is survivorship bias', 'survivorship bias meaning', 'survivorship bias examples'],
+    a: 'Survivorship bias is the logical error of focusing on things that passed a selection process and ignoring those that did not, leading to false conclusions. Example: studying only successful entrepreneurs and concluding that dropping out of college leads to success, while ignoring the far larger number who dropped out and failed. The name comes from WWII aircraft armour studies by Abraham Wald.',
+    tags: ['psychology', 'philosophy']
+  },
+  {
+    id: 'gen-sunk-cost',
+    q: ['what is the sunk cost fallacy', 'sunk cost meaning', 'sunk cost fallacy examples'],
+    a: 'The sunk cost fallacy is continuing an endeavour because of previously invested resources (time, money, effort) rather than future value. "I\'ve already watched 6 episodes of this bad show, so I should finish it." Rational decision-making ignores sunk costs and asks: given where I am now, what is the best next step? The more you have invested, the harder it is to walk away — which is exactly the trap.',
+    tags: ['psychology', 'economy', 'philosophy']
+  },
+  {
+    id: 'gen-scam-types',
+    q: ['what are common scams', 'how to spot a scam', 'phishing meaning'],
+    a: 'Common scams: phishing (fake emails/texts that impersonate trusted organisations to steal credentials), romance scams (fake online relationships leading to money requests), investment scams (guaranteed high returns), tech support scams (fake virus warnings), and advance-fee fraud (money upfront for a larger promised payout). Red flags: urgency, secrecy, unusual payment methods, and "too good to be true" returns.',
+    tags: ['tech', 'practical']
+  },
+  {
+    id: 'gen-password-security',
+    q: ['how to make a strong password', 'password security tips', 'what is 2fa'],
+    a: 'A strong password is long (16+ characters), unique per site, and not based on personal information. Passphrases (random word combinations like "correct horse battery staple") are easier to remember and harder to crack. Use a password manager to generate and store unique passwords. Enable two-factor authentication (2FA) — preferably hardware keys or authenticator apps, not SMS.',
+    tags: ['tech', 'practical']
+  },
+  {
+    id: 'gen-media-literacy',
+    q: ['what is media literacy', 'how to spot fake news', 'media literacy meaning'],
+    a: 'Media literacy is the ability to critically evaluate information sources. Check: Who published this? What is their evidence? Who benefits if I believe it? Do other credible sources report the same? Reverse-image search suspicious photos. Beware of emotional headlines, missing context, and anonymous sources. The SIFT method: Stop, Investigate the source, Find better coverage, Trace claims to their origin.',
+    tags: ['culture', 'practical']
+  },
+  {
+    id: 'gen-conspiracy-theories',
+    q: ['why do people believe conspiracy theories', 'conspiracy theory meaning'],
+    a: 'Conspiracy theories offer simple explanations for complex events and a sense of control in uncertain times. Research links belief to pattern-seeking, distrust of institutions, need for uniqueness, and social identity. They are not always wrong — real conspiracies exist — but they tend to be unfalsifiable, require implausibly large secret collaborations, and grow by absorbing counter-evidence as further proof of the cover-up.',
+    tags: ['psychology', 'philosophy']
+  },
+  {
+    id: 'gen-deepfake',
+    q: ['what is a deepfake', 'deepfake meaning', 'how do deepfakes work'],
+    a: 'A deepfake is synthetic media — video, audio, or image — created using deep learning (typically GANs or diffusion models) to make a person appear to say or do something they did not. Originally used for face-swapping, the technology now includes voice cloning and full-body synthesis. Detection methods exist but lag behind generation quality. Concerns include political disinformation, fraud, and non-consensual pornography.',
+    tags: ['tech', 'culture']
+  },
+  {
+    id: 'gen-privacy-tips',
+    q: ['how to protect your privacy online', 'online privacy tips'],
+    a: 'Use a password manager with unique passwords. Enable 2FA everywhere. Use a VPN on public Wi-Fi. Review app permissions (camera, microphone, location) and revoke unnecessary ones. Use private/incognito browsing for searches you would rather not have tracked. Read privacy policies for services handling sensitive data. Regularly Google yourself. Use encrypted messaging (Signal) for sensitive conversations.',
+    tags: ['tech', 'practical']
+  },
+  {
+    id: 'gen-love-languages',
+    q: ['what are love languages', 'five love languages', 'love languages meaning'],
+    a: 'The five love languages, from Gary Chapman\'s 1992 book: words of affirmation, quality time, receiving gifts, acts of service, and physical touch. The theory says people prefer to give and receive love in specific ways, and mismatched "languages" cause friction. The concept is widely used in couples therapy, though it lacks strong empirical support as a formal framework.',
+    tags: ['psychology', 'culture']
+  },
+  {
+    id: 'gen-attachment-styles',
+    q: ['what are attachment styles', 'attachment theory', 'secure attachment meaning'],
+    a: 'Attachment theory (John Bowlby, Mary Ainsworth) describes how early bonds with caregivers shape relationship patterns. Four styles: secure (comfortable with closeness), anxious-preoccupied (craves closeness, fears abandonment), dismissive-avoidant (values independence, uncomfortable with intimacy), and fearful-avoidant (wants closeness but fears it). These patterns are not fixed — therapy and secure relationships can shift them.',
+    tags: ['psychology']
+  },
+  {
+    id: 'gen-hustle-culture',
+    q: ['what is hustle culture', 'hustle culture meaning', 'antiwork movement'],
+    a: 'Hustle culture glorifies overwork as a lifestyle: "rise and grind," "sleep when you\'re dead," multiple side hustles. It equates personal worth with productivity. The counter-movement (antiwork, quiet quitting, "act your wage") argues that labour should be fairly compensated and that identity should not be defined by output. Research consistently links chronic overwork to worse health outcomes, not greater success.',
+    tags: ['culture', 'psychology']
+  },
+  {
+    id: 'gen-greenwashing',
+    q: ['what is greenwashing', 'greenwashing meaning', 'greenwashing examples'],
+    a: 'Greenwashing is when a company makes misleading claims about the environmental benefits of its product or practices. Examples: calling something "natural" (arsenic is natural), using green packaging without changing practices, or highlighting one small eco-friendly product while the core business remains polluting. The EU\'s Green Claims Directive (proposed) aims to require substantiation for environmental claims.',
+    tags: ['environment', 'economy']
+  },
+  {
+    id: 'gen-attention-economy',
+    q: ['what is the attention economy', 'attention economy meaning'],
+    a: 'The attention economy treats human attention as a scarce commodity that products compete for. Social media, news, and entertainment are designed to maximise engagement — time spent, clicks, returns. Algorithms optimise for outrage and novelty because those hold attention longest. The term was popularised by Herbert Simon (1971) and became central to critiques of social media design.',
+    tags: ['tech', 'culture', 'psychology']
+  },
+  {
+    id: 'food-avocado-toast',
+    q: ['why is avocado toast famous', 'avocado toast meaning', 'avocado toast meme'],
+    a: 'Avocado toast became a cultural symbol after Australian property developer Tim Gurner said in 2017 that millennials could afford houses if they stopped buying avocado toast and coffee. The comment went viral as an emblem of out-of-touch boomer advice. In reality, median house prices in major cities have far outpaced wages regardless of brunch habits, but the meme stuck.',
+    tags: ['culture', 'food', 'economy']
+  },
+  {
+    id: 'gen-baselining',
+    q: ['what is baselining in conversation', 'baseline meaning psychology'],
+    a: 'Baselining means observing someone\'s normal behaviour — posture, speech rate, eye contact, word choice — before trying to detect changes. In interrogation, negotiation, or body language reading, you need to know what "normal" looks like for that person before a deviation means anything. Without a baseline, a nervous tic and a lie look the same.',
+    tags: ['psychology', 'practical']
+  }
+];;
+
+
   window.ARCHIVER_KB = {
     version: '3.4',
     generated: '2026-09-27',
-    cards: [...WW2, ...FIGURES, ...TECH, ...GENERAL, ...WORDS, ...SCIENCE, ...WORLD, ...LANGUAGE, ...EVERYDAY, ...MORE, ...MORE24, ...HIST25, ...LIGHT, ...OFFLINE31],
+    cards: [...WW2, ...FIGURES, ...TECH, ...GENERAL, ...WORDS, ...SCIENCE, ...WORLD, ...LANGUAGE, ...EVERYDAY, ...MORE, ...MORE24, ...HIST25, ...LIGHT, ...OFFLINE31, ...MORE34],
     note: 'Grounded offline corpus. Charges are not convictions; contested history is not a "side".'
   };
 })();

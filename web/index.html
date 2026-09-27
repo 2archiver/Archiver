@@ -162,6 +162,7 @@ html, body {
   font-family: var(--sans); font-size: var(--fs-base); line-height: var(--lh);
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
   text-rendering: optimizeLegibility;
 }
 ::selection { background: var(--accent); color: var(--accent-ink); }
@@ -211,7 +212,7 @@ a:hover { text-decoration-color: var(--ink); }
 .side-searchrow { height: 44px; border-bottom: var(--border); display: flex; align-items: center; }
 .side-searchrow input { width: 100%; background: transparent; border: 0; outline: 0; font-size: 13px; color: var(--ink); padding: 0; }
 .side-searchrow input::placeholder { color: var(--ink-3); }
-.side-list { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 8px 6px; display: flex; flex-direction: column; gap: 2px; }
+.side-list { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; overflow-x: hidden; padding: 8px 6px; display: flex; flex-direction: column; gap: 2px; }
 .side-item {
   display: flex; align-items: center; gap: 8px; padding: 9px 10px 9px 12px; border-radius: var(--radius-sm);
   cursor: pointer; color: var(--ink-2); border: 1px solid transparent; transition: all var(--motion-fast);
@@ -239,7 +240,7 @@ a:hover { text-decoration-color: var(--ink); }
 .topbar {
   height: 56px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
   padding: 0 16px; border-bottom: var(--border); background: var(--surface);
-  position: sticky; top: 0; z-index: 10;
+  position: -webkit-sticky; position: sticky; top: 0; z-index: 10;
 }
 .tb-left, .tb-right { display: flex; align-items: center; gap: 10px; }
 .model-badge-wrap { display: flex; align-items: center; gap: 10px; }
@@ -265,7 +266,7 @@ a:hover { text-decoration-color: var(--ink); }
 .art-icon-btn:hover { color: var(--ink); border-color: var(--line-strong); background: var(--surface-2); }
 
 /* ---------- Chat container — paper ---------- */
-.chat-container { flex: 1; overflow-y: auto; overflow-x: hidden; background: var(--canvas); }
+.chat-container { flex: 1; overflow-y: auto; overflow-x: hidden; background: var(--canvas); touch-action: pan-y; -webkit-overflow-scrolling: touch; }
 .chat-container.grid-bg {
   background-image: none; /* remove tech grid — paper doesn't need it */
 }
@@ -518,7 +519,7 @@ a:hover { text-decoration-color: var(--ink); }
   padding: 7px 14px; font-size: 12.5px; font-weight: 600; transition: all var(--motion-fast);
 }
 .btn-primary:hover { background: var(--accent-2); border-color: var(--accent-2); }
-.mem-list { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; background: var(--canvas); }
+.mem-list { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 10px; display: flex; flex-direction: column; gap: 8px; background: var(--canvas); }
 .mem-item { background: var(--surface); border: var(--border); border-radius: var(--radius-md); padding: 11px 12px; transition: border-color var(--motion-fast); box-shadow: var(--shadow-1); }
 .mem-item:hover { border-color: var(--line-strong); }
 .mem-item .m-head { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
@@ -557,7 +558,7 @@ a:hover { text-decoration-color: var(--ink); }
 .settings-body { padding: 18px 20px; display: flex; flex-direction: column; gap: 16px; }
 .settings-body fieldset { margin: 0; min-width: 0; padding: 14px; border: var(--border); border-radius: var(--radius-md); background: var(--surface); }
 .settings-body legend { padding: 0 6px; font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
-.settings-modal > footer { display: flex; align-items: center; gap: 10px; padding: 14px 20px max(14px, env(safe-area-inset-bottom)); border-top: var(--border); background: var(--surface-2); }
+.settings-modal > footer { display: flex; align-items: center; gap: 10px; padding: 14px 20px max(14px, env(safe-area-inset-bottom)); border-top: var(--border); background: var(--surface-2); -webkit-overflow-scrolling: touch; }
 .engine-box { display: grid; gap: 10px; }
 .engine-line { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .engine-line b { font-size: 13px; line-height: 1.35; }
@@ -786,7 +787,7 @@ a:hover { text-decoration-color: var(--ink); }
 .changelog-header{
   flex-shrink:0; display:flex; align-items:center; justify-content:space-between;
   padding:14px 16px 12px; border-bottom:1px solid var(--line); background:var(--surface-2);
-  position:sticky; top:0; z-index:1;
+  position:-webkit-sticky; position:sticky; top:0; z-index:1;
 }
 .changelog-header h2{ font-family:var(--serif); font-size:16px; font-weight:800; letter-spacing:-.02em; margin:0; color:var(--ink); }
 .changelog-header p{ margin:2px 0 0; font-family:var(--mono); font-size:11px; color:var(--ink-3); }
@@ -825,6 +826,7 @@ a:hover { text-decoration-color: var(--ink); }
   .topbar{ height: calc(56px + env(safe-area-inset-top)); }
   body{ -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
   #chatContainer, #chatThread{ -webkit-user-select: text; user-select: text; }
+  .input-textarea{ -webkit-user-select: text; user-select: text; }
 }
 
 
@@ -832,7 +834,7 @@ a:hover { text-decoration-color: var(--ink); }
    3.2 adds the keyboard-aware rules below; both keep browser zoom working. */
 .app-shell { height: var(--viewport-height, 100dvh); min-height: 0; }
 .main, .chat-container, #chatThread, .msg-row { min-width: 0; min-height: 0; }
-.chat-container { overscroll-behavior: contain; scroll-padding-bottom: 24px; }
+.chat-container { -webkit-overscroll-behavior: contain; overscroll-behavior: contain; scroll-padding-bottom: 24px; }
 .assistant-orb { width: 64px; height: 64px; margin: 24px 0; border-radius: 50%; background: conic-gradient(from 40deg, #4d8dff, #9873e8, #d1acfa, #63c6df, #4d8dff); box-shadow: inset 0 0 0 11px var(--canvas), 0 0 34px #8b7bd51f; }
 .start-greeting { font-size: clamp(30px, 5vw, 52px); letter-spacing: -.045em; text-align: center; }
 .start-sub { max-width: 510px; line-height: 1.7; }
@@ -844,14 +846,14 @@ a:hover { text-decoration-color: var(--ink); }
 .msg-row.user .msg-body { background: var(--accent-soft); border-color: transparent; border-radius: 22px 22px 6px 22px; }
 .msg-row.ai .msg-body { font-size: 15px; }
 .msg-actions { opacity: 1; }
-.msg-body pre, .code-block { max-width: 100%; overflow-x: auto; }
+.msg-body pre, .code-block { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .msg-body table { display: block; max-width: 100%; overflow-x: auto; }
 .composer-hint { min-height: 18px; gap: 12px; }
 #composerStatus { text-align: right; }
 #sendBtn { border-radius: 50%; width: 44px; height: 44px; }
 #sendBtn[data-stopping="true"] svg { display: none; }
 #sendBtn[data-stopping="true"]::after { content: ''; width: 13px; height: 13px; background: currentColor; border-radius: 3px; }
-button, a, input, textarea, select { touch-action: manipulation; }
+button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
 @media (pointer: coarse), (max-width: 600px) {
   .art-icon-btn, .tool-btn, .ghost-btn, .mini-btn { min-width: 44px; min-height: 44px; }
@@ -898,7 +900,7 @@ button, a, input, textarea, select { touch-action: manipulation; }
 /* iOS Safari gives fixed overlays their own scrolling context. */
 .settings-modal, .changelog-modal { -webkit-overflow-scrolling: touch; }
 @supports (-webkit-touch-callout: none) {
-  .app-shell { height: var(--viewport-height, -webkit-fill-available); }
+  .app-shell { height: var(--viewport-height, -webkit-fill-available); min-height: -webkit-fill-available; }
   .settings-overlay, .changelog-overlay { min-height: -webkit-fill-available; }
 }
 
@@ -1367,7 +1369,7 @@ button, a, input, textarea, select { touch-action: manipulation; }
 
         <div class="cl-entry" style="border-color:var(--accent);">
           <div class="cl-head"><span class="cl-ver">2.5</span><span class="cl-date">2026-09-24</span></div>
-          <div class="cl-title">1300 topics — Napoleon, Saint-Simonism & Europe deep dive</div>
+          <div class="cl-title">1400 topics — Napoleon, Saint-Simonism & Europe deep dive</div>
           <div class="cl-body">
             <p style="margin:0; font-size:12.5px; line-height:1.55; color:var(--ink-2);">Deeper, more philosophical: <b>Napoleon & Napoleon III, Saint-Simonism, and the ideas that built modern Europe</b> — plus cleaner top bar and smarter prompts.</p>
             <ul>
@@ -1376,7 +1378,7 @@ button, a, input, textarea, select { touch-action: manipulation; }
               <li><b>3 smarter prompts</b> — not 6 — curated for depth, not clutter</li>
             </ul>
           </div>
-          <div class="cl-foot"><span>2.5 · 1300 topics</span><span>Try “what was Saint-Simonism?”</span></div>
+          <div class="cl-foot"><span>2.5 · 1400 topics</span><span>Try “what was Saint-Simonism?”</span></div>
         </div>
 
         
@@ -2338,12 +2340,13 @@ button, a, input, textarea, select { touch-action: manipulation; }
        and the reader is entitled to know which one they got. */
     const backendWord = st.backend === 'wasm' ? 'on this device’s CPU'
       : st.backend === 'webgpu' ? 'on this device’s GPU' : '';
+    const fromCache = typeof A.wasReadyBefore === 'function' && A.wasReadyBefore();
     const labels = {
       ready: 'Archiver 3.4 · active' + (backendWord ? ' ' + backendWord : ''),
-      loading: 'Archiver 3.4 · preparing…',
+      loading: fromCache ? 'Archiver 3.4 · loading from browser cache…' : 'Archiver 3.4 · preparing…',
       error: 'Archiver 3.4 unavailable · instant tools ready',
       paused: 'Archiver 3.4 · waiting for support or connection',
-      idle: 'Archiver 3.4 · preparing in the background'
+      idle: fromCache ? 'Archiver 3.4 · loading from browser cache' : 'Archiver 3.4 · preparing in the background'
     };
     const label = labels[st.aiState] || labels.idle;
     const candidates = (st.backendCandidates || []).slice();
@@ -2798,9 +2801,13 @@ button, a, input, textarea, select { touch-action: manipulation; }
        download. A short delay lets first paint win. warm() uses the same
        guards as the on-demand path (offline, Data Saver, unsupported browser)
        and never throws into the UI. */
-    setTimeout(() => {
-      if (window.Archiver && typeof window.Archiver.warm === 'function') window.Archiver.warm();
-    }, 1200);
+    if (window.Archiver && typeof window.Archiver.warm === 'function') {
+      if (typeof window.Archiver.wasReadyBefore === 'function' && window.Archiver.wasReadyBefore()) {
+        window.Archiver.warm();
+      } else {
+        setTimeout(() => { window.Archiver.warm(); }, 1200);
+      }
+    }
 
     // Check last active session from LocalStore
     const lastActive = LocalStore.getActiveSessionId();
