@@ -1,7 +1,7 @@
 {
-  "name": "Archiver 4.0 — Your everyday assistant",
+  "name": "Archiver 4.1 — Your everyday assistant",
   "short_name": "Archiver",
-  "description": "Archiver 4.0 — our own model, in your browser. Instant local tools, open-ended answers on WebGPU or WebAssembly, and live web when you ask. Every answer shows what it did.",
+  "description": "Archiver 4.1 — our own model, in your browser. Instant local tools, open-ended answers on WebGPU or WebAssembly, and live web when you ask. Every answer shows what it did.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

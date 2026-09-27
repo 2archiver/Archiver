@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-title" content="Archiver">
 <meta name="format-detection" content="telephone=no">
 <meta name="mobile-web-app-capable" content="yes">
-<title>Archiver 4.0 — Your everyday assistant</title>
+<title>Archiver 4.1 — Your everyday assistant</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
@@ -20,7 +20,7 @@
 <style>
 
 /* ========================================================================
-   ARCHIVER — The Living Archive  (v4.0)
+   ARCHIVER — The Living Archive  (v4.1)
    A contemporary research desk + field journal, digital.
    Quiet, precise, tactile through spacing — not decoration.
    ======================================================================== */
@@ -970,7 +970,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
           <path d="M0 10 Q 10 0, 20 10 T 40 10 T 60 10 T 80 10" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round"/>
         </svg>
       </span>
-      <span class="side-label">Archiver <span class="version-tag">4.0</span></span>
+      <span class="side-label">Archiver <span class="version-tag">4.1</span></span>
       <button class="side-x" id="sideClose" aria-label="Close menu" title="Close">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
@@ -1022,7 +1022,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
         </button>
         <div class="model-badge-wrap">
-          <span class="model-name" id="modelLabel">Archiver <span class="version-tag">4.0</span></span>
+          <span class="model-name" id="modelLabel">Archiver <span class="version-tag">4.1</span></span>
           <div class="status-pill" id="topStatusPill" style="display:none !important;"><span class="dot"></span><span id="modelText">ready</span></div>
         </div>
       </div>
@@ -1044,15 +1044,15 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
         <div class="start-badge">LOCAL ANSWERS. YOUR PACE.</div>
         <div class="assistant-orb" aria-hidden="true"></div>
         <div class="start-greeting">What’s on <em>your mind?</em></div>
-        <div class="start-sub">A quick question, a tricky concept, a page of notes. Start here.<br>Instant local tools, open-ended answers from Archiver 4.0 — our own model — and the web only when you ask.</div>
-        <p class="ai-disclosure">Archiver 4.0 is our own model, built on the open Qwen 2.5 0.5B base, and it runs entirely in your browser — no model runs on our server. It starts preparing the moment you open this page, in the background, so your first open-ended answer is ready when you are. Lookup, calculations and note extraction are instant from the first second. The one-time model fetch is a few hundred MB into your browser’s cache (Data Saver pauses it), and Archiver picks WebGPU where the browser has it and a WebAssembly runtime where it does not, so Safari is not left out.</p>
+        <div class="start-sub">A quick question, a tricky concept, a page of notes. Start here.<br>Instant local tools, open-ended answers from Archiver 4.1 — our own model — and the web only when you ask.</div>
+        <p class="ai-disclosure">Archiver 4.1 is our own model, built on the open Qwen 2.5 0.5B base, and it runs entirely in your browser — no model runs on our server. It starts preparing the moment you open this page, in the background, so your first open-ended answer is ready when you are. Lookup, calculations and note extraction are instant from the first second. The one-time model fetch is a few hundred MB into your browser’s cache (Data Saver pauses it), and Archiver picks WebGPU where the browser has it and a WebAssembly runtime where it does not, so Safari is not left out.</p>
         <div class="start-features">
           <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> No model-provider key</span>
           <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Live web when you want it</span>
           <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg> Remembers you</span>
         </div>
         <div class="ob-chips" id="chips"></div>
-        <div style="margin-top:18px; font-size:11px; color:var(--ink-3);">Archiver 4.0 — our own model · Chats can sync to this app’s server</div>
+        <div style="margin-top:18px; font-size:11px; color:var(--ink-3);">Archiver 4.1 — our own model · Chats can sync to this app’s server</div>
       </div>
       <div id="chatThread" class="hidden" role="log" aria-label="Conversation" aria-live="polite" aria-relevant="additions"></div>
     </div>
@@ -1073,7 +1073,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
             </button>
           </div>
         </div>
-        <div class="ai-runtime-status" id="aiRuntimeStatus" role="status" aria-live="polite">Archiver 4.0 · preparing in the background</div>
+        <div class="ai-runtime-status" id="aiRuntimeStatus" role="status" aria-live="polite">Archiver 4.1 · preparing in the background</div>
         <div class="composer-hint">
           <span>Enter to send · Shift+Enter for newline</span>
           <span id="composerStatus" role="status" aria-live="polite"></span>
@@ -1128,20 +1128,20 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     </header>
     <div class="settings-body">
       <fieldset>
-        <legend>Archiver 4.0 — our model</legend>
+        <legend>Archiver 4.1 — our model</legend>
         <div class="engine-box">
           <div class="engine-line">
             <span class="dot on" id="engineDot"></span>
-            <b id="engineMode">Archiver 4.0 · preparing in the background</b>
+            <b id="engineMode">Archiver 4.1 · preparing in the background</b>
             <span class="mtag" id="engineModel"></span>
           </div>
-          <p id="engineBlurb">Archiver 4.0 is our own model, built on the open Qwen 2.5 0.5B base. It runs entirely in your browser, so nothing runs on Render and no one else sees your prompts. It starts preparing the moment you open the page.</p>
+          <p id="engineBlurb">Archiver 4.1 is our own model, built on the open Qwen 2.5 0.5B base. It runs entirely in your browser, so nothing runs on Render and no one else sees your prompts. It starts preparing the moment you open the page.</p>
           <div class="ai-confirmation" id="aiConfirmation" role="status" aria-live="polite">
             <span class="mark" aria-hidden="true">✓</span>
-            <span><strong id="aiConfirmationTitle">Archiver 4.0 is enabled</strong><small id="aiConfirmationDetail">It prepares in the background the moment you open this page.</small></span>
+            <span><strong id="aiConfirmationTitle">Archiver 4.1 is enabled</strong><small id="aiConfirmationDetail">It prepares in the background the moment you open this page.</small></span>
           </div>
-          <p class="desc">Archiver 4.0 is always enabled for writing, explanations, coding and plans. Its status is shown here and beside the chat box. There is nothing to install and no download button: while the page is open it fetches the model once into this browser’s cache and reuses it afterwards, so by the time you type your first open-ended question it is usually already ready. Archiver picks the runtime automatically — WebGPU where the browser has it, and a WebAssembly (CPU) runtime where it does not, which is what most Safari installs get. Keep this page open while it prepares. Offline mode, Data Saver, or a browser with neither runtime will leave the instant tools running instead.</p>
-          <button class="btn" id="retryModel" type="button" hidden>Retry Archiver 4.0</button>
+          <p class="desc">Archiver 4.1 is always enabled for writing, explanations, coding and plans. Its status is shown here and beside the chat box. There is nothing to install and no download button: while the page is open it fetches the model once into this browser’s cache and reuses it afterwards, so by the time you type your first open-ended question it is usually already ready. Archiver picks the runtime automatically — WebGPU where the browser has it, and a WebAssembly (CPU) runtime where it does not, which is what most Safari installs get. Keep this page open while it prepares. Offline mode, Data Saver, or a browser with neither runtime will leave the instant tools running instead.</p>
+          <button class="btn" id="retryModel" type="button" hidden>Retry Archiver 4.1</button>
           <div class="engine-bar" id="engineBar" style="display:none"><span id="engineBarFill"></span></div>
           <div class="engine-progress" id="engineProgress" style="display:none"></div>
         </div>
@@ -1158,7 +1158,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
 
       <fieldset>
         <legend>Memory Bank</legend>
-        <p style="margin-top:0;margin-bottom:10px;font-size:12px;color:var(--ink-3)">Memories are stored on this app’s server. Relevant cached memories can inform Archiver 4.0 when a request needs it.</p>
+        <p style="margin-top:0;margin-bottom:10px;font-size:12px;color:var(--ink-3)">Memories are stored on this app’s server. Relevant cached memories can inform Archiver 4.1 when a request needs it.</p>
         <label class="toggle"><input type="checkbox" id="setAutoExtract"> Learn new memories automatically from chat</label>
         <label class="toggle"><input type="checkbox" id="setAutoDistill"> Auto-distill and consolidate long chats</label>
       </fieldset>
@@ -1167,7 +1167,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
         <legend>Persona & Prompt</legend>
         <div class="field">
           <textarea id="setPersona" spellcheck="false" placeholder="Custom instructions for Archiver..."></textarea>
-          <div class="desc">Instructions for Archiver 4.0 (open-ended answers). Instant lookup and text tools are deterministic.</div>
+          <div class="desc">Instructions for Archiver 4.1 (open-ended answers). Instant lookup and text tools are deterministic.</div>
         </div>
       </fieldset>
 
@@ -1228,8 +1228,8 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
         <legend>Updates</legend>
         <div class="update-row">
           <div class="update-meta">
-            <b>4.0</b><span>2026-09-27 · latest</span>
-            <p>Archiver 4.0 — built to live on the free tier: honest "waking the server" cold starts, bounded and cached web fetches, and model bytes that revalidate instead of re-downloading.</p>
+            <b>4.1</b><span>2026-09-27 · latest</span>
+            <p>Archiver 4.1 — built to live on the free tier: honest "waking the server" cold starts, bounded and cached web fetches, and model bytes that revalidate instead of re-downloading.</p>
           </div>
           <button class="btn sm" id="openChangelog" style="white-space:nowrap; flex-shrink:0;">View changelog →</button>
         </div>
@@ -1293,7 +1293,23 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     <div class="changelog-body">
       <div class="changelog-timeline">
         <div class="cl-entry" style="border-color:var(--accent)">
-          <div class="cl-head"><span class="cl-ver">4.0</span><span class="cl-tag">Latest</span><span class="cl-date">2026-09-27</span></div>
+          <div class="cl-head"><span class="cl-ver">4.1</span><span class="cl-tag">Latest</span><span class="cl-date">2026-09-27</span></div>
+          <div class="cl-title">4.1 — broader search, smarter answers, fewer hard refusals</div>
+          <div class="cl-body">
+            <ul>
+              <li><b>Bing web results, keyless.</b> Ordinary Bing web search now runs alongside Wikipedia and Stack Exchange, with all three providers kicked off <i>concurrently</i> so you wait for the slowest, not the sum. Wikipedia is great for encyclopaedic facts and Stack Overflow for programming questions, but most everyday queries land on neither.</li>
+              <li><b>Search waits for a sleeping server.</b> The browser-side search timeout is raised to 75 seconds (from 12) so a free-tier instance that has spun down has time to wake and answer before the client gives up. The “Waking the server…” hint still appears after a few seconds.</li>
+              <li><b>Relaxed relevance.</b> The bar for surfacing a result is lowered so ordinary web hits (which tend to score lower on keyword overlap than Wikipedia pages) still reach you when they’re the best answer available.</li>
+              <li><b>Best-effort, labelled.</b> If a search finds no citable sources, Archiver no longer refuses outright for ordinary questions — it gives a best-effort answer from general knowledge and labels it <i>_unverified_</i>. No invented citations, no fake URLs, and fresh/live questions still fail closed.</li>
+              <li><b>No forced “Thinking:” preamble.</b> The one-line plan still shows in the Thought process panel, but the visible answer no longer has to open with a visible “Thinking: …” line. Response style is more flexible, while safeguards for serious real-world harm remain.</li>
+              <li><b>Model weights are unchanged</b> (Qwen 2.5 0.5B). This release makes search, prompting and fallbacks smarter without swapping the base model or adding a paid API.</li>
+            </ul>
+          </div>
+          <div class="cl-foot"><span>4.1 · search + prompting refresh</span><span>Bing, concurrency, 75 s wake, unverified label</span></div>
+        </div>
+
+        <div class="cl-entry">
+          <div class="cl-head"><span class="cl-ver">4.0</span><span class="cl-date">2026-09-27</span></div>
           <div class="cl-title">4.0 — built to live on the free tier: honest cold starts, bounded web fetches, cheaper model bytes</div>
           <div class="cl-body">
             <ul>
@@ -2372,11 +2388,11 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
       : st.backend === 'webgpu' ? 'on this device’s GPU' : '';
     const fromCache = typeof A.wasReadyBefore === 'function' && A.wasReadyBefore();
     const labels = {
-      ready: 'Archiver 4.0 · active' + (backendWord ? ' ' + backendWord : ''),
-      loading: fromCache ? 'Archiver 4.0 · loading from browser cache…' : 'Archiver 4.0 · preparing…',
-      error: 'Archiver 4.0 unavailable · instant tools ready',
-      paused: 'Archiver 4.0 · waiting for support or connection',
-      idle: fromCache ? 'Archiver 4.0 · loading from browser cache' : 'Archiver 4.0 · preparing in the background'
+      ready: 'Archiver 4.1 · active' + (backendWord ? ' ' + backendWord : ''),
+      loading: fromCache ? 'Archiver 4.1 · loading from browser cache…' : 'Archiver 4.1 · preparing…',
+      error: 'Archiver 4.1 unavailable · instant tools ready',
+      paused: 'Archiver 4.1 · waiting for support or connection',
+      idle: fromCache ? 'Archiver 4.1 · loading from browser cache' : 'Archiver 4.1 · preparing in the background'
     };
     const label = labels[st.aiState] || labels.idle;
     const candidates = (st.backendCandidates || []).slice();
@@ -2393,17 +2409,17 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
       ? st.modelPretty + (st.backend === 'wasm' ? ' · WASM' : st.backend === 'webgpu' ? ' · WebGPU' : '')
       : '';
     $('#aiRuntimeStatus').textContent = label;
-    $('#aiRuntimeStatus').title = st.aiReason || 'Archiver 4.0 handles open-ended writing, explanations, coding and plans; instant tools cover the rest.';
+    $('#aiRuntimeStatus').title = st.aiReason || 'Archiver 4.1 handles open-ended writing, explanations, coding and plans; instant tools cover the rest.';
     if (confirm) {
       const active = st.aiState === 'ready' || (st.aiEnabled && st.aiState === 'idle');
       confirm.className = 'ai-confirmation ' + (st.aiState === 'error' || st.aiState === 'paused' ? 'warn' : active ? 'active' : '');
       confirmTitle.textContent = st.aiState === 'ready'
-        ? 'Archiver 4.0 is active in this browser'
+        ? 'Archiver 4.1 is active in this browser'
         : st.aiState === 'loading'
-          ? 'Archiver 4.0 is preparing'
+          ? 'Archiver 4.1 is preparing'
           : st.aiState === 'error' || st.aiState === 'paused'
-            ? 'Archiver 4.0 is currently unavailable'
-            : 'Archiver 4.0 is enabled';
+            ? 'Archiver 4.1 is currently unavailable'
+            : 'Archiver 4.1 is enabled';
       confirmDetail.textContent = st.aiState === 'ready'
         ? (st.backend === 'wasm'
           ? 'Running the WebAssembly runtime on this device’s CPU because WebGPU is not available here. Writing and explanations work; expect slower output than a GPU browser. Lookup and note tools remain instant.'
@@ -2563,15 +2579,15 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     $('#retryModel').onclick = async () => {
       if (state.streaming || $('#retryModel').disabled) return;
       $('#retryModel').disabled = true;
-      $('#composerStatus').textContent = 'Retrying Archiver 4.0…';
+      $('#composerStatus').textContent = 'Retrying Archiver 4.1…';
       paintEngine();
       $('#retryModel').disabled = true;
       try {
         await window.Archiver.retryAI();
-        toast('Archiver 4.0 is ready', 'ok');
+        toast('Archiver 4.1 is ready', 'ok');
       } catch (err) {
         const st = window.Archiver.status();
-        toast(st.aiReason || st.progressText || err.message || 'Archiver 4.0 could not start', 'err');
+        toast(st.aiReason || st.progressText || err.message || 'Archiver 4.1 could not start', 'err');
       } finally {
         $('#composerStatus').textContent = '';
         paintEngine();
@@ -2773,7 +2789,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     $('#exportBtn').onclick = () => {
       if (!state.sessionId) { toast('No active session', 'err'); return; }
       const messages = LocalStore.getMessages(state.sessionId);
-      const text = '# Archiver 4.0 conversation\n\n' + messages.map(m => '## ' + (m.role === 'user' ? 'You' : 'Archiver') + '\n\n' + m.content).join('\n\n');
+      const text = '# Archiver 4.1 conversation\n\n' + messages.map(m => '## ' + (m.role === 'user' ? 'You' : 'Archiver') + '\n\n' + m.content).join('\n\n');
       window.ArchiverDownload.save(text, 'archiver-conversation.md', 'text/markdown;charset=utf-8');
     };
     $('#exportArchive').onclick = () => { window.location.href = '/api/archive/export'; };
