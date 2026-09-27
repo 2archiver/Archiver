@@ -1,8 +1,45 @@
-# Archiver 4.0
+# Archiver 4.2
 
-**An everyday assistant with instant local tools, open-ended answers from Archiver 4.0 — our own model — and live web search when you ask.**
+**An everyday assistant with instant local tools, open-ended answers from Archiver 4.2 — our own model — and live web search when you ask.**
 
 No account or model-provider API key. Two inference runtimes are bundled with the website — WebGPU where a browser offers it, WebAssembly where it does not — and model assets are fetched and cached automatically in the browser. No model server, deployment-time npm step, or model weights in Git.
+
+## New in 4.2 — capability checks, diagnostics, hardening
+
+- **WebGPU only when it will actually work.** The adapter must be hardware,
+  allow ≥ 128 MiB buffers, and pass a 64 MiB test allocation; otherwise the
+  WebAssembly runtime is used and the audit trail says why. See
+  [docs/BROWSER-SUPPORT.md](docs/BROWSER-SUPPORT.md) for the Chrome / Edge /
+  Firefox / Safari (macOS, iOS) / Android matrix and the versions assumed.
+- **Diagnostics** — Settings → Diagnostics, `#diag`, or Ctrl/⌘+Shift+D. Paste
+  the report into bug reports. It can also clear cached model weights.
+- **Render free has no persistent disk.** The server database is recreated on
+  every restart or redeploy. Your chats live in this browser; when the server
+  was reset, a banner says so. Use Settings → export to keep a JSON copy.
+- **Hardened for one small instance:** COOP/COEP isolation and security
+  headers, per-IP rate limits, request-size and concurrency caps, SQLite tuned
+  for low memory with a WAL flush on shutdown, search-provider cooldowns,
+  memory de-duplication, contradiction handling and a per-user cap.
+
+Optional environment variables (none required):
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `ARCHIVER_COEP` | `require-corp` | `credentialless` or `off` to relax isolation |
+| `ARCHIVER_CSP` | `report-only` | `enforce` or `off` |
+| `ARCHIVER_RATE` | `search=30/60,sync=60/60,import=5/60` | per-IP requests/window(s) |
+| `ARCHIVER_MAX_BODY` | `2097152` | request body cap (bytes) |
+| `ARCHIVER_MAX_INFLIGHT` | `24` | concurrent requests before 503 |
+| `ARCHIVER_MEMORY_CAP` | `2000` | memories per browser identity |
+| `ARCHIVER_PROVIDER_COOLDOWN` | `600` | seconds to skip a blocked search provider |
+| `ARCHIVER_PROVIDER_TIMEOUT` | `12` | per-provider search timeout (s) |
+
+**Keep-warm trade-off.** `/api/ping` is the cheapest endpoint to hit. An
+external pinger every ~10 minutes avoids 30–60 s cold starts, but it uses the
+free tier's monthly instance hours continuously (one always-on free service
+roughly consumes the whole allowance) and Render may treat artificial traffic
+as against the spirit of the free plan. Archiver does not ship a pinger; the UI
+shows "Waking the server…" instead.
 
 ## Safari and answer-reliability hotfix
 

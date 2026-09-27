@@ -26,7 +26,9 @@ from __future__ import annotations
 
 import asyncio
 import html
+import os
 import re
+import time
 from typing import Any, Awaitable, Callable
 
 import httpx
@@ -40,7 +42,7 @@ TIMEOUT = httpx.Timeout(70.0, connect=15.0)
 
 # Wikimedia's policy requires "<client>/<version> (<contact>)"; a bare product
 # name is rejected outright.
-UA = "Archiver/4.1 (https://github.com/2archiver/Archiver; personal assistant) httpx/0.27"
+UA = "Archiver/4.2 (https://github.com/2archiver/Archiver; personal assistant) httpx/0.27"
 
 ENDPOINTS = {
     "wikipedia-action": "https://en.wikipedia.org/w/api.php",
@@ -559,6 +561,47 @@ SE_CHAIN: list[tuple[str, Callable[..., Awaitable[list[dict[str, Any]]]]]] = [
 ]
 
 
+# Provider health cache. A provider that answered 403/429 (datacentre IP
+# blocks, rate limits) or timed out is skipped for PROVIDER_COOLDOWN seconds, so
+# every following query does not pay for the same refusal again. In-memory and
+# per-process: a free-tier spin-down forgets it, which is the right default.
+PROVIDER_COOLDOWN = float(os.environ.get("ARCHIVER_PROVIDER_COOLDOWN", "600"))
+# Each provider gets its own ceiling inside the overall TIMEOUT, so one slow
+# upstream cannot eat the whole budget of a chain.
+PROVIDER_TIMEOUT = float(os.environ.get("ARCHIVER_PROVIDER_TIMEOUT", "12"))
+_provider_down: dict[str, tuple[float, str]] = {}
+
+
+def _cooling(name: str, now: float | None = None) -> str:
+    """Why `name` is being skipped right now, or '' if it may be tried."""
+    entry = _provider_down.get(name)
+    if not entry:
+        return ""
+    until, why = entry
+    if (time.monotonic() if now is None else now) >= until:
+        _provider_down.pop(name, None)
+        return ""
+    return why
+
+
+def _mark_down(name: str, why: str) -> None:
+    _provider_down[name] = (time.monotonic() + PROVIDER_COOLDOWN, why)
+
+
+def _is_block(exc: BaseException) -> bool:
+    if isinstance(exc, (asyncio.TimeoutError, httpx.TimeoutException)):
+        return True
+    if isinstance(exc, httpx.HTTPStatusError):
+        return exc.response.status_code in (403, 429, 503)
+    return False
+
+
+def provider_health() -> dict[str, str]:
+    """Providers currently in cooldown, for /api/search/diag."""
+    now = time.monotonic()
+    return {n: f"{w} (retry in {int(u - now)}s)" for n, (u, w) in _provider_down.items() if u > now}
+
+
 async def _try_chain(
     client: httpx.AsyncClient,
     chain: list[tuple[str, Callable[..., Awaitable[list[dict[str, Any]]]]]],
@@ -568,13 +611,21 @@ async def _try_chain(
 ) -> list[dict[str, Any]]:
     """Run a chain until one provider yields something. Never raises."""
     for name, fn in chain:
+        why = _cooling(name)
+        if why:
+            log[name] = f"skipped: cooling down after {why}"
+            continue
         try:
-            got = await fn(client, q, n)
+            got = await asyncio.wait_for(fn(client, q, n), timeout=PROVIDER_TIMEOUT)
             log[name] = f"ok ({len(got)} result{'s' if len(got) != 1 else ''})"
             if got:
                 return got
         except Exception as exc:
             log[name] = f"{type(exc).__name__}: {str(exc)[:110]}"
+            if _is_block(exc):
+                label = (f"HTTP {exc.response.status_code}" if isinstance(exc, httpx.HTTPStatusError)
+                         else "timeout")
+                _mark_down(name, label)
     return []
 
 
@@ -1186,4 +1237,5 @@ async def diag(query: str = "Battle of Kursk") -> dict[str, Any]:
                     "ok": False, "count": 0,
                     "error": f"{type(exc).__name__}: {str(exc)[:150]}",
                 }
+    out["cooldown"] = provider_health()
     return out

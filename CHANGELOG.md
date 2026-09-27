@@ -1,3 +1,44 @@
+## 4.2 — 2026-09-27
+
+### Browser capability checks, diagnostics, free-tier hardening
+
+- **Real WebGPU capability probe.** WebGPU is chosen only when the adapter is
+  not a software fallback, allows ≥ 128 MiB storage bindings and buffers,
+  `deviceMemory` (where reported) is ≥ 2 GB, and a 64 MiB canary allocation
+  succeeds. Everything else routes to the WebAssembly runtime with a one-line
+  reason in the audit trail (Edge/D3D12 low limits, phones, fallback adapters).
+- **WASM compile check.** `WebAssembly.validate` on a minimal module detects
+  Edge Enhanced-security/strict mode and other JIT-less profiles up front.
+- **Diagnostics panel** (Settings → Diagnostics, `#diag`, Ctrl/⌘+Shift+D):
+  browser, WebGPU adapter info/limits, WASM SIMD/threads, cross-origin
+  isolation, storage quota/usage, cached models; copy-to-clipboard; clear
+  cached weights. Runs only when opened.
+- **"Server storage was reset" notice.** `/api/health` now reports
+  `db_created_at`, `boot_id` and `ephemeral_disk`; the browser shows a banner
+  when the free tier's ephemeral database was recreated.
+- **Security headers** on every response: COOP `same-origin`, COEP
+  `require-corp` (so `crossOriginIsolated` / SharedArrayBuffer work in Chrome,
+  Edge, Firefox and Safari), CORP `same-origin`, `nosniff`, `Referrer-Policy`,
+  `Permissions-Policy`, and a CSP limited to the model hosts (report-only by
+  default; `ARCHIVER_CSP=enforce`).
+- **Per-IP rate limits** (search 30/min, sync 60/min, import 5/min), a 2 MiB
+  request-body cap, and a global in-flight cap (503 + Retry-After) — all
+  in-memory, bounded, configurable by env; `/api/health` is exempt.
+- **`/api/ping`**: a DB-free keep-warm/liveness endpoint.
+- **SQLite tuned for 512 MB** (small page cache, NORMAL sync under WAL,
+  frequent auto-checkpoint, journal size limit) and **WAL checkpoint on
+  shutdown**.
+- **Search provider cooldown**: a provider that returned 403/429/503 or timed
+  out is skipped for 10 minutes; each provider gets its own 12 s ceiling.
+  Cooldowns are listed in `/api/search/diag`.
+- **Memory**: write-time de-duplication (identical memories return the
+  existing row), contradiction handling via `superseded_by` (reversible with
+  `/restore`), and a per-user cap (`ARCHIVER_MEMORY_CAP`, default 2000) that
+  evicts superseded then low-value, never pinned, memories.
+- `docs/BROWSER-SUPPORT.md` (matrix + Edge/Safari manual checklist) and
+  `docs/AUDIT-4.2.md`. Version bumped to 4.2 everywhere; 4.1 persona and
+  model label migrate in place.
+
 ## 4.1 — 2026-09-27
 
 ### Broader search, smarter answers, fewer hard refusals
