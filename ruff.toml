@@ -1,0 +1,11 @@
+# Lint gate for `make lint` (and the CI lint job). Ruff is a development tool
+# installed by CI / the developer — never a runtime dependency; requirements.txt
+# stays at three packages, no build step.
+#
+# The rule set is the classic correctness core: pycodestyle errors, pyflakes.
+# Style churn is deliberately out of scope for a no-build-step codebase.
+line-length = 120
+target-version = "py311"
+
+[lint]
+select = ["E4", "E7", "E9", "F"]

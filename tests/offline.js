@@ -4,8 +4,8 @@ const A = require('./ui_check');
 let checks = 0;
 function check(ok, message) { assert.ok(ok, message); checks++; }
 (async () => {
-  check(A.version === '3.5' && A.status().version === '3.5' && A.name === 'Archiver 3.5', 'runtime version');
-  check(A.__ctx.ARCHIVER_KB.version === '3.5', 'corpus version');
+  check(A.version === '4.0' && A.status().version === '4.0' && A.name === 'Archiver 4.0', 'runtime version');
+  check(A.__ctx.ARCHIVER_KB.version === '4.0', 'corpus version');
   for (const [query, expected] of [
     ['2 + 3 * 4', '14'], ['(2 + 3) * 4', '20'], ['2^3^2', '512'],
     ['-2^2', '-4'], ['(-2)^2', '4'], ['3 * -2', '-6'], ['2^-2', '0.25'],

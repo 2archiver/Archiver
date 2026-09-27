@@ -188,8 +188,6 @@ async def _mock(
     first, receipts after, no hedging. Enough to prove retrieval, injection and
     recall work before you spend a single API key.
     """
-    import asyncio
-
     last_user = next(
         (m["content"] for m in reversed(messages) if m["role"] == "user"), ""
     )
@@ -199,7 +197,6 @@ async def _mock(
         re.M,
     )
     preferences = [t for k, t in recalled if k == "preference"]
-    facts = [t for k, t in recalled if k != "preference"]
 
     lines = [
         "**Short answer:** ",

@@ -5,8 +5,6 @@ checks run against the shape of text the providers actually return.
 """
 import re
 
-import pytest
-
 from app import search, take
 
 MUSSOLINI = (

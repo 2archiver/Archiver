@@ -1,0 +1,97 @@
+# CI for the Render free-tier target: lint, the full test suite, and a boot
+# check that starts the service exactly as Render does — ./run.sh with an
+# injected $PORT — then waits for the cheap /api/health.
+#
+# The boot job is the one that flakes on a cold GitHub runner (cold pip cache,
+# slow interpreter, uvicorn binding seconds after checkout), so nothing in it is
+# a single shot: pip retries, a long health-poll deadline, and a failure that
+# dumps the server log instead of leaving a mystery.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install ruff (dev tool only — requirements.txt stays at three runtime deps)
+        run: pip install ruff
+      - run: make lint
+
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install (venv, the same path `make install` takes locally)
+        run: |
+          python3 -m venv .venv
+          .venv/bin/pip install -r requirements.txt pytest
+      - run: make test
+
+  boot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install with retries (cold runners lose here most often)
+        run: |
+          python3 -m venv .venv
+          for attempt in 1 2 3 4 5; do
+            if .venv/bin/pip install -r requirements.txt; then
+              break
+            fi
+            echo "pip install failed (attempt ${attempt}), retrying..."
+            sleep $((attempt * 5))
+          done
+      - name: Start via ./run.sh with an injected $PORT
+        env:
+          PORT: 8123
+        run: |
+          nohup ./run.sh > /tmp/archiver.log 2>&1 &
+          echo $! > /tmp/archiver.pid
+      - name: Wait for /api/health (poll with a long deadline, never single-shot)
+        env:
+          PORT: 8123
+        run: |
+          ok=""
+          for i in $(seq 1 60); do
+            if curl -fsS --max-time 5 "http://127.0.0.1:${PORT}/api/health"; then
+              ok=1
+              echo
+              echo "healthy after ${i} attempts"
+              break
+            fi
+            sleep 2
+          done
+          if [ -z "$ok" ]; then
+            echo "::error::/api/health never answered"
+            cat /tmp/archiver.log
+            exit 1
+          fi
+      - name: Prove the entrypoint contract, then stop
+        env:
+          PORT: 8123
+        run: |
+          curl -fsS "http://127.0.0.1:${PORT}/api/health" | grep -q '"ok":true'
+          curl -fsS -o /dev/null -w "index: %{http_code}\n" "http://127.0.0.1:${PORT}/"
+          kill "$(cat /tmp/archiver.pid)" 2>/dev/null || true

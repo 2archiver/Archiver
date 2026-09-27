@@ -296,7 +296,8 @@ def _dedupe(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 async def p_wikipedia_action(c: httpx.AsyncClient, q: str, n: int) -> list[dict[str, Any]]:
-    r = await c.get(
+    r = await take_mod.fetch(
+        c,
         ENDPOINTS["wikipedia-action"],
         params={
             "action": "query", "format": "json", "generator": "search",
@@ -321,7 +322,8 @@ async def p_wikipedia_action(c: httpx.AsyncClient, q: str, n: int) -> list[dict[
 async def p_wikimedia_core(c: httpx.AsyncClient, q: str, n: int) -> list[dict[str, Any]]:
     """api.wikimedia.org — a separate service from en.wikipedia.org, so it is
     not covered by the same IP restrictions."""
-    r = await c.get(
+    r = await take_mod.fetch(
+        c,
         ENDPOINTS["wikimedia-core"],
         params={"q": q, "limit": str(n)},
         headers={"User-Agent": UA, "Accept": "application/json"},
@@ -353,8 +355,8 @@ async def p_allorigins_wikipedia(c: httpx.AsyncClient, q: str, n: int) -> list[d
         "&generator=search&gsrlimit=%d&prop=extracts|info&exintro=1"
         "&explaintext=1&inprop=url&redirects=1&gsrsearch=%s" % (n, q.replace(" ", "+"))
     )
-    r = await c.get(ENDPOINTS["allorigins"], params={"url": target},
-                    headers={"User-Agent": UA})
+    r = await take_mod.fetch(c, ENDPOINTS["allorigins"], params={"url": target},
+                             headers={"User-Agent": UA})
     r.raise_for_status()
     data = r.json()
     if isinstance(data, dict) and "contents" in data:
@@ -373,7 +375,8 @@ async def p_allorigins_wikipedia(c: httpx.AsyncClient, q: str, n: int) -> list[d
 
 async def p_hackernews(c: httpx.AsyncClient, q: str, n: int) -> list[dict[str, Any]]:
     """Tech discussions, dev commentary, and startup culture."""
-    r = await c.get(
+    r = await take_mod.fetch(
+        c,
         "https://hn.algolia.com/api/v1/search",
         params={"query": q, "hitsPerPage": str(n), "tags": "story"},
         headers={"User-Agent": UA},
@@ -393,7 +396,8 @@ async def p_hackernews(c: httpx.AsyncClient, q: str, n: int) -> list[dict[str, A
 
 async def p_wikiquote(c: httpx.AsyncClient, q: str, n: int) -> list[dict[str, Any]]:
     """Primary statements, notable quotes, and historical sayings."""
-    r = await c.get(
+    r = await take_mod.fetch(
+        c,
         "https://en.wikiquote.org/w/api.php",
         params={
             "action": "query", "format": "json", "generator": "search",
@@ -415,10 +419,10 @@ async def p_wikiquote(c: httpx.AsyncClient, q: str, n: int) -> list[dict[str, An
 
 
 async def p_ddg_instant(c: httpx.AsyncClient, q: str, n: int) -> list[dict[str, Any]]:
-    r = await c.get(ENDPOINTS["ddg-instant"],
-                    params={"q": q, "format": "json", "no_html": "1",
-                            "no_redirect": "1", "skip_disambig": "1"},
-                    headers={"User-Agent": UA})
+    r = await take_mod.fetch(c, ENDPOINTS["ddg-instant"],
+                             params={"q": q, "format": "json", "no_html": "1",
+                                     "no_redirect": "1", "skip_disambig": "1"},
+                             headers={"User-Agent": UA})
     r.raise_for_status()
     d = r.json()
     abstract = _clean(d.get("AbstractText", ""), 380)
@@ -430,11 +434,11 @@ async def p_ddg_instant(c: httpx.AsyncClient, q: str, n: int) -> list[dict[str, 
 
 async def p_stackexchange(c: httpx.AsyncClient, q: str, n: int) -> list[dict[str, Any]]:
     """Genuinely good answers for programming questions, and keyless."""
-    r = await c.get(ENDPOINTS["stackexchange"],
-                    params={"order": "desc", "sort": "relevance", "q": q,
-                            "site": "stackoverflow", "pagesize": str(n),
-                            "filter": "withbody"},
-                    headers={"User-Agent": UA})
+    r = await take_mod.fetch(c, ENDPOINTS["stackexchange"],
+                             params={"order": "desc", "sort": "relevance", "q": q,
+                                     "site": "stackoverflow", "pagesize": str(n),
+                                     "filter": "withbody"},
+                             headers={"User-Agent": UA})
     r.raise_for_status()
     out = []
     for i, item in enumerate((r.json() or {}).get("items") or []):
@@ -1023,7 +1027,8 @@ async def suggest(query: str) -> str:
     """
     try:
         async with httpx.AsyncClient(timeout=TIMEOUT, follow_redirects=True) as c:
-            r = await c.get(
+            r = await take_mod.fetch(
+                c,
                 ENDPOINTS["wikipedia-action"],
                 params={
                     "action": "query", "list": "search", "srsearch": query,
@@ -1045,9 +1050,13 @@ async def diag(query: str = "Battle of Kursk") -> dict[str, Any]:
     which source was failing, so it just looked broken.
     """
     out: dict[str, Any] = {"host": None, "providers": {}}
+    take_mod.cache_clear()  # a diagnostic must probe live, never report a cached answer
     try:
         async with httpx.AsyncClient(timeout=TIMEOUT) as c:
-            me = await c.get("https://api.ipify.org?format=json", headers={"User-Agent": UA})
+            # cache=False: a diagnostic that reports a stale cached answer is
+            # worse than no diagnostic. The ceiling and content gate still apply.
+            me = await take_mod.fetch(c, "https://api.ipify.org?format=json",
+                                      headers={"User-Agent": UA}, cache=False)
             out["host"] = me.json().get("ip")
     except Exception as exc:
         out["host"] = f"unknown ({type(exc).__name__})"

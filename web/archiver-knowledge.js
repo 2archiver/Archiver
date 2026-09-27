@@ -2691,7 +2691,7 @@ const MORE34 = [
 
 
   window.ARCHIVER_KB = {
-    version: '3.5',
+    version: '4.0',
     generated: '2026-09-27',
     cards: [...WW2, ...FIGURES, ...TECH, ...GENERAL, ...WORDS, ...SCIENCE, ...WORLD, ...LANGUAGE, ...EVERYDAY, ...MORE, ...MORE24, ...HIST25, ...LIGHT, ...OFFLINE31, ...MORE34],
     note: 'Grounded offline corpus. Charges are not convictions; contested history is not a "side".'

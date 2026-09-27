@@ -1,6 +1,6 @@
-# Archiver 3.5
+# Archiver 4.0
 
-**An everyday assistant with instant local tools, open-ended answers from Archiver 3.5 — our own model — and live web search when you ask.**
+**An everyday assistant with instant local tools, open-ended answers from Archiver 4.0 — our own model — and live web search when you ask.**
 
 No account or model-provider API key. Two inference runtimes are bundled with the website — WebGPU where a browser offers it, WebAssembly where it does not — and model assets are fetched and cached automatically in the browser. No model server, deployment-time npm step, or model weights in Git.
 
@@ -47,6 +47,48 @@ for desktop/mobile WebKit reload, history navigation and downloads, and
 `node tests/browser-ai.js` for Chromium generation integration. Linux WebKit
 emulation is not an actual iPhone/Mac Safari test. Device follow-up should cover
 cold/cached opening, tab restoration, first generation, cancellation, and export.
+
+## New in 4.0 — the free-tier budget release
+
+4.0 is built around its deployment target: a Render free web service that
+spins down when idle, throttles past one shared monthly bandwidth allowance,
+and runs on 512 MB RAM with an ephemeral disk. Each change names the
+constraint it serves.
+
+- **Cold starts, named instead of mysterious.** The first search that runs
+  past a few seconds shows a distinct **“Waking the server…”** state rather
+  than an anonymous spinner: the free instance sleeps after ~15 minutes idle
+  and takes tens of seconds to answer. There is deliberately **no keep-alive
+  pinger** — keeping the instance hot is exactly what spin-down exists to
+  prevent, and self-pinging burns the same metered bandwidth as real traffic.
+  `/api/health` stays fetch-free (a test pins that) so it answers the moment
+  uvicorn binds, which is what lets the UI tell “waking” from “broken”.
+- **Service-Initiated egress is bounded in one place.** Every outbound fetch
+  the search path makes now goes through the guarded fetcher in `app/take.py`:
+  streamed under a **2 MB ceiling** (oversized bodies are aborted mid-stream,
+  never read whole), **content-type gated** before the body is downloaded
+  (`take.py` only ever needs text), `Accept-Encoding: gzip` on every request
+  with only **decompressed bytes** kept, an in-process **TTL cache** on the
+  normalised URL (dict + timestamps, bounded by entries and bytes — it dies
+  with the instance, and that is fine: the disk is ephemeral anyway), and a
+  **concurrency cap** of four so one query fanning out cannot saturate the
+  shared CPU.
+- **Vendored model bytes, as cheap as possible to serve.** The
+  `web-llm` / `wllama` runtimes carry strong content-addressed `ETag`s: a warm
+  browser revalidates and receives `304` instead of the payload, the pre-compressed
+  `.gz` variants keep serving on `Accept-Encoding` negotiation, and the
+  immutable one-year `cache-control` is unchanged. `tests/test_api.py` pins the
+  MIME types, headers, integrity and the conditional path.
+- **Why no WebSockets, in writing.** Inference is client-side, so there is no
+  token stream to push; a socket would hold the instance awake (defeating the
+  only cost control), bill every frame into the priciest bandwidth meter, and
+  reconnect-storm on wake. If streaming is ever needed the answer is SSE over
+  the existing HTTP handler — one-directional, closed on completion. See
+  [`docs/architecture-decisions.md`](docs/architecture-decisions.md).
+- **CI that survives a cold runner.** `make lint` runs `ruff` (a dev tool —
+  `requirements.txt` stays at three runtime dependencies, no build step), and
+  the `boot` job starts `./run.sh` with an injected `$PORT` and polls
+  `/api/health` with pip retries and a long deadline.
 
 ## New in 3.5
 

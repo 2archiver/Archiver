@@ -1,3 +1,62 @@
+## 4.0 — 2026-09-27
+
+### The free-tier budget release
+
+4.0 changes no behaviour a visitor relies on; it changes what the service
+costs to run. The deployment target is a Render free web service: it spins
+down after ~15 minutes idle, metered bandwidth is one shared monthly
+allowance with no overage billing, and the instance has 512 MB RAM with an
+ephemeral disk. Every change below is in service of one of those.
+
+- **Cold starts are named, not hidden.** The first search that exceeds a few
+  seconds reports a distinct "Waking the server…" state instead of a generic
+  spinner. The page is served from the same instance that has to wake, so the
+  client cannot warn ahead of the first request — but it can say what the wait
+  is. Deliberately no keep-alive pinger: spin-down is the free tier's only
+  cost control, and self-pinging burns the same bandwidth meter as traffic.
+  `/api/health` is documented and tested as fetch-free so it answers the
+  moment uvicorn binds; `render.yaml` already points `healthCheckPath` at it.
+- **Service-Initiated egress is bounded in `app/take.py`**, the single page
+  retrieval / fetch layer that `search.py` now routes every outbound request
+  through: a 2 MB streamed byte ceiling that aborts oversized bodies (one
+  unbounded PDF must not eat a slice of the month), a content-type gate that
+  refuses non-text before the body is read (HEAD probe first where the target
+  supports it), `Accept-Encoding: gzip` on every outbound request with only
+  decompressed bytes stored, an in-process TTL cache keyed on the normalised
+  URL and bounded by entry count and total bytes (dict + timestamps; it dies
+  with the instance — fine, the disk is ephemeral anyway), and an asyncio
+  semaphore capping concurrent fetches at four so one query cannot saturate
+  the shared CPU. No new dependency: the ceiling is the streaming httpx
+  already had.
+- **Vendored model bytes cost less to serve.** The `web-llm` / `wllama`
+  routes keep their immutable one-year `cache-control`, add strong
+  content-derived `ETag`s (one per variant — plain and `.gz` carry different
+  validators), and answer `If-None-Match` with `304` and no payload. The app
+  shell gained the same conditional handling, so its mandated per-load
+  revalidation is a 304, not 166 KB. The existing `test_api.py` assertions
+  are unbroken and extended: 304 on a conditional request is now pinned.
+- **No WebSockets — decided and recorded** in
+  `docs/architecture-decisions.md`: client-side inference means no server-side
+  token stream to push; a socket keeps the instance awake, bills every frame
+  into the priciest meter, and reconnect-storms on wake. If streaming is ever
+  needed: SSE over the existing HTTP handler, one-directional, closed on
+  completion.
+- **CI: lint and boot.** `make lint` is a real recipe now (`ruff`, dev-only;
+  compileall fallback when it is absent — the runtime stays at three
+  dependencies with no build step), and a `boot` job starts `./run.sh` with an
+  injected `$PORT` and polls `/api/health`, built to survive a cold GitHub
+  runner: pip retries, a long wait deadline, and a failing boot that dumps the
+  server log.
+- Tests: oversized-body abort, non-text refusal before body read (and the
+  HEAD probe), TTL cache hit/miss driven by a clock seam, cache entry bounds,
+  gzip round-trip storing decoded bytes only, the concurrency cap, 304 on a
+  conditional vendor request, and `/api/health` performing no outbound fetch
+  against a stubbed fetcher.
+- Limits: the cache is process-local and vanishes on spin-down (by design —
+  nothing survives the ephemeral disk, and persisting it would need a disk
+  tier that does not exist here); the "waking" state is honest timing
+  behaviour, not a wake-up API; the byte ceiling applies to decoded bytes.
+
 ## 3.5 hotfix — Safari startup and evidence safeguards
 
 - Defer background model warm-up on Safari/iOS and hidden tabs; keep on-demand

@@ -1,4 +1,4 @@
-"""3.5 browser-chat sync regression tests; no external requests or model calls."""
+"""4.0 browser-chat sync regression tests; no external requests or model calls."""
 import pytest
 from fastapi.testclient import TestClient
 from app import main
@@ -13,7 +13,7 @@ def client(tmp_path, monkeypatch):
 
 
 def test_release_assets(client):
-    assert client.get("/api/health").json()["version"] == "3.5"
+    assert client.get("/api/health").json()["version"] == "4.0"
     for asset in ("archiver-comprehension.js", "archiver-engine.js", "archiver-worker.js",
                   "archiver-viewport.js", "archiver-download.js"):
         assert client.get("/static/" + asset).status_code == 200
@@ -21,7 +21,7 @@ def test_release_assets(client):
     assert 'maximum-scale=1' not in page
     assert 'id="autoAI"' not in page
     assert 'id="retryModel"' in page
-    assert 'Archiver 3.5 is always enabled' in page
+    assert 'Archiver 4.0 is always enabled' in page
 
 
 def test_both_inference_runtimes_are_shipped(client):
@@ -97,7 +97,7 @@ def test_default_migration_preserves_custom_persona(client):
     store.set_setting("model", "Archiver 2.5 (in-browser)", uid)
     store.set_setting("persona", "My custom persona", uid)
     main.apply_defaults(store, uid)
-    assert store.get_setting("model", user_id=uid) == "Archiver 3.5 (in-browser)"
+    assert store.get_setting("model", user_id=uid) == "Archiver 4.0 (in-browser)"
     assert store.get_setting("persona", user_id=uid) == "My custom persona"
     store.set_setting("persona", main.RETIRED_PERSONAS[0], uid)
     main.apply_defaults(store, uid)
@@ -141,6 +141,62 @@ def test_bundled_runtime_cache_and_integrity(client):
     client.cookies.clear()
     response = client.get("/static/vendor/web-llm-0.2.80.js")
     assert "set-cookie" not in response.headers
+
+
+def test_vendor_asset_conditional_request_returns_304(client):
+    """A warm browser revalidates with the ETag and gets 304, not the payload.
+
+    The vendored runtimes are the largest bytes the service ships and every
+    avoided transfer is metered bandwidth not spent."""
+    etags = {}
+    for encoding in ("identity", "gzip"):
+        first = client.get("/static/vendor/wllama-3.6.1.js", headers={"Accept-Encoding": encoding})
+        assert first.status_code == 200
+        etag = first.headers.get("etag")
+        assert etag and etag.startswith('"'), encoding
+        etags[encoding] = etag
+        conditional = client.get(
+            "/static/vendor/wllama-3.6.1.js",
+            headers={"Accept-Encoding": encoding, "If-None-Match": etag},
+        )
+        assert conditional.status_code == 304, encoding
+        assert conditional.content == b"", encoding
+        assert conditional.headers["etag"] == etag, encoding
+        assert "immutable" in conditional.headers["cache-control"], encoding
+        assert conditional.headers["vary"] == "Accept-Encoding", encoding
+        assert "set-cookie" not in conditional.headers, encoding
+    # Plain and gziped variants are different bytes and get different validators.
+    assert etags["identity"] != etags["gzip"]
+    # A stale validator (a redeployed runtime) gets the payload back.
+    stale = client.get(
+        "/static/vendor/wllama-3.6.1.js",
+        headers={"Accept-Encoding": "identity", "If-None-Match": '"0123456789abcdef"'},
+    )
+    assert stale.status_code == 200
+    assert len(stale.content) > 1000
+
+
+def test_health_performs_no_outbound_fetch(client, monkeypatch):
+    """/api/health is the wake probe and the deploy health check: it answers the
+    moment uvicorn binds, so nothing in it may reach the network."""
+    from app import search, take
+
+    calls = []
+
+    async def forbidden(*args, **kwargs):
+        calls.append((args, kwargs))
+        raise AssertionError("an outbound fetch was attempted from /api/health")
+
+    monkeypatch.setattr(take, "fetch", forbidden)
+    monkeypatch.setattr(take, "fetch_text", forbidden)
+    monkeypatch.setattr(search, "search", forbidden)
+    monkeypatch.setattr(search, "suggest", forbidden)
+    monkeypatch.setattr(search, "diag", forbidden)
+    response = client.get("/api/health")
+    assert response.status_code == 200
+    assert response.json()["ok"] is True
+    assert response.json()["version"] == "4.0"
+    assert calls == []
 
 
 def test_free_render_deployment_has_no_model_server():

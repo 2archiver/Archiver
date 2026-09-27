@@ -1,14 +1,15 @@
-/* Archiver 3.5: instant retrieval and text tools, plus generation on whichever
+/* Archiver 4.0: instant retrieval and text tools, plus generation on whichever
    runtime this device can actually run — WebGPU where it exists, WebAssembly
-   where it does not (which is most of Safari). 3.5 brands the model as
-   Archiver 3.5, persists the chosen backend across refreshes, and starts
-   preparing it the moment the page opens. */
+   where it does not (which is most of Safari). 4.0 brands the model as
+   Archiver 4.0, persists the chosen backend across refreshes, starts
+   preparing it the moment the page opens, and names a cold free-tier instance
+   for what it is ("Waking the server…") instead of spinning silently. */
 (function () {
   'use strict';
 
   /* One definition of the version, so the label in the sidebar, the persona, the
      self-description, the API and the tests cannot disagree with each other. */
-  const VERSION = '3.5';
+  const VERSION = '4.0';
   const NAME = 'Archiver ' + VERSION;
 
   /* ======================================================================== */
@@ -284,7 +285,7 @@
   /* ---- commands ---------------------------------------------------------- */
 
 const HELP = [
-    "I'm **" + NAME + "** — your private research desk: instant local knowledge, plus Archiver 3.5, our own model, for open-ended work. Chats can sync to the app server.",
+    "I'm **" + NAME + "** — your private research desk: instant local knowledge, plus Archiver 4.0, our own model, for open-ended work. Chats can sync to the app server.",
     '',
     '**Ask me anything.** History, science, health, tech, philosophy, nature, culture, practical life — plus **Render.com** (I know the host inside-out) and **intuition**. With **WEB** on I read live sources and give you a short read first, with 1–3 compact sources.',
     '',
@@ -841,7 +842,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       if (matches.every(m => m.entry && m.score >= ANSWER_AT) && matches[0].entry !== matches[1].entry) {
         return { text: matches.map((m, i) => '**' + understood.compare[i] + '**\n\n' + comprehension.excerpt(m.entry.a, 3, false)).join('\n\n') + '\n\n_Compared from local knowledge cards; this is not an exhaustive comparison._', kind: 'comparison', score: Math.min(...matches.map(m => m.score)) };
       }
-      return { text: 'I need a reliable local match for both sides of that comparison. Try more specific names or use WEB. Archiver 3.5 starts for open-ended requests when this device supports it.', kind: 'clarify', score: 0 };
+      return { text: 'I need a reliable local match for both sides of that comparison. Try more specific names or use WEB. Archiver 4.0 starts for open-ended requests when this device supports it.', kind: 'clarify', score: 0 };
     }
     const tl = tool(t);
     if (tl) return { text: tl, kind: 'tool', score: 1 };
@@ -854,7 +855,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     if (LIVE_RE.test(t) && !/^(?:what is|define|explain|difference between|compare)\b/i.test(t)) return { text: "Live data — weather, news, prices, scores — needs web search. Turn on **WEB** and I will fetch it rather than guess.", kind: 'live', score: 0 };
 
     if (/^(?:write|draft|rewrite|rephrase|translate|compose|brainstorm|create|debug)\b/i.test(understood.query || t)) {
-      return { text: 'That needs Archiver 3.5 rather than a stored answer. ' + (aiReason() || 'Archiver 3.5 starts automatically for this request in chat; the one-time download is a few hundred MB.') + ' I can still extract key sentences (`summarize: …`), compare known topics, or calculate in instant mode.', kind: 'capability', score: 1 };
+      return { text: 'That needs Archiver 4.0 rather than a stored answer. ' + (aiReason() || 'Archiver 4.0 starts automatically for this request in chat; the one-time download is a few hundred MB.') + ' I can still extract key sentences (`summarize: …`), compare known topics, or calculate in instant mode.', kind: 'capability', score: 1 };
     }
     const r = resolve(understood.query || t);
     const best = search(r.text, 5);
@@ -905,9 +906,9 @@ I can describe my capabilities and limitations; that is not consciousness or fee
   const WASM_TIMEOUT_MS = 12 * 60 * 1000;
 
   /* Small, fixed model family; never silently select a larger catalogue model.
-     This is Archiver's own model — branded "Archiver 3.5" in every label —
+     This is Archiver's own model — branded "Archiver 4.0" in every label —
      built on the open Qwen 2.5 0.5B Instruct base. Settings names the base
-     honestly; the product surface says Archiver 3.5. */
+     honestly; the product surface says Archiver 4.0. */
   const PREFERRED = ['Qwen2.5-0.5B-Instruct-q4f16_1-MLC', 'Qwen2.5-0.5B-Instruct-q4f32_1-MLC'];
 
   /* The same model family on the WASM path, as GGUF from its publisher. Tried in
@@ -926,14 +927,14 @@ I can describe my capabilities and limitations; that is not consciousness or fee
   const WASM_CONTEXT = 2048;
 
   /* Human-readable model labels. The 0.5B family is Archiver's own model,
-     branded Archiver 3.5; the other entries are guards so an unexpected model
+     branded Archiver 4.0; the other entries are guards so an unexpected model
      id still renders as something a reader can act on. */
   const NICE = [
     [/Qwen2\.5-7B/, 'Qwen 2.5 7B'],
     [/Qwen2\.5-3B/, 'Qwen 2.5 3B'],
     [/Qwen2\.5-1\.5B/, 'Qwen 2.5 1.5B'],
-    [/Qwen2\.5-0\.5B/, 'Archiver 3.5'],
-    [/qwen2\.5-0\.5b/, 'Archiver 3.5'],
+    [/Qwen2\.5-0\.5B/, 'Archiver 4.0'],
+    [/qwen2\.5-0\.5b/, 'Archiver 4.0'],
     [/Hermes-3/, 'Hermes 3 8B'],
     [/Phi-3\.5/, 'Phi 3.5 mini'],
     [/gemma-2-2b/, 'Gemma 2 2B']
@@ -1177,11 +1178,11 @@ I can describe my capabilities and limitations; that is not consciousness or fee
   function blockReason() {
     if (generationReady()) return '';
     if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-      return 'You are offline; connect to the internet to prepare Archiver 3.5.';
+      return 'You are offline; connect to the internet to prepare Archiver 4.0.';
     }
     try {
       const c = navigator.connection;
-      if (c && c.saveData) return 'Data Saver is on, so Archiver 3.5 is paused. Turn it off to prepare the model.';
+      if (c && c.saveData) return 'Data Saver is on, so Archiver 4.0 is paused. Turn it off to prepare the model.';
     } catch (_) {}
     if (!webgpu() && !wasmSupported()) {
       return 'This browser supports neither WebGPU nor WebAssembly workers; instant tools remain available.';
@@ -1229,7 +1230,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     // model that is loading/serving a response.
     try { localStorage.setItem('archiver.ai.enabled', '1'); } catch (_) {}
     loadFailure = '';
-    emitProgress('Archiver 3.5 is enabled when needed', 0);
+    emitProgress('Archiver 4.0 is enabled when needed', 0);
     return true;
   }
 
@@ -1277,8 +1278,8 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     }
     const cachedBefore = !!readPersistedBackend();
     emitProgress(cachedBefore
-      ? 'Archiver 3.5 · loading from browser cache…'
-      : 'Fetching Archiver 3.5 into this browser’s cache — one time, in the background…', 1);
+      ? 'Archiver 4.0 · loading from browser cache…'
+      : 'Fetching Archiver 4.0 into this browser’s cache — one time, in the background…', 1);
     traceStep('Chose the WebGPU backend (' + choice.why + ').');
     const mod = await import(/* webpackIgnore: true */ WEBLLM_RUNTIME);
     ctx.stopped();
@@ -1290,7 +1291,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       appConfig: { model_list: [record], useIndexedDBCache: false },
       initProgressCallback: r => {
         if (!ctx.controller.signal.aborted && ctx.generation === loadGeneration) {
-          emitProgress(r.text || 'Preparing Archiver 3.5…', Math.round((r.progress || 0) * 100));
+          emitProgress(r.text || 'Preparing Archiver 4.0…', Math.round((r.progress || 0) * 100));
         }
       }
     });
@@ -1310,7 +1311,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
   async function loadWASM(choice, wanted, ctx) {
     const cachedBeforeW = !!readPersistedBackend();
     emitProgress(cachedBeforeW
-      ? 'Archiver 3.5 · loading WebAssembly from browser cache…'
+      ? 'Archiver 4.0 · loading WebAssembly from browser cache…'
       : 'Starting the WebAssembly runtime — no GPU needed…', 1);
     traceStep('Chose the WebAssembly backend (' + choice.why + ')');
     const mod = await import(/* webpackIgnore: true */ WLLAMA_RUNTIME);
@@ -1413,8 +1414,8 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     const task = (async () => {
       const fromCache = !!readPersistedBackend();
       emitProgress(fromCache
-        ? 'Archiver 3.5 · loading from browser cache…'
-        : 'Checking this device for Archiver 3.5…', 0);
+        ? 'Archiver 4.0 · loading from browser cache…'
+        : 'Checking this device for Archiver 4.0…', 0);
       const choice = await chooseBackend();
       ctx.stopped();
       if (!choice) {
@@ -1425,8 +1426,8 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       timeoutMs = choice.kind === 'wasm' ? WASM_TIMEOUT_MS : LOAD_TIMEOUT_MS;
       armTimeout();
       traceStep(choice.kind === 'wasm'
-        ? 'WebGPU is unavailable here, so Archiver 3.5 falls back to the WebAssembly runtime automatically.'
-        : 'WebGPU is available, so Archiver 3.5 uses the GPU runtime.');
+        ? 'WebGPU is unavailable here, so Archiver 4.0 falls back to the WebAssembly runtime automatically.'
+        : 'WebGPU is available, so Archiver 4.0 uses the GPU runtime.');
       const selected = choice.kind === 'wasm'
         ? await loadWASM(choice, wanted, ctx)
         : await loadWebGPU(choice, wanted, ctx);
@@ -1435,8 +1436,8 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       activeBackend = choice.kind;
       persistBackend(selected, choice.kind, choice.f16);
       emitProgress(choice.kind === 'wasm'
-        ? 'Archiver 3.5 is active on this device’s CPU (WebAssembly)'
-        : 'Archiver 3.5 is active', 100);
+        ? 'Archiver 4.0 is active on this device’s CPU (WebAssembly)'
+        : 'Archiver 4.0 is active', 100);
       return { model: selected, pretty: pretty(selected), backend: choice.kind };
     })();
     let timer = null;
@@ -1469,12 +1470,12 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       if (!controller.signal.aborted) controller.abort();
       const stoppedByUser = loadAbortReason && loadAbortReason !== 'timeout' && loadAbortReason !== 'retry';
       if (timedOut) {
-        loadFailure = 'Archiver 3.5 timed out. Instant tools still work; try again on a faster connection.';
+        loadFailure = 'Archiver 4.0 timed out. Instant tools still work; try again on a faster connection.';
       } else if (err.name !== 'AbortError' || !stoppedByUser) {
         const detail = err && err.message ? ' ' + err.message : '';
-        loadFailure = 'Archiver 3.5 could not start.' + detail + ' Try again in Settings.';
+        loadFailure = 'Archiver 4.0 could not start.' + detail + ' Try again in Settings.';
       }
-      emitProgress(loadFailure || 'Archiver 3.5 stopped; instant tools are ready', 0);
+      emitProgress(loadFailure || 'Archiver 4.0 stopped; instant tools are ready', 0);
       throw err;
     } finally {
       clearTimeout(timer);
@@ -1502,7 +1503,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     loadFailure = '';
     loadAbortReason = '';
     clearPersistedBackend();
-    emitProgress('Retrying Archiver 3.5…', 0);
+    emitProgress('Retrying Archiver 4.0…', 0);
     return load(wanted);
   }
 
@@ -1583,13 +1584,28 @@ I can describe my capabilities and limitations; that is not consciousness or fee
   /* Queries the app's own server, which does the lookup without a key and
      without the browser talking to a third party directly. Returns [] on any
      failure — a search outage should degrade the answer, never break it.
-     2.6: default 3, max 3. Extracts are already short (400 chars) server-side. */
-  async function webSearch(query, limit, signal) {
+     2.6: default 3, max 3. Extracts are already short (400 chars) server-side.
+
+     Cold start (4.0): the page and the API come from the same free instance,
+     which sleeps after ~15 minutes idle and takes tens of seconds to wake. The
+     client cannot warn before the first request — the first request *is* the
+     wake — but it can name what is happening: the first search that exceeds a
+     few seconds reports a distinct "waking the server" state instead of an
+     anonymous spinner. Deliberately no keep-alive pinger: keeping the instance
+     hot is the one thing the free tier's spin-down exists to prevent, and
+     self-pinging burns the same metered bandwidth as real traffic. */
+  const WAKE_HINT_MS = 4000;
+  let serverWarmed = false;
+
+  async function webSearch(query, limit, signal, onStatus) {
     const controller = new AbortController();
     const cancel = () => controller.abort();
     if (signal && signal.aborted) throw new DOMException('Stopped', 'AbortError');
     if (signal) signal.addEventListener('abort', cancel, { once: true });
     const timer = setTimeout(cancel, 12000);
+    const wake = (!serverWarmed && typeof onStatus === 'function')
+      ? setTimeout(() => onStatus('Waking the server… it sleeps when idle and can take up to a minute to answer'), WAKE_HINT_MS)
+      : null;
     try {
       const res = await fetch('/api/search?limit=' + (limit || 3) + '&q=' + encodeURIComponent(query), { signal: controller.signal });
       if (!res.ok) return { results: [], error: 'search endpoint returned ' + res.status };
@@ -1607,6 +1623,8 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       return { results: [], error: 'Search unavailable; using local knowledge.' };
     } finally {
       clearTimeout(timer);
+      if (wake) clearTimeout(wake);
+      serverWarmed = true;  // one completed round trip means the instance is awake
       if (signal) signal.removeEventListener('abort', cancel);
     }
   }
@@ -2027,7 +2045,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       traceStep(isExplicitSearch && !opts.search
         ? 'The prompt explicitly asked for a search, so WEB was used for this turn only.'
         : 'WEB was on for this turn.');
-      const got = await webSearch(query, Math.min(opts.searchLimit || 3, 3), opts.signal);
+      const got = await webSearch(query, Math.min(opts.searchLimit || 3, 3), opts.signal, opts.onStatus);
       checkStopped();
       web = usableSources(got.results);
       lastReport = got.report || null;
@@ -2062,12 +2080,12 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     if (!generationReady() && !searchEnabled && opts.autoAI !== false) {
       const local = _reply(t);
       if (['capability', 'miss', 'fuzzy', 'related', 'clarify'].includes(local.kind)) {
-        traceStep('Local tools could not answer this (' + local.kind + '), so Archiver 3.5 was prepared automatically.');
-        if (opts.onStatus) opts.onStatus('Preparing Archiver 3.5…');
+        traceStep('Local tools could not answer this (' + local.kind + '), so Archiver 4.0 was prepared automatically.');
+        if (opts.onStatus) opts.onStatus('Preparing Archiver 4.0…');
         await ensureAI(opts);
         checkStopped();
         if (!generationReady()) {
-          traceStep('Archiver 3.5 could not start: ' + (aiReason() || 'unknown reason') + ' The answer below comes from local tools and any sources already fetched.');
+          traceStep('Archiver 4.0 could not start: ' + (aiReason() || 'unknown reason') + ' The answer below comes from local tools and any sources already fetched.');
         }
       }
     }

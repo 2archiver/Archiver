@@ -27,13 +27,237 @@ unexplained rather than papered over with a generic angle.
 
 It also returns a one-line plan — what was read, what was found, how the answer
 will be built — so the search path shows its thinking like every other route.
+
+The second half of this module is page retrieval: the only place the service
+originates fetches to the open web, and therefore the place where the Render
+free tier's metered *Service-Initiated* bandwidth is actually spent. Every
+outbound request from `search.py` goes through `fetch()` / `fetch_text()`:
+streamed under a hard byte ceiling, refused by content type before the body is
+read, asked for gzip and decompressed on arrival, cached in-process on the
+normalised URL, and capped to a small number of concurrent fetches. The
+constraints and their reasons are in `docs/architecture-decisions.md`.
 """
 
 from __future__ import annotations
 
+import asyncio
 import re
+import time
 import zlib
 from typing import Any
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+
+import httpx
+
+# --------------------------------------------------------------------------- #
+# Page retrieval — egress-guarded fetching
+#
+# Render's free tier meters *Service-Initiated* bandwidth against one shared
+# monthly allowance and throttles past it, so the rules below are budget rules,
+# not niceties: never read more than MAX_BODY_BYTES of any one response, never
+# download a body whose headers say it is not text, ask for gzip and store the
+# decompressed bytes, remember answers briefly in-process, and never fan out
+# more than MAX_CONCURRENT_FETCHES fetches from one query. The cache dies with
+# the instance (the disk is ephemeral anyway) and that is fine: its job is to
+# collapse the repeat-fetch pattern inside a session.
+# --------------------------------------------------------------------------- #
+
+MAX_BODY_BYTES = 2 * 1024 * 1024        # one oversized PDF must not eat the month
+CACHE_TTL = 300.0                       # seconds; a session-scale memory, not a store
+CACHE_MAX_ENTRIES = 128
+CACHE_MAX_BYTES = 8 * 1024 * 1024
+MAX_CONCURRENT_FETCHES = 4              # shared CPU: one query must not saturate it
+
+
+class FetchError(RuntimeError):
+    """A guarded fetch was refused. Providers treat this as a failed provider."""
+
+
+class BodyTooLarge(FetchError):
+    """The response streamed past MAX_BODY_BYTES and was aborted."""
+
+
+class NonTextContent(FetchError):
+    """The response declared a non-text Content-Type; the body was never read."""
+
+
+# take.py only ever needs text: search APIs return JSON/XML, pages return HTML.
+_TEXT_PREFIXES = (
+    "text/",
+    "application/json",
+    "application/javascript",
+    "application/x-javascript",
+    "application/xml",
+    "application/xhtml+xml",
+    "image/svg+xml",
+)
+_TEXT_SUFFIXES = ("+json", "+xml")
+
+
+def _is_text_type(content_type: str) -> bool:
+    """A missing header passes (the byte ceiling still applies); explicit
+    non-text — a PDF, a media file, an octet-stream — is refused at once."""
+    if not content_type:
+        return True
+    mime = content_type.split(";", 1)[0].strip().lower()
+    return mime.startswith(_TEXT_PREFIXES) or mime.endswith(_TEXT_SUFFIXES)
+
+
+def normalize_url(url: str, params: Any = None) -> str:
+    """Canonical cache key: lowercased scheme/host, no fragment, sorted query."""
+    parts = urlsplit(url)
+    query = parse_qsl(parts.query, keep_blank_values=True)
+    if params:
+        items = params.items() if isinstance(params, dict) else params
+        query.extend((str(k), str(v)) for k, v in items)
+    query.sort()
+    scheme = (parts.scheme or "https").lower()
+    netloc = parts.netloc.lower()
+    if scheme == "http" and netloc.endswith(":80"):
+        netloc = netloc[:-3]
+    elif scheme == "https" and netloc.endswith(":443"):
+        netloc = netloc[:-4]
+    return urlunsplit((scheme, netloc, parts.path or "/", urlencode(query), ""))
+
+
+def _now() -> float:
+    """Clock seam: tests move time to prove the TTL without sleeping."""
+    return time.monotonic()
+
+
+# key -> (expires_at, status, headers, body). Body is always decompressed bytes.
+_cache: dict[str, tuple[float, int, list[tuple[str, str]], bytes]] = {}
+
+
+def cache_clear() -> None:
+    _cache.clear()
+
+
+def cache_stats() -> dict[str, Any]:
+    entries = list(_cache.values())
+    return {
+        "entries": len(entries),
+        "bytes": sum(len(e[3]) for e in entries),
+        "max_entries": CACHE_MAX_ENTRIES,
+        "max_bytes": CACHE_MAX_BYTES,
+        "ttl": CACHE_TTL,
+    }
+
+
+def _cache_store(key: str, status: int, headers: list[tuple[str, str]], body: bytes, ttl: float) -> None:
+    if ttl <= 0:
+        return
+    now = _now()
+    for k, (exp, *_rest) in list(_cache.items()):
+        if exp <= now:
+            _cache.pop(k, None)
+    _cache[key] = (now + ttl, status, headers, body)
+    while len(_cache) > CACHE_MAX_ENTRIES or (
+        sum(len(e[3]) for e in _cache.values()) > CACHE_MAX_BYTES and len(_cache) > 1
+    ):
+        _cache.pop(next(iter(_cache)), None)  # insertion order: oldest first
+
+
+def _cache_replay(key: str, entry: tuple[float, int, list[tuple[str, str]], bytes]) -> httpx.Response:
+    _exp, status, headers, body = entry
+    return httpx.Response(status, headers=headers, content=body, request=httpx.Request("GET", key))
+
+
+# asyncio primitives bind to the first event loop that awaits them, and each
+# TestClient instance runs its own loop — so the cap is re-armed per loop.
+_sem: asyncio.Semaphore | None = None
+_sem_loop: asyncio.AbstractEventLoop | None = None
+
+
+def _semaphore() -> asyncio.Semaphore:
+    global _sem, _sem_loop
+    loop = asyncio.get_running_loop()
+    if _sem is None or _sem_loop is not loop:
+        _sem = asyncio.Semaphore(MAX_CONCURRENT_FETCHES)
+        _sem_loop = loop
+    return _sem
+
+
+async def fetch(
+    client: httpx.AsyncClient,
+    url: str,
+    *,
+    params: Any = None,
+    headers: dict[str, str] | None = None,
+    ttl: float = CACHE_TTL,
+    max_bytes: int = MAX_BODY_BYTES,
+    cache: bool = True,
+    head_first: bool = False,
+) -> httpx.Response:
+    """One guarded GET. Returns a decoded response (or a cache replay).
+
+    - `Accept-Encoding: gzip` goes out on every request; the stream is read
+      through httpx's decoder and only decompressed bytes are kept or returned,
+      so the cache stores text, not the compressed transport form.
+    - A non-text `Content-Type` raises NonTextContent before the body is read.
+    - The body streams under `max_bytes`; past it the fetch is aborted and
+      BodyTooLarge is raised.
+    - `head_first=True` probes with HEAD first and refuses on its content type
+      before any GET body exists — used for page retrieval where a PDF may be
+      hiding behind a generous-looking link.
+    """
+    key = normalize_url(url, params)
+    if cache:
+        entry = _cache.get(key)
+        if entry is not None:
+            if entry[0] > _now():
+                return _cache_replay(key, entry)
+            _cache.pop(key, None)
+
+    out_headers = dict(headers or {})
+    out_headers["Accept-Encoding"] = "gzip"  # every outbound request, no exceptions
+
+    async with _semaphore():
+        if head_first:
+            try:
+                # Streamed HEAD: read the headers, never a body, so a non-text
+                # target is refused before any GET exists to download.
+                async with client.stream("HEAD", url, params=params, headers=out_headers) as probe:
+                    probe_type = probe.headers.get("content-type", "")
+                    if probe.status_code < 400 and not _is_text_type(probe_type):
+                        raise NonTextContent(f"{key} is {probe_type or 'unknown type'}; body not fetched")
+            except httpx.HTTPError:
+                pass  # no HEAD support: the streamed GET gate below still applies
+
+        async with client.stream("GET", url, params=params, headers=out_headers) as response:
+            content_type = response.headers.get("content-type", "")
+            if not _is_text_type(content_type):
+                raise NonTextContent(f"{key} is {content_type or 'unknown type'}; body not read")
+            chunks: list[bytes] = []
+            size = 0
+            async for chunk in response.aiter_bytes():  # decoded: gzip is handled here
+                size += len(chunk)
+                if size > max_bytes:
+                    raise BodyTooLarge(f"{key} passed {max_bytes} bytes; aborted at {size}")
+                chunks.append(chunk)
+            body = b"".join(chunks)
+            status = response.status_code
+            keep = [
+                (k, v) for k, v in response.headers.multi_items()
+                if k.lower() not in ("content-encoding", "content-length", "transfer-encoding")
+            ]
+
+    result = httpx.Response(status, headers=keep, content=body, request=httpx.Request("GET", key))
+    if cache and status == 200:
+        _cache_store(key, status, keep, body, ttl)
+    return result
+
+
+async def fetch_text(
+    client: httpx.AsyncClient,
+    url: str,
+    *,
+    head_first: bool = True,
+    **kwargs: Any,
+) -> str:
+    """Page retrieval in one call: the decoded text of a text-only URL."""
+    return (await fetch(client, url, head_first=head_first, **kwargs)).text
+
 
 _YEAR = re.compile(r"\b(1[0-9]{3}|20[0-9]{2})\b")
 
