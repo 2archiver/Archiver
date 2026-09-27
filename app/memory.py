@@ -285,6 +285,18 @@ class MemoryStore:
         self._conn = sqlite3.connect(self.path, check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
         self._conn.execute("PRAGMA journal_mode=WAL")
+        # Tuned for a 512 MB free instance: a small page cache (~2 MB), temp
+        # tables in memory only while small, NORMAL sync (safe under WAL), and
+        # frequent auto-checkpoints so the -wal file never grows large.
+        for pragma in (
+            "PRAGMA synchronous=NORMAL",
+            "PRAGMA cache_size=-2000",
+            "PRAGMA temp_store=DEFAULT",
+            "PRAGMA wal_autocheckpoint=256",
+            "PRAGMA journal_size_limit=4194304",
+            "PRAGMA busy_timeout=3000",
+        ):
+            self._conn.execute(pragma)
         self._conn.executescript(_SCHEMA)
         self._migrate()
         self.fts = self._try_fts()
@@ -340,8 +352,62 @@ class MemoryStore:
             return False
 
     def close(self) -> None:
+        """Flush the WAL into the main file, then close. Safe to call twice."""
         with self._lock:
-            self._conn.close()
+            try:
+                self._conn.commit()
+                self._conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+                self._conn.execute("PRAGMA optimize")
+            except sqlite3.Error:
+                pass
+            try:
+                self._conn.close()
+            except sqlite3.Error:
+                pass
+
+    def created_at(self) -> float:
+        """When this database file was first initialised (unix seconds).
+
+        Render's free tier has no persistent disk, so the database is recreated
+        on every redeploy or restart. Clients compare this stamp with the one
+        they last saw to tell "server storage was reset" from "nothing here".
+        """
+        stamp = self.get_setting("_db_created_at", user_id="")
+        if not stamp:
+            stamp = repr(now())
+            self.set_setting("_db_created_at", stamp, user_id="")
+        try:
+            return float(stamp)
+        except ValueError:
+            return 0.0
+
+    def enforce_cap(self, cap: int, user_id: str | None = None) -> int:
+        """Evict the least valuable memories above `cap` for one user.
+
+        Order of eviction: superseded first, then unpinned by (importance,
+        hits, last_used/created_at) ascending. Pinned memories are never
+        evicted. Returns how many rows were removed.
+        """
+        if cap <= 0:
+            return 0
+        uid = user_id or ""
+        with self._lock:
+            total = self._conn.execute(
+                "SELECT COUNT(*) FROM memories WHERE user_id = ?", (uid,)
+            ).fetchone()[0]
+            excess = total - cap
+            if excess <= 0:
+                return 0
+            rows = self._conn.execute(
+                "SELECT id FROM memories WHERE user_id = ? AND pinned = 0 "
+                "ORDER BY (superseded_by IS NULL) ASC, "
+                "CASE importance WHEN 'low' THEN 0 WHEN 'normal' THEN 1 ELSE 2 END ASC, "
+                "hits ASC, COALESCE(last_used, created_at) ASC LIMIT ?",
+                (uid, excess),
+            ).fetchall()
+        for r in rows:
+            self.delete_memory(r["id"], user_id=uid)
+        return len(rows)
 
     # -- settings ---------------------------------------------------------- #
 

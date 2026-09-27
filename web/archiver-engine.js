@@ -1,7 +1,7 @@
-/* Archiver 4.1: instant retrieval and text tools, plus generation on whichever
+/* Archiver 4.2: instant retrieval and text tools, plus generation on whichever
    runtime this device can actually run — WebGPU where it exists, WebAssembly
    where it does not (which is most of Safari). 4.1 brands the model as
-   Archiver 4.1, adds Bing web search alongside Wikipedia and Stack Exchange
+   Archiver 4.2, adds Bing web search alongside Wikipedia and Stack Exchange
    (all running concurrently), relaxes the relevance bar so ordinary web
    results surface, lets searches wait up to 75 s for a sleeping free-tier
    instance, drops the forced "Thinking:" preamble, and allows a labelled
@@ -12,7 +12,7 @@
 
   /* One definition of the version, so the label in the sidebar, the persona, the
      self-description, the API and the tests cannot disagree with each other. */
-  const VERSION = '4.1';
+  const VERSION = '4.2';
   const NAME = 'Archiver ' + VERSION;
 
   /* ======================================================================== */
@@ -288,7 +288,7 @@
   /* ---- commands ---------------------------------------------------------- */
 
 const HELP = [
-    "I'm **" + NAME + "** — your private research desk: instant local knowledge, plus Archiver 4.1, our own model, for open-ended work. Chats can sync to the app server.",
+    "I'm **" + NAME + "** — your private research desk: instant local knowledge, plus Archiver 4.2, our own model, for open-ended work. Chats can sync to the app server.",
     '',
     '**Ask me anything.** History, science, health, tech, philosophy, nature, culture, practical life — plus **Render.com** (I know the host inside-out) and **intuition**. With **WEB** on I read live sources and give you a short read first, with 1–3 compact sources.',
     '',
@@ -845,7 +845,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       if (matches.every(m => m.entry && m.score >= ANSWER_AT) && matches[0].entry !== matches[1].entry) {
         return { text: matches.map((m, i) => '**' + understood.compare[i] + '**\n\n' + comprehension.excerpt(m.entry.a, 3, false)).join('\n\n') + '\n\n_Compared from local knowledge cards; this is not an exhaustive comparison._', kind: 'comparison', score: Math.min(...matches.map(m => m.score)) };
       }
-      return { text: 'I need a reliable local match for both sides of that comparison. Try more specific names or use WEB. Archiver 4.1 starts for open-ended requests when this device supports it.', kind: 'clarify', score: 0 };
+      return { text: 'I need a reliable local match for both sides of that comparison. Try more specific names or use WEB. Archiver 4.2 starts for open-ended requests when this device supports it.', kind: 'clarify', score: 0 };
     }
     const tl = tool(t);
     if (tl) return { text: tl, kind: 'tool', score: 1 };
@@ -858,7 +858,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     if (LIVE_RE.test(t) && !/^(?:what is|define|explain|difference between|compare)\b/i.test(t)) return { text: "Live data — weather, news, prices, scores — needs web search. Turn on **WEB** and I will fetch it rather than guess.", kind: 'live', score: 0 };
 
     if (/^(?:write|draft|rewrite|rephrase|translate|compose|brainstorm|create|debug)\b/i.test(understood.query || t)) {
-      return { text: 'That needs Archiver 4.1 rather than a stored answer. ' + (aiReason() || 'Archiver 4.1 starts automatically for this request in chat; the one-time download is a few hundred MB.') + ' I can still extract key sentences (`summarize: …`), compare known topics, or calculate in instant mode.', kind: 'capability', score: 1 };
+      return { text: 'That needs Archiver 4.2 rather than a stored answer. ' + (aiReason() || 'Archiver 4.2 starts automatically for this request in chat; the one-time download is a few hundred MB.') + ' I can still extract key sentences (`summarize: …`), compare known topics, or calculate in instant mode.', kind: 'capability', score: 1 };
     }
     const r = resolve(understood.query || t);
     const best = search(r.text, 5);
@@ -909,9 +909,9 @@ I can describe my capabilities and limitations; that is not consciousness or fee
   const WASM_TIMEOUT_MS = 12 * 60 * 1000;
 
   /* Small, fixed model family; never silently select a larger catalogue model.
-     This is Archiver's own model — branded "Archiver 4.1" in every label —
+     This is Archiver's own model — branded "Archiver 4.2" in every label —
      built on the open Qwen 2.5 0.5B Instruct base. Settings names the base
-     honestly; the product surface says Archiver 4.1. */
+     honestly; the product surface says Archiver 4.2. */
   const PREFERRED = ['Qwen2.5-0.5B-Instruct-q4f16_1-MLC', 'Qwen2.5-0.5B-Instruct-q4f32_1-MLC'];
 
   /* The same model family on the WASM path, as GGUF from its publisher. Tried in
@@ -930,14 +930,14 @@ I can describe my capabilities and limitations; that is not consciousness or fee
   const WASM_CONTEXT = 2048;
 
   /* Human-readable model labels. The 0.5B family is Archiver's own model,
-     branded Archiver 4.1; the other entries are guards so an unexpected model
+     branded Archiver 4.2; the other entries are guards so an unexpected model
      id still renders as something a reader can act on. */
   const NICE = [
     [/Qwen2\.5-7B/, 'Qwen 2.5 7B'],
     [/Qwen2\.5-3B/, 'Qwen 2.5 3B'],
     [/Qwen2\.5-1\.5B/, 'Qwen 2.5 1.5B'],
-    [/Qwen2\.5-0\.5B/, 'Archiver 4.1'],
-    [/qwen2\.5-0\.5b/, 'Archiver 4.1'],
+    [/Qwen2\.5-0\.5B/, 'Archiver 4.2'],
+    [/qwen2\.5-0\.5b/, 'Archiver 4.2'],
     [/Hermes-3/, 'Hermes 3 8B'],
     [/Phi-3\.5/, 'Phi 3.5 mini'],
     [/gemma-2-2b/, 'Gemma 2 2B']
@@ -1058,8 +1058,13 @@ I can describe my capabilities and limitations; that is not consciousness or fee
   };
   const wasmSupported = () => {
     try {
-      return typeof WebAssembly !== 'undefined' && typeof WebAssembly.instantiate === 'function'
-        && typeof Worker === 'function' && typeof fetch === 'function';
+      if (typeof WebAssembly === 'undefined' || typeof WebAssembly.instantiate !== 'function') return false;
+      if (typeof Worker !== 'function' || typeof fetch !== 'function') return false;
+      // 4.2: Edge "Enhanced security" / strict mode and some locked-down
+      // profiles expose the WebAssembly object but refuse to compile. Validate
+      // the smallest possible module so that case falls back with a reason
+      // instead of failing deep inside the runtime.
+      return WebAssembly.validate(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]));
     } catch (_) { return false; }
   };
   const generationReady = () => aiEnabled && !!activeBackend && (!!engine || !!wasm);
@@ -1149,6 +1154,8 @@ I can describe my capabilities and limitations; that is not consciousness or fee
         try { adapter = await navigator.gpu.requestAdapter({ powerPreference: 'low-power' }); adapterCalls++; } catch (_) { adapterCalls++; }
         if (!adapter) { try { adapter = await navigator.gpu.requestAdapter(); adapterCalls++; } catch (_) { adapterCalls++; } }
         if (!adapter) return { ok: false, adapterCalls, reason: 'WebGPU is present but this device returned no adapter.' };
+        const verdict = await gpuFitsModel(adapter);
+        if (!verdict.ok) return { ok: false, adapterCalls, reason: verdict.reason };
         const features = adapter.features || new Set();
         return {
           ok: true,
@@ -1160,6 +1167,52 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       }
     })();
     return gpuProbe;
+  }
+
+
+  /* 4.2: "navigator.gpu exists" is not "this model will run". Check the
+     adapter against what the pinned 0.5B q4 model actually needs, reject
+     software (fallback) adapters, respect a low deviceMemory hint, and prove
+     the driver will really hand out a buffer before committing to WebGPU.
+     Edge on D3D12 and some Android GPUs report maxStorageBufferBindingSize at
+     the 128 MiB spec minimum; that is enough for 0.5B (WebLLM marks it
+     low_resource_required) but not for anything larger. */
+  const GPU_NEEDS = { storageBinding: 128 * 1024 * 1024, buffer: 128 * 1024 * 1024, canary: 64 * 1024 * 1024 };
+  async function gpuFitsModel(adapter) {
+    try {
+      if (adapter.isFallbackAdapter || (adapter.info && adapter.info.isFallbackAdapter)) {
+        return { ok: false, reason: 'WebGPU only offered a software (fallback) adapter, which is slower than the CPU runtime.' };
+      }
+      const lim = adapter.limits || {};
+      if ((lim.maxStorageBufferBindingSize || 0) < GPU_NEEDS.storageBinding) {
+        return { ok: false, reason: 'This GPU allows only ' + Math.round((lim.maxStorageBufferBindingSize || 0) / 1048576) + ' MiB storage bindings; the model needs 128 MiB.' };
+      }
+      if ((lim.maxBufferSize || 0) < GPU_NEEDS.buffer) {
+        return { ok: false, reason: 'This GPU caps buffers below 128 MiB, too small for the model.' };
+      }
+      const dm = typeof navigator !== 'undefined' ? navigator.deviceMemory : undefined;
+      if (typeof dm === 'number' && dm > 0 && dm < 2) {
+        return { ok: false, reason: 'This device reports under 2 GB of memory, so the lighter CPU runtime is safer.' };
+      }
+      if (typeof adapter.requestDevice === 'function') {
+        let device = null;
+        try {
+          device = await adapter.requestDevice({
+            requiredLimits: { maxStorageBufferBindingSize: GPU_NEEDS.storageBinding, maxBufferSize: GPU_NEEDS.buffer }
+          });
+          device.pushErrorScope && device.pushErrorScope('out-of-memory');
+          const buf = device.createBuffer({ size: GPU_NEEDS.canary, usage: 0x0080 /* STORAGE */ });
+          const err = device.popErrorScope ? await device.popErrorScope() : null;
+          buf.destroy();
+          if (err) return { ok: false, reason: 'The GPU refused a 64 MiB test allocation (' + (err.message || 'out of memory') + ').' };
+        } finally {
+          try { device && device.destroy(); } catch (_) {}
+        }
+      }
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, reason: 'The WebGPU capability check failed: ' + ((err && err.message) || 'unknown error') + '.' };
+    }
   }
 
   /* The choice is made once per initialization, and it is reported: a visitor on
@@ -1181,11 +1234,11 @@ I can describe my capabilities and limitations; that is not consciousness or fee
   function blockReason() {
     if (generationReady()) return '';
     if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-      return 'You are offline; connect to the internet to prepare Archiver 4.1.';
+      return 'You are offline; connect to the internet to prepare Archiver 4.2.';
     }
     try {
       const c = navigator.connection;
-      if (c && c.saveData) return 'Data Saver is on, so Archiver 4.1 is paused. Turn it off to prepare the model.';
+      if (c && c.saveData) return 'Data Saver is on, so Archiver 4.2 is paused. Turn it off to prepare the model.';
     } catch (_) {}
     if (!webgpu() && !wasmSupported()) {
       return 'This browser supports neither WebGPU nor WebAssembly workers; instant tools remain available.';
@@ -1233,7 +1286,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     // model that is loading/serving a response.
     try { localStorage.setItem('archiver.ai.enabled', '1'); } catch (_) {}
     loadFailure = '';
-    emitProgress('Archiver 4.1 is enabled when needed', 0);
+    emitProgress('Archiver 4.2 is enabled when needed', 0);
     return true;
   }
 
@@ -1281,8 +1334,8 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     }
     const cachedBefore = !!readPersistedBackend();
     emitProgress(cachedBefore
-      ? 'Archiver 4.1 · loading from browser cache…'
-      : 'Fetching Archiver 4.1 into this browser’s cache — one time, in the background…', 1);
+      ? 'Archiver 4.2 · loading from browser cache…'
+      : 'Fetching Archiver 4.2 into this browser’s cache — one time, in the background…', 1);
     traceStep('Chose the WebGPU backend (' + choice.why + ').');
     const mod = await import(/* webpackIgnore: true */ WEBLLM_RUNTIME);
     ctx.stopped();
@@ -1294,7 +1347,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       appConfig: { model_list: [record], useIndexedDBCache: false },
       initProgressCallback: r => {
         if (!ctx.controller.signal.aborted && ctx.generation === loadGeneration) {
-          emitProgress(r.text || 'Preparing Archiver 4.1…', Math.round((r.progress || 0) * 100));
+          emitProgress(r.text || 'Preparing Archiver 4.2…', Math.round((r.progress || 0) * 100));
         }
       }
     });
@@ -1314,7 +1367,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
   async function loadWASM(choice, wanted, ctx) {
     const cachedBeforeW = !!readPersistedBackend();
     emitProgress(cachedBeforeW
-      ? 'Archiver 4.1 · loading WebAssembly from browser cache…'
+      ? 'Archiver 4.2 · loading WebAssembly from browser cache…'
       : 'Starting the WebAssembly runtime — no GPU needed…', 1);
     traceStep('Chose the WebAssembly backend (' + choice.why + ')');
     const mod = await import(/* webpackIgnore: true */ WLLAMA_RUNTIME);
@@ -1417,8 +1470,8 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     const task = (async () => {
       const fromCache = !!readPersistedBackend();
       emitProgress(fromCache
-        ? 'Archiver 4.1 · loading from browser cache…'
-        : 'Checking this device for Archiver 4.1…', 0);
+        ? 'Archiver 4.2 · loading from browser cache…'
+        : 'Checking this device for Archiver 4.2…', 0);
       const choice = await chooseBackend();
       ctx.stopped();
       if (!choice) {
@@ -1429,8 +1482,8 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       timeoutMs = choice.kind === 'wasm' ? WASM_TIMEOUT_MS : LOAD_TIMEOUT_MS;
       armTimeout();
       traceStep(choice.kind === 'wasm'
-        ? 'WebGPU is unavailable here, so Archiver 4.1 falls back to the WebAssembly runtime automatically.'
-        : 'WebGPU is available, so Archiver 4.1 uses the GPU runtime.');
+        ? 'WebGPU is unavailable here, so Archiver 4.2 falls back to the WebAssembly runtime automatically.'
+        : 'WebGPU is available, so Archiver 4.2 uses the GPU runtime.');
       const selected = choice.kind === 'wasm'
         ? await loadWASM(choice, wanted, ctx)
         : await loadWebGPU(choice, wanted, ctx);
@@ -1439,8 +1492,8 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       activeBackend = choice.kind;
       persistBackend(selected, choice.kind, choice.f16);
       emitProgress(choice.kind === 'wasm'
-        ? 'Archiver 4.1 is active on this device’s CPU (WebAssembly)'
-        : 'Archiver 4.1 is active', 100);
+        ? 'Archiver 4.2 is active on this device’s CPU (WebAssembly)'
+        : 'Archiver 4.2 is active', 100);
       return { model: selected, pretty: pretty(selected), backend: choice.kind };
     })();
     let timer = null;
@@ -1473,12 +1526,12 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       if (!controller.signal.aborted) controller.abort();
       const stoppedByUser = loadAbortReason && loadAbortReason !== 'timeout' && loadAbortReason !== 'retry';
       if (timedOut) {
-        loadFailure = 'Archiver 4.1 timed out. Instant tools still work; try again on a faster connection.';
+        loadFailure = 'Archiver 4.2 timed out. Instant tools still work; try again on a faster connection.';
       } else if (err.name !== 'AbortError' || !stoppedByUser) {
         const detail = err && err.message ? ' ' + err.message : '';
-        loadFailure = 'Archiver 4.1 could not start.' + detail + ' Try again in Settings.';
+        loadFailure = 'Archiver 4.2 could not start.' + detail + ' Try again in Settings.';
       }
-      emitProgress(loadFailure || 'Archiver 4.1 stopped; instant tools are ready', 0);
+      emitProgress(loadFailure || 'Archiver 4.2 stopped; instant tools are ready', 0);
       throw err;
     } finally {
       clearTimeout(timer);
@@ -1506,7 +1559,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     loadFailure = '';
     loadAbortReason = '';
     clearPersistedBackend();
-    emitProgress('Retrying Archiver 4.1…', 0);
+    emitProgress('Retrying Archiver 4.2…', 0);
     return load(wanted);
   }
 
@@ -2100,12 +2153,12 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     if (!generationReady() && !searchEnabled && opts.autoAI !== false) {
       const local = _reply(t);
       if (['capability', 'miss', 'fuzzy', 'related', 'clarify'].includes(local.kind)) {
-        traceStep('Local tools could not answer this (' + local.kind + '), so Archiver 4.1 was prepared automatically.');
-        if (opts.onStatus) opts.onStatus('Preparing Archiver 4.1…');
+        traceStep('Local tools could not answer this (' + local.kind + '), so Archiver 4.2 was prepared automatically.');
+        if (opts.onStatus) opts.onStatus('Preparing Archiver 4.2…');
         await ensureAI(opts);
         checkStopped();
         if (!generationReady()) {
-          traceStep('Archiver 4.1 could not start: ' + (aiReason() || 'unknown reason') + ' The answer below comes from local tools and any sources already fetched.');
+          traceStep('Archiver 4.2 could not start: ' + (aiReason() || 'unknown reason') + ' The answer below comes from local tools and any sources already fetched.');
         }
       }
     }

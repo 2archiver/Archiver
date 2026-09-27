@@ -13,7 +13,7 @@ def client(tmp_path, monkeypatch):
 
 
 def test_release_assets(client):
-    assert client.get("/api/health").json()["version"] == "4.1"
+    assert client.get("/api/health").json()["version"] == "4.2"
     for asset in ("archiver-comprehension.js", "archiver-engine.js", "archiver-worker.js",
                   "archiver-viewport.js", "archiver-download.js"):
         assert client.get("/static/" + asset).status_code == 200
@@ -21,7 +21,7 @@ def test_release_assets(client):
     assert 'maximum-scale=1' not in page
     assert 'id="autoAI"' not in page
     assert 'id="retryModel"' in page
-    assert 'Archiver 4.1 is always enabled' in page
+    assert 'Archiver 4.2 is always enabled' in page
 
 
 def test_both_inference_runtimes_are_shipped(client):
@@ -97,13 +97,13 @@ def test_default_migration_preserves_custom_persona(client):
     store.set_setting("model", "Archiver 2.5 (in-browser)", uid)
     store.set_setting("persona", "My custom persona", uid)
     main.apply_defaults(store, uid)
-    assert store.get_setting("model", user_id=uid) == "Archiver 4.1 (in-browser)"
+    assert store.get_setting("model", user_id=uid) == "Archiver 4.2 (in-browser)"
     assert store.get_setting("persona", user_id=uid) == "My custom persona"
     # 4.0 retired persona upgrades to 4.1.
     store.set_setting("persona", main.RETIRED_PERSONAS[0], uid)
     main.apply_defaults(store, uid)
     assert store.get_setting("persona", user_id=uid) == main.PERSONA
-    assert "Archiver 4.1" in store.get_setting("persona", user_id=uid)
+    assert "Archiver 4.2" in store.get_setting("persona", user_id=uid)
 
 
 def test_restore_defaults_replaces_custom_settings(client):
@@ -116,7 +116,7 @@ def test_restore_defaults_replaces_custom_settings(client):
     assert body["has_api_key"] is False
     assert "api_key" not in main.app.state.store.settings(secret=True, user_id=client.cookies.get(main.COOKIE_NAME))
     # Default model in settings is now 4.1.
-    assert body["model"] == "Archiver 4.1 (in-browser)"
+    assert body["model"] == "Archiver 4.2 (in-browser)"
 
 
 def test_retry_removes_trailing_turn_for_replacement(client):
@@ -199,7 +199,7 @@ def test_health_performs_no_outbound_fetch(client, monkeypatch):
     response = client.get("/api/health")
     assert response.status_code == 200
     assert response.json()["ok"] is True
-    assert response.json()["version"] == "4.1"
+    assert response.json()["version"] == "4.2"
     assert calls == []
 
 
@@ -300,7 +300,7 @@ def test_server_timeout_is_raised_for_waking_instance():
 
 def test_persona_mentions_concurrent_search_and_unverified_fallback():
     """4.1 persona mentions the new behaviour."""
-    assert "Archiver 4.1" in main.PERSONA
+    assert "Archiver 4.2" in main.PERSONA
     assert "concurrently" in main.PERSONA
     assert "unverified" in main.PERSONA
 
@@ -308,5 +308,5 @@ def test_persona_mentions_concurrent_search_and_unverified_fallback():
 def test_settings_default_mentions_local_provider_41(client):
     """Settings endpoint returns the 4.1 default model label."""
     body = client.get("/api/settings").json()
-    assert body["model"] == "Archiver 4.1 (in-browser)"
-    assert body["providers"]["local"]["default_model"] == "Archiver 4.1 (in-browser)"
+    assert body["model"] == "Archiver 4.2 (in-browser)"
+    assert body["providers"]["local"]["default_model"] == "Archiver 4.2 (in-browser)"
