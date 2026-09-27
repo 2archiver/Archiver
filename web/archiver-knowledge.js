@@ -1,5 +1,5 @@
 /* ============================================================================
-   ARCHIVER — knowledge base v3.3
+   ARCHIVER — knowledge base v3.5
 
    A grounded, offline corpus. Real content, honest sourcing, no generation.
 
@@ -2691,7 +2691,7 @@ const MORE34 = [
 
 
   window.ARCHIVER_KB = {
-    version: '3.4',
+    version: '3.5',
     generated: '2026-09-27',
     cards: [...WW2, ...FIGURES, ...TECH, ...GENERAL, ...WORDS, ...SCIENCE, ...WORLD, ...LANGUAGE, ...EVERYDAY, ...MORE, ...MORE24, ...HIST25, ...LIGHT, ...OFFLINE31, ...MORE34],
     note: 'Grounded offline corpus. Charges are not convictions; contested history is not a "side".'

@@ -24,3 +24,7 @@ dist/
 .idea/
 .vscode/
 *.swp
+
+# Local JS tooling (jsdom/playwright used for ad-hoc checks only)
+node_modules/
+package-lock.json

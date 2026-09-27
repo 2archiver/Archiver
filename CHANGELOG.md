@@ -1,5 +1,58 @@
 # Changelog
 
+## 3.5 — 2026-09-27
+
+### The version that actually ships
+
+- **Version bumped everywhere.** 3.5's changes had landed on the server without
+  any surface saying so: the page still branded itself Archiver 3.4 in the
+  title, top bar, status line, Settings, `/api/health` and the changelog. A
+  returning visitor could not tell the update had shipped — on iOS Safari,
+  which heuristically caches the app shell and scripts, it genuinely might not
+  have. Engine, corpus, page shell, manifest, health endpoint, API schema,
+  default model label and the server persona now all say 3.5, and a bank still
+  carrying the `Archiver 3.4 (in-browser)` label or the shipped 3.4 persona
+  upgrades in place on start, as with every previous release.
+
+### Refresh persistence
+
+- The backend choice (WebGPU vs WebAssembly), model id and a timestamp are
+  written to localStorage after a successful load. The next page load skips
+  the GPU probe and starts loading immediately; `warm()` runs at once instead
+  of after 1.2 s; the status line says "loading from browser cache". Entries
+  expire after 7 days; a retry clears the stored choice and re-probes.
+
+### Corpus and model
+
+- 117 new knowledge cards (1400+ total): food and drink, sports, brands,
+  geography, science, technology, psychology, economy, practical life, culture
+  and philosophy.
+- The persona and the eight per-request response approaches were rewritten for
+  a 0.5B model — lead with the answer, vary sentence length, no filler openers
+  or closers, smallest correct implementation first for code — and the filler
+  cleanup catches more of them mid-stream.
+
+### Safari
+
+- `-webkit-overflow-scrolling: touch` on every scroller,
+  `-webkit-overscroll-behavior` on the chat, `-webkit-sticky` top bars,
+  `-webkit-tap-highlight-color: transparent` on controls,
+  `-webkit-text-size-adjust: 100%`, `touch-action: pan-y` on the chat, and a
+  `-webkit-fill-available` min-height fallback for the app shell.
+
+### Serving
+
+- The app shell and every `/static` file now send `Cache-Control: no-cache`:
+  browsers revalidate (a 304 when unchanged) instead of trusting a heuristic
+  guess, so a redeploy is picked up on the next load everywhere — this was the
+  root cause of updates not appearing on iOS. The versioned inference runtimes
+  under `/static/vendor/` keep their immutable caching.
+- `/manifest.json` and `/apple-touch-icon.png` are served. Both shipped in
+  `web/` and were referenced by the app shell, and both returned 404 on every
+  page load; with the manifest unreachable, Add to Home Screen could not
+  install a working standalone app.
+
+
 ## 3.4 — 2026-09-27
 
 ### Pre-warm: instant access for first-time visitors
