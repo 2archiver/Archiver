@@ -1,15 +1,18 @@
-/* Archiver 4.0: instant retrieval and text tools, plus generation on whichever
+/* Archiver 4.1: instant retrieval and text tools, plus generation on whichever
    runtime this device can actually run — WebGPU where it exists, WebAssembly
-   where it does not (which is most of Safari). 4.0 brands the model as
-   Archiver 4.0, persists the chosen backend across refreshes, starts
-   preparing it the moment the page opens, and names a cold free-tier instance
-   for what it is ("Waking the server…") instead of spinning silently. */
+   where it does not (which is most of Safari). 4.1 brands the model as
+   Archiver 4.1, adds Bing web search alongside Wikipedia and Stack Exchange
+   (all running concurrently), relaxes the relevance bar so ordinary web
+   results surface, lets searches wait up to 75 s for a sleeping free-tier
+   instance, drops the forced "Thinking:" preamble, and allows a labelled
+   "unverified" best-effort answer when no usable sources are found instead
+   of refusing outright. */
 (function () {
   'use strict';
 
   /* One definition of the version, so the label in the sidebar, the persona, the
      self-description, the API and the tests cannot disagree with each other. */
-  const VERSION = '4.0';
+  const VERSION = '4.1';
   const NAME = 'Archiver ' + VERSION;
 
   /* ======================================================================== */
@@ -285,7 +288,7 @@
   /* ---- commands ---------------------------------------------------------- */
 
 const HELP = [
-    "I'm **" + NAME + "** — your private research desk: instant local knowledge, plus Archiver 4.0, our own model, for open-ended work. Chats can sync to the app server.",
+    "I'm **" + NAME + "** — your private research desk: instant local knowledge, plus Archiver 4.1, our own model, for open-ended work. Chats can sync to the app server.",
     '',
     '**Ask me anything.** History, science, health, tech, philosophy, nature, culture, practical life — plus **Render.com** (I know the host inside-out) and **intuition**. With **WEB** on I read live sources and give you a short read first, with 1–3 compact sources.',
     '',
@@ -842,7 +845,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       if (matches.every(m => m.entry && m.score >= ANSWER_AT) && matches[0].entry !== matches[1].entry) {
         return { text: matches.map((m, i) => '**' + understood.compare[i] + '**\n\n' + comprehension.excerpt(m.entry.a, 3, false)).join('\n\n') + '\n\n_Compared from local knowledge cards; this is not an exhaustive comparison._', kind: 'comparison', score: Math.min(...matches.map(m => m.score)) };
       }
-      return { text: 'I need a reliable local match for both sides of that comparison. Try more specific names or use WEB. Archiver 4.0 starts for open-ended requests when this device supports it.', kind: 'clarify', score: 0 };
+      return { text: 'I need a reliable local match for both sides of that comparison. Try more specific names or use WEB. Archiver 4.1 starts for open-ended requests when this device supports it.', kind: 'clarify', score: 0 };
     }
     const tl = tool(t);
     if (tl) return { text: tl, kind: 'tool', score: 1 };
@@ -855,7 +858,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     if (LIVE_RE.test(t) && !/^(?:what is|define|explain|difference between|compare)\b/i.test(t)) return { text: "Live data — weather, news, prices, scores — needs web search. Turn on **WEB** and I will fetch it rather than guess.", kind: 'live', score: 0 };
 
     if (/^(?:write|draft|rewrite|rephrase|translate|compose|brainstorm|create|debug)\b/i.test(understood.query || t)) {
-      return { text: 'That needs Archiver 4.0 rather than a stored answer. ' + (aiReason() || 'Archiver 4.0 starts automatically for this request in chat; the one-time download is a few hundred MB.') + ' I can still extract key sentences (`summarize: …`), compare known topics, or calculate in instant mode.', kind: 'capability', score: 1 };
+      return { text: 'That needs Archiver 4.1 rather than a stored answer. ' + (aiReason() || 'Archiver 4.1 starts automatically for this request in chat; the one-time download is a few hundred MB.') + ' I can still extract key sentences (`summarize: …`), compare known topics, or calculate in instant mode.', kind: 'capability', score: 1 };
     }
     const r = resolve(understood.query || t);
     const best = search(r.text, 5);
@@ -906,9 +909,9 @@ I can describe my capabilities and limitations; that is not consciousness or fee
   const WASM_TIMEOUT_MS = 12 * 60 * 1000;
 
   /* Small, fixed model family; never silently select a larger catalogue model.
-     This is Archiver's own model — branded "Archiver 4.0" in every label —
+     This is Archiver's own model — branded "Archiver 4.1" in every label —
      built on the open Qwen 2.5 0.5B Instruct base. Settings names the base
-     honestly; the product surface says Archiver 4.0. */
+     honestly; the product surface says Archiver 4.1. */
   const PREFERRED = ['Qwen2.5-0.5B-Instruct-q4f16_1-MLC', 'Qwen2.5-0.5B-Instruct-q4f32_1-MLC'];
 
   /* The same model family on the WASM path, as GGUF from its publisher. Tried in
@@ -927,14 +930,14 @@ I can describe my capabilities and limitations; that is not consciousness or fee
   const WASM_CONTEXT = 2048;
 
   /* Human-readable model labels. The 0.5B family is Archiver's own model,
-     branded Archiver 4.0; the other entries are guards so an unexpected model
+     branded Archiver 4.1; the other entries are guards so an unexpected model
      id still renders as something a reader can act on. */
   const NICE = [
     [/Qwen2\.5-7B/, 'Qwen 2.5 7B'],
     [/Qwen2\.5-3B/, 'Qwen 2.5 3B'],
     [/Qwen2\.5-1\.5B/, 'Qwen 2.5 1.5B'],
-    [/Qwen2\.5-0\.5B/, 'Archiver 4.0'],
-    [/qwen2\.5-0\.5b/, 'Archiver 4.0'],
+    [/Qwen2\.5-0\.5B/, 'Archiver 4.1'],
+    [/qwen2\.5-0\.5b/, 'Archiver 4.1'],
     [/Hermes-3/, 'Hermes 3 8B'],
     [/Phi-3\.5/, 'Phi 3.5 mini'],
     [/gemma-2-2b/, 'Gemma 2 2B']
@@ -1178,11 +1181,11 @@ I can describe my capabilities and limitations; that is not consciousness or fee
   function blockReason() {
     if (generationReady()) return '';
     if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-      return 'You are offline; connect to the internet to prepare Archiver 4.0.';
+      return 'You are offline; connect to the internet to prepare Archiver 4.1.';
     }
     try {
       const c = navigator.connection;
-      if (c && c.saveData) return 'Data Saver is on, so Archiver 4.0 is paused. Turn it off to prepare the model.';
+      if (c && c.saveData) return 'Data Saver is on, so Archiver 4.1 is paused. Turn it off to prepare the model.';
     } catch (_) {}
     if (!webgpu() && !wasmSupported()) {
       return 'This browser supports neither WebGPU nor WebAssembly workers; instant tools remain available.';
@@ -1230,7 +1233,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     // model that is loading/serving a response.
     try { localStorage.setItem('archiver.ai.enabled', '1'); } catch (_) {}
     loadFailure = '';
-    emitProgress('Archiver 4.0 is enabled when needed', 0);
+    emitProgress('Archiver 4.1 is enabled when needed', 0);
     return true;
   }
 
@@ -1278,8 +1281,8 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     }
     const cachedBefore = !!readPersistedBackend();
     emitProgress(cachedBefore
-      ? 'Archiver 4.0 · loading from browser cache…'
-      : 'Fetching Archiver 4.0 into this browser’s cache — one time, in the background…', 1);
+      ? 'Archiver 4.1 · loading from browser cache…'
+      : 'Fetching Archiver 4.1 into this browser’s cache — one time, in the background…', 1);
     traceStep('Chose the WebGPU backend (' + choice.why + ').');
     const mod = await import(/* webpackIgnore: true */ WEBLLM_RUNTIME);
     ctx.stopped();
@@ -1291,7 +1294,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       appConfig: { model_list: [record], useIndexedDBCache: false },
       initProgressCallback: r => {
         if (!ctx.controller.signal.aborted && ctx.generation === loadGeneration) {
-          emitProgress(r.text || 'Preparing Archiver 4.0…', Math.round((r.progress || 0) * 100));
+          emitProgress(r.text || 'Preparing Archiver 4.1…', Math.round((r.progress || 0) * 100));
         }
       }
     });
@@ -1311,7 +1314,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
   async function loadWASM(choice, wanted, ctx) {
     const cachedBeforeW = !!readPersistedBackend();
     emitProgress(cachedBeforeW
-      ? 'Archiver 4.0 · loading WebAssembly from browser cache…'
+      ? 'Archiver 4.1 · loading WebAssembly from browser cache…'
       : 'Starting the WebAssembly runtime — no GPU needed…', 1);
     traceStep('Chose the WebAssembly backend (' + choice.why + ')');
     const mod = await import(/* webpackIgnore: true */ WLLAMA_RUNTIME);
@@ -1414,8 +1417,8 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     const task = (async () => {
       const fromCache = !!readPersistedBackend();
       emitProgress(fromCache
-        ? 'Archiver 4.0 · loading from browser cache…'
-        : 'Checking this device for Archiver 4.0…', 0);
+        ? 'Archiver 4.1 · loading from browser cache…'
+        : 'Checking this device for Archiver 4.1…', 0);
       const choice = await chooseBackend();
       ctx.stopped();
       if (!choice) {
@@ -1426,8 +1429,8 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       timeoutMs = choice.kind === 'wasm' ? WASM_TIMEOUT_MS : LOAD_TIMEOUT_MS;
       armTimeout();
       traceStep(choice.kind === 'wasm'
-        ? 'WebGPU is unavailable here, so Archiver 4.0 falls back to the WebAssembly runtime automatically.'
-        : 'WebGPU is available, so Archiver 4.0 uses the GPU runtime.');
+        ? 'WebGPU is unavailable here, so Archiver 4.1 falls back to the WebAssembly runtime automatically.'
+        : 'WebGPU is available, so Archiver 4.1 uses the GPU runtime.');
       const selected = choice.kind === 'wasm'
         ? await loadWASM(choice, wanted, ctx)
         : await loadWebGPU(choice, wanted, ctx);
@@ -1436,8 +1439,8 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       activeBackend = choice.kind;
       persistBackend(selected, choice.kind, choice.f16);
       emitProgress(choice.kind === 'wasm'
-        ? 'Archiver 4.0 is active on this device’s CPU (WebAssembly)'
-        : 'Archiver 4.0 is active', 100);
+        ? 'Archiver 4.1 is active on this device’s CPU (WebAssembly)'
+        : 'Archiver 4.1 is active', 100);
       return { model: selected, pretty: pretty(selected), backend: choice.kind };
     })();
     let timer = null;
@@ -1470,12 +1473,12 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       if (!controller.signal.aborted) controller.abort();
       const stoppedByUser = loadAbortReason && loadAbortReason !== 'timeout' && loadAbortReason !== 'retry';
       if (timedOut) {
-        loadFailure = 'Archiver 4.0 timed out. Instant tools still work; try again on a faster connection.';
+        loadFailure = 'Archiver 4.1 timed out. Instant tools still work; try again on a faster connection.';
       } else if (err.name !== 'AbortError' || !stoppedByUser) {
         const detail = err && err.message ? ' ' + err.message : '';
-        loadFailure = 'Archiver 4.0 could not start.' + detail + ' Try again in Settings.';
+        loadFailure = 'Archiver 4.1 could not start.' + detail + ' Try again in Settings.';
       }
-      emitProgress(loadFailure || 'Archiver 4.0 stopped; instant tools are ready', 0);
+      emitProgress(loadFailure || 'Archiver 4.1 stopped; instant tools are ready', 0);
       throw err;
     } finally {
       clearTimeout(timer);
@@ -1503,7 +1506,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     loadFailure = '';
     loadAbortReason = '';
     clearPersistedBackend();
-    emitProgress('Retrying Archiver 4.0…', 0);
+    emitProgress('Retrying Archiver 4.1…', 0);
     return load(wanted);
   }
 
@@ -1587,14 +1590,14 @@ I can describe my capabilities and limitations; that is not consciousness or fee
      2.6: default 3, max 3. Extracts are already short (400 chars) server-side.
 
      Cold start (4.0): the page and the API come from the same free instance,
-     which sleeps after ~15 minutes idle and takes tens of seconds to wake. The
-     client cannot warn before the first request — the first request *is* the
-     wake — but it can name what is happening: the first search that exceeds a
-     few seconds reports a distinct "waking the server" state instead of an
-     anonymous spinner. Deliberately no keep-alive pinger: keeping the instance
-     hot is the one thing the free tier's spin-down exists to prevent, and
-     self-pinging burns the same metered bandwidth as real traffic. */
+     which sleeps after ~15 minutes idle and takes tens of seconds to wake.
+     4.1 raises the client-side abort to 75 s so a sleeping server has time to
+     answer (and so Bing + Wikipedia + Stack Exchange, now fanned out
+     concurrently, all have time to return) instead of being cut off at 12 s.
+     The wake hint still fires after a few seconds so the user knows what is
+     happening. Deliberately no keep-alive pinger. */
   const WAKE_HINT_MS = 4000;
+  const SEARCH_TIMEOUT_MS = 75000;
   let serverWarmed = false;
 
   async function webSearch(query, limit, signal, onStatus) {
@@ -1602,7 +1605,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     const cancel = () => controller.abort();
     if (signal && signal.aborted) throw new DOMException('Stopped', 'AbortError');
     if (signal) signal.addEventListener('abort', cancel, { once: true });
-    const timer = setTimeout(cancel, 12000);
+    const timer = setTimeout(cancel, SEARCH_TIMEOUT_MS);
     const wake = (!serverWarmed && typeof onStatus === 'function')
       ? setTimeout(() => onStatus('Waking the server… it sleeps when idle and can take up to a minute to answer'), WAKE_HINT_MS)
       : null;
@@ -2038,6 +2041,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     const isExplicitSearch = /^(?:search|lookup|look up|google|find out about|find me|browse)\b/i.test(t);
     const searchEnabled = Boolean(opts.search || isExplicitSearch);
     let web = [];
+    let got = null;
     if (searchEnabled) {
       if (opts.onStatus) opts.onStatus('Searching…');
       /* Follow-ups carry the previous subject into the query. */
@@ -2045,7 +2049,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       traceStep(isExplicitSearch && !opts.search
         ? 'The prompt explicitly asked for a search, so WEB was used for this turn only.'
         : 'WEB was on for this turn.');
-      const got = await webSearch(query, Math.min(opts.searchLimit || 3, 3), opts.signal, opts.onStatus);
+      got = await webSearch(query, Math.min(opts.searchLimit || 3, 3), opts.signal, opts.onStatus);
       checkStopped();
       web = usableSources(got.results);
       lastReport = got.report || null;
@@ -2064,28 +2068,44 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       traceStep('WEB was off, so no live source was fetched and none was invented.');
     }
 
-    // Fail closed for a requested lookup or fresh fact with no usable evidence.
-    // Do not silently substitute model memory for a failed live search.
+    // Fail closed for fresh/live facts and explicit source requests — those
+    // genuinely need live data and should not be guessed. But for ordinary
+    // questions where search simply returned nothing usable, 4.1 allows the
+    // model to give a best-effort answer labelled _unverified_ rather than
+    // refusing outright. The prompt tells it to cite nothing and label the
+    // answer clearly.
     const factTask = !['writing', 'code', 'translation'].includes(approachKind(t));
-    if ((!web.length && searchEnabled)
-        || (!web.length && factTask && (FRESH_FACT_RE.test(t) || SOURCE_REQUEST_RE.test(t)))) {
-      const message = searchEnabled
-        ? 'I could not retrieve usable sources for this question, so I cannot verify an answer. Try the search again or paste a reliable source; I will not invent facts or citations.'
-        : 'I do not have live sources for this question. Turn on WEB or paste a reliable source so I can check it instead of guessing.';
-      tracePlan('No usable web evidence: explain the gap rather than generate an unverified answer.');
+    const mustHaveLive = FRESH_FACT_RE.test(t) || SOURCE_REQUEST_RE.test(t);
+    let unverified = false;
+    if (got && got.unverified) unverified = true;
+    if (!web.length && searchEnabled && mustHaveLive) {
+      const message = 'I could not retrieve usable live sources for this, so I cannot verify an up-to-date answer. Try the search again or paste a reliable source; I will not invent current facts or citations.';
+      tracePlan('No usable live evidence for a time-sensitive question: explain the gap rather than guess.');
       finish('insufficient-evidence', { runtime: 'evidence guard' });
       onDelta(message); return message;
+    }
+    if (!web.length && !searchEnabled && factTask && mustHaveLive) {
+      const message = 'I do not have live sources for this question. Turn on WEB or paste a reliable source so I can check it instead of guessing.';
+      tracePlan('Live data needed but WEB is off: say so rather than guess.');
+      finish('insufficient-evidence', { runtime: 'evidence guard' });
+      onDelta(message); return message;
+    }
+    // Search ran but returned nothing usable: proceed to a labelled
+    // unverified answer instead of refusing. The prompt carries the flag.
+    if (!web.length && searchEnabled) {
+      unverified = true;
+      traceStep('No usable sources from the search; allowing a best-effort answer labelled _unverified_.');
     }
 
     if (!generationReady() && !searchEnabled && opts.autoAI !== false) {
       const local = _reply(t);
       if (['capability', 'miss', 'fuzzy', 'related', 'clarify'].includes(local.kind)) {
-        traceStep('Local tools could not answer this (' + local.kind + '), so Archiver 4.0 was prepared automatically.');
-        if (opts.onStatus) opts.onStatus('Preparing Archiver 4.0…');
+        traceStep('Local tools could not answer this (' + local.kind + '), so Archiver 4.1 was prepared automatically.');
+        if (opts.onStatus) opts.onStatus('Preparing Archiver 4.1…');
         await ensureAI(opts);
         checkStopped();
         if (!generationReady()) {
-          traceStep('Archiver 4.0 could not start: ' + (aiReason() || 'unknown reason') + ' The answer below comes from local tools and any sources already fetched.');
+          traceStep('Archiver 4.1 could not start: ' + (aiReason() || 'unknown reason') + ' The answer below comes from local tools and any sources already fetched.');
         }
       }
     }
@@ -2153,20 +2173,30 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       ? 'This answer is grounded in fetched sources. After the facts, finish with one short paragraph of your own assessment: what the evidence adds up to and the one thing the reader should not miss. Only include an assessment supported by these passages. Label inference and uncertainty; omit the assessment if evidence is insufficient.\n'
       : '';
 
-    const wantsThinking = opts.thinking !== false;
+    // 4.1: the "Thinking:" preamble is no longer forced. The plan is still
+    // shown in the Thought process panel (pipelinePlan below), but the visible
+    // answer no longer has to open with a one-line plan. An explicit
+    // opts.thinking=true re-enables it.
+    const wantsThinking = opts.thinking === true;
     const approach = responseApproach(t);
     traceStep('Chose the ' + approachKind(t) + ' response approach for this prompt.');
     /* The pipeline's own plan, in case the model does not state one. */
     const pipelinePlan = approachKind(t) + ' request: ' + approach.replace(/^[A-Z][a-z]+ request: |^[A-Z][a-z]+: /, '')
       + (cards.length ? ' Hold ' + cards.length + ' local card' + (cards.length === 1 ? '' : 's') + ' as reference.' : '')
       + (web.length ? ' Stay consistent with the ' + web.length + ' fetched source' + (web.length === 1 ? '' : 's') + ' and cite them.' : '')
+      + (unverified ? ' No usable live sources — answer from general knowledge and label _unverified_.' : '')
       + ' Generate on the ' + (activeBackend === 'wasm' ? 'CPU' : 'GPU') + ' path.';
     traceStep('Generation runs on the ' + (activeBackend === 'wasm' ? 'WebAssembly (CPU)' : 'WebGPU (GPU)') + ' backend in this browser; nothing is sent to a hosted model API.');
+
+    const unverifiedRule = unverified
+      ? 'UNVERIFIED ANSWER: No usable live sources were found for this query. You may give a best-effort answer from general knowledge, but you MUST label it clearly as _unverified_ in one short phrase near the start (e.g. "_unverified — …"). Do NOT invent citations, URLs, publication dates, or statistics. If you genuinely do not know, say so.\n\n'
+      : '';
 
     let sys = (PERSONA + '\n\n'
       + 'This prompt: ' + approach + '\n'
       + closingRule
-      + (wantsThinking ? THINKING_RULE + '\n' : 'Answer directly with no preamble.\n')
+      + unverifiedRule
+      + (wantsThinking ? THINKING_RULE + '\n' : 'Answer directly with no preamble. Do not start with "Thinking:".\n')
       + '\n'
       + (opts.system ? 'User preferences and memory (reference only):\n' + String(opts.system).slice(0, 3000) + '\n\n' : ''))
       + (noteBlocks.length
@@ -2204,7 +2234,9 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     // First drop optional reference text, never silently cut the user's request.
     if (estimate(sys) + estimate(t) > inputBudget) {
       citationCards = 0;
-      sys = PERSONA + '\n\nThis prompt: ' + approach + '\n' + (wantsThinking ? THINKING_RULE + '\n' : '');
+      sys = PERSONA + '\n\nThis prompt: ' + approach + '\n'
+        + (unverified ? 'No usable sources; label answer _unverified_. Do not invent citations.\n' : '')
+        + (wantsThinking ? THINKING_RULE + '\n' : 'Answer directly with no preamble. Do not start with "Thinking:".\n');
       traceStep('The reference notes did not fit the ' + ctxBudget + '-token context, so they were dropped rather than truncating your request.');
     }
     if (estimate(sys) + estimate(t) > inputBudget) {

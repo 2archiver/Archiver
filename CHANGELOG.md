@@ -1,3 +1,44 @@
+## 4.1 — 2026-09-27
+
+### Broader search, smarter answers, fewer hard refusals
+
+4.1 makes search, prompting and fallbacks smarter — without touching the base
+model weights (Qwen 2.5 0.5B is unchanged; improving it substantially would
+need a larger model and more device memory / download bandwidth) and without
+adding any paid model API.
+
+- **Ordinary Bing web results alongside Wikipedia and technical search, all
+  running concurrently.** A new keyless Bing HTML provider parses ordinary
+  SERPs server-side, and the three primary legs — Wikipedia, Bing and Stack
+  Exchange (for technical queries) — now kick off in parallel, so a query
+  waits for the slowest provider rather than the sum. Wikipedia is great for
+  encyclopaedic facts and Stack Overflow for programming questions, but most
+  everyday queries land on neither.
+- **Browser search timeout raised to 75 seconds.** 4.0 aborted client-side at
+  12 s, which was short enough to cut off a free-tier instance that was still
+  spinning up. The server-side timeout is raised to match, so a sleeping
+  server has time to answer. The "Waking the server…" hint still fires after
+  four seconds so the user knows what is happening.
+- **Relevance thresholds relaxed.** The bar for surfacing a result is lowered
+  so ordinary web hits (which tend to score lower on keyword overlap than
+  Wikipedia pages) still reach the answer when they are the best available
+  source.
+- **Best-effort, labelled _unverified_ — no invented citations.** If a search
+  finds no citable sources, Archiver no longer refuses outright for ordinary
+  questions: it gives a best-effort answer from general knowledge and labels
+  it _unverified_ in one short phrase. It still fails closed for fresh/live
+  facts (news, scores, prices) and explicit citation requests. No invented
+  URLs, dates, statistics or citations.
+- **Forced "Thinking:" preamble removed.** The one-line plan still shows in
+  the Thought process panel, but the visible answer no longer has to open
+  with a literal "Thinking: …" line. Response style is more flexible, while
+  the safeguard for serious real-world harm remains (one short sentence
+  declining, then on to something useful).
+- **Version, defaults migration, changelog and tests updated to 4.1.**
+  Existing banks on the shipped 4.0 persona and model label are upgraded in
+  place on startup, the way every prior release has.
+
+
 ## 4.0 — 2026-09-27
 
 ### The free-tier budget release

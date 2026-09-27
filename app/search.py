@@ -33,11 +33,14 @@ import httpx
 
 from . import take as take_mod
 
-TIMEOUT = httpx.Timeout(14.0, connect=6.0)
+# 4.1: raised to give a sleeping free-tier instance time to spin up and Bing /
+# Wikipedia time to answer; the browser client also gives the request up to 75 s
+# before aborting, so the server-side budget must match.
+TIMEOUT = httpx.Timeout(70.0, connect=15.0)
 
 # Wikimedia's policy requires "<client>/<version> (<contact>)"; a bare product
 # name is rejected outright.
-UA = "Archiver/2.5 (https://github.com/2archiver/Archiver; personal assistant) httpx/0.27"
+UA = "Archiver/4.1 (https://github.com/2archiver/Archiver; personal assistant) httpx/0.27"
 
 ENDPOINTS = {
     "wikipedia-action": "https://en.wikipedia.org/w/api.php",
@@ -46,6 +49,7 @@ ENDPOINTS = {
     "ddg-instant": "https://api.duckduckgo.com/",
     "stackexchange": "https://api.stackexchange.com/2.3/search/advanced",
     "allorigins": "https://api.allorigins.win/raw",
+    "bing": "https://www.bing.com/search",
 }
 
 
@@ -272,8 +276,8 @@ def confidence(query: str, result: dict[str, Any]) -> float:
 
 
 def _dedupe(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Best extract per title, preferring Wikipedia over aggregators."""
-    weight = {"Wikipedia": 3, "Stack Exchange": 2, "DuckDuckGo": 2}
+    """Best extract per title, preferring primary/edited sources over aggregators."""
+    weight = {"Wikipedia": 3, "Stack Exchange": 2, "DuckDuckGo": 2, "Bing": 1, "Hacker News": 1, "Wikiquote": 2}
     best: dict[str, dict[str, Any]] = {}
     for r in results:
         key = re.sub(r"[^a-z0-9]", "", r["title"].lower())[:60]
@@ -451,6 +455,85 @@ async def p_stackexchange(c: httpx.AsyncClient, q: str, n: int) -> list[dict[str
     return out
 
 
+def _parse_bing_html(html_text: str, n: int) -> list[dict[str, Any]]:
+    """Parse Bing's ordinary web-results HTML without an API key.
+
+    Bing's SERP markup shifts over time, so the parser is deliberately loose:
+    walk every <li class="b_algo"> block, pull the first <h2><a>, collect the
+    nearest following paragraph as the snippet. Anything that doesn't yield
+    both a title and a non-empty snippet is skipped.
+    """
+    import urllib.parse as _up
+    out: list[dict[str, Any]] = []
+    # Each organic result lives in an <li class="b_algo"> block.
+    blocks = re.findall(r'<li class="b_algo".*?</li>', html_text or "", re.S | re.I)
+    for i, blk in enumerate(blocks):
+        if len(out) >= n:
+            break
+        m_link = re.search(r'<h2[^>]*>\s*<a[^>]+href="([^"]+)"[^>]*>(.*?)</a>', blk, re.S | re.I)
+        if not m_link:
+            continue
+        href = html.unescape(m_link.group(1)).strip()
+        title = _clean(re.sub(r"<[^>]+>", " ", m_link.group(2)), 160)
+        if not href or not title:
+            continue
+        # Bing sometimes wraps outbound links through its own redirector.
+        if href.startswith("/"):
+            href = "https://www.bing.com" + href
+        parsed = _up.urlparse(href)
+        if parsed.netloc.endswith("bing.com"):
+            qs = _up.parse_qs(parsed.query)
+            if "u" in qs:
+                # Bing redirector parameter — base64-ish or plain URL; try plain first.
+                cand = qs["u"][0]
+                if cand.startswith("http"):
+                    href = cand
+        # Snippet: first <p> inside the block, or div with snippet-looking class.
+        snip = ""
+        m_cap = re.search(r'<p[^>]*>(.*?)</p>', blk, re.S | re.I)
+        if m_cap:
+            snip = m_cap.group(1)
+        if not snip:
+            m_cap = re.search(r'class="b_caption[^"]*"[^>]*>(.*?)</div>', blk, re.S | re.I)
+            if m_cap:
+                snip = m_cap.group(1)
+        snip_clean = _clean(re.sub(r"<[^>]+>", " ", snip), 380)
+        if not snip_clean:
+            continue
+        out.append({
+            "title": title,
+            "extract": snip_clean,
+            "url": href,
+            "source": "Bing",
+            "rank": i,
+        })
+    return out
+
+
+async def p_bing(c: httpx.AsyncClient, q: str, n: int) -> list[dict[str, Any]]:
+    """Ordinary, keyless Bing web results.
+
+    Uses a desktop User-Agent so the HTML comes back as a full SERP rather
+    than a mobile or JS-only shell. This is the \"general web\" leg: Wikipedia
+    and Stack Exchange answer specific shapes of question, but many everyday
+    queries land on neither.
+    """
+    r = await take_mod.fetch(
+        c,
+        ENDPOINTS["bing"],
+        params={"q": q, "setlang": "en-US", "cc": "US"},
+        headers={
+            "User-Agent": ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                           "AppleWebKit/537.36 (KHTML, like Gecko) "
+                           "Chrome/124.0.0.0 Safari/537.36"),
+            "Accept-Language": "en-US,en;q=0.9",
+            "Accept": "text/html,application/xhtml+xml",
+        },
+    )
+    r.raise_for_status()
+    return _parse_bing_html(r.text, n)
+
+
 # Order matters: accuracy first, availability last.
 WIKI_CHAIN: list[tuple[str, Callable[..., Awaitable[list[dict[str, Any]]]]]] = [
     ("wikipedia-action", p_wikipedia_action),
@@ -459,11 +542,20 @@ WIKI_CHAIN: list[tuple[str, Callable[..., Awaitable[list[dict[str, Any]]]]]] = [
 PROXY_CHAIN: list[tuple[str, Callable[..., Awaitable[list[dict[str, Any]]]]]] = [
     ("allorigins-wikipedia", p_allorigins_wikipedia),
 ]
+# 4.1: Bing runs alongside (not after) Wikipedia and Stack Exchange — it is a
+# general-web leg, not a last resort.
+BING_CHAIN: list[tuple[str, Callable[..., Awaitable[list[dict[str, Any]]]]]] = [
+    ("bing", p_bing),
+]
 OTHER_CHAIN: list[tuple[str, Callable[..., Awaitable[list[dict[str, Any]]]]]] = [
     ("ddg-instant", p_ddg_instant),
-    ("stackexchange", p_stackexchange),
     ("hackernews", p_hackernews),
     ("wikiquote", p_wikiquote),
+]
+# Stack Exchange is split out of OTHER_CHAIN because it is launched concurrently
+# with Wikipedia and Bing when the query looks technical.
+SE_CHAIN: list[tuple[str, Callable[..., Awaitable[list[dict[str, Any]]]]]] = [
+    ("stackexchange", p_stackexchange),
 ]
 
 
@@ -490,18 +582,20 @@ async def _try_chain(
 # how sure is sure enough
 # --------------------------------------------------------------------------- #
 
-# Two bars, and they exist because a search panel that is always full is a
-# search panel nobody trusts. Anything at or above SURE_AT is a real match and
-# is listed. Anything below it is not shown at all — unless exactly one result
-# clears MAYBE_AT, in which case that one result is shown on its own, labelled
-# as uncorroborated. Below MAYBE_AT the honest answer is "nothing", and the
-# report says that instead of dressing up a near-miss.
-SURE_AT = 0.40
-MAYBE_AT = 0.20
+# 4.1: bars relaxed so ordinary web results (which tend to score lower than
+# Wikipedia on keyword overlap because their titles are shorter and less
+# encyclopaedic) still clear the panel when they are the best available
+# answer. Anything at or above SURE_AT is a real match and is listed. Anything
+# below is not shown at all — unless exactly one result clears MAYBE_AT, in
+# which case that one result is shown on its own, labelled as uncorroborated.
+# Below MAYBE_AT the honest answer is "nothing", and the report says so
+# instead of dressing up a near-miss.
+SURE_AT = 0.30
+MAYBE_AT = 0.14
 
 # Below MAYBE_AT the only thing that can still be shown is a verbatim sentence
 # containing what was asked. That is a quotation, not a claim about relevance.
-QUOTE_AT = 0.15
+QUOTE_AT = 0.10
 
 # No matter what the caller asks for. Ten results is not a better answer than
 # three good ones — and three short, interpreted results beat four long dumps.
@@ -660,7 +754,14 @@ def _gate(
 async def _gather(
     q: str, client: httpx.AsyncClient, log: dict[str, str], technical: bool
 ) -> list[dict[str, Any]]:
-    """Run the providers. Records what each one said into `log`."""
+    """Run the providers concurrently where possible.
+
+    4.1: Bing (ordinary web) now runs alongside Wikipedia and, for technical
+    queries, Stack Exchange — all three kick off in parallel so the round-trip
+    cost is the slowest of them, not the sum. Other providers (DDG instant
+    answer, HN, Wikiquote) and the Wikipedia-through-proxy fallback only fire
+    if the concurrent round didn't yield enough.
+    """
 
     async def run(chain, tag):
         out = await _try_chain(client, chain, q, 5, log)
@@ -668,16 +769,21 @@ async def _gather(
             r["_chain"] = tag
         return out
 
-    # Wikipedia and Stack Exchange answer different kinds of question, and
-    # running them together costs one round trip instead of two.
+    # Launch the three primary legs concurrently. They answer different kinds
+    # of question — encyclopaedic, general-web, practitioner — and one of them
+    # being slow or blocked must not block the others.
     wiki_task = asyncio.create_task(run(WIKI_CHAIN, "wiki"))
-    se_task = asyncio.create_task(run([("stackexchange", p_stackexchange)], "se"))
-    wiki = await wiki_task
-    se = await se_task if technical else []
-    if not technical:
-        se_task.cancel()
+    bing_task = asyncio.create_task(run(BING_CHAIN, "bing"))
+    if technical:
+        se_task = asyncio.create_task(run(SE_CHAIN, "se"))
+    else:
+        se_task = None
 
-    found = wiki + se
+    wiki = await wiki_task
+    bing = await bing_task
+    se = await se_task if se_task else []
+
+    found = wiki + bing + se
     if len(found) < 2:
         found += await run(OTHER_CHAIN, "other")
     if not found:
@@ -758,6 +864,7 @@ async def search(query: str, limit: int = 5) -> dict[str, Any]:
         "interpretation": interp,
         "report": report,
         "corrected": corrected,
+        "unverified": bool(report.get("unverified")) or level == "none",
     }
 
 
@@ -948,12 +1055,16 @@ def brief(
         return {
             "headline": "",
             "reading": reading,
-            "voice": "Nothing directly answering that found in live sources. Try rephrasing or asking more specifically.",
+            "voice": ("Nothing directly answering that found in live sources. "
+                      "If you answer from general knowledge, label it unverified "
+                      "and do not invent citations or URLs."),
             "take": "",
-            "plan": f"Read the question as {reading or query}; no live source cleared the confidence bar, so say so rather than dress up a weak match.",
+            "plan": (f"Read the question as {reading or query}; no live source cleared the "
+                     f"confidence bar — flag any answer as unverified and cite nothing."),
             "confidence": "nothing worth citing",
             "sources": 0,
             "consensus": [],
+            "unverified": True,
         }
 
     # Pick the best lead sentence across results, avoiding disambiguation stubs
@@ -1062,7 +1173,7 @@ async def diag(query: str = "Battle of Kursk") -> dict[str, Any]:
         out["host"] = f"unknown ({type(exc).__name__})"
 
     async with httpx.AsyncClient(timeout=TIMEOUT, follow_redirects=True) as client:
-        for name, fn in WIKI_CHAIN + OTHER_CHAIN + PROXY_CHAIN:
+        for name, fn in WIKI_CHAIN + BING_CHAIN + SE_CHAIN + OTHER_CHAIN + PROXY_CHAIN:
             try:
                 got = await fn(client, query, 2)
                 out["providers"][name] = {
