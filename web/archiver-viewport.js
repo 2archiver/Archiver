@@ -37,10 +37,14 @@
     const shell = deps.shell || null;
     const thread = deps.thread || null;
     const onState = typeof deps.onState === 'function' ? deps.onState : () => {};
-    const raf = deps.requestAnimationFrame || (fn => deps.setTimeout(() => fn(Date.now()), 16));
-    const cancelRaf = deps.cancelAnimationFrame || deps.clearTimeout || (() => {});
-    const setTimer = deps.setTimeout || setTimeout;
-    const clearTimer = deps.clearTimeout || clearTimeout;
+    const setTimer = deps.setTimeout || (win.setTimeout && win.setTimeout.bind(win)) || setTimeout;
+    const clearTimer = deps.clearTimeout || (win.clearTimeout && win.clearTimeout.bind(win)) || clearTimeout;
+    // The real page injects window/document, not timer functions. Use its RAF
+    // with the right receiver, or the resolved timer pair (never deps alone).
+    const raf = deps.requestAnimationFrame || (win.requestAnimationFrame && win.requestAnimationFrame.bind(win))
+      || (fn => setTimer(() => fn(Date.now()), 16));
+    const cancelRaf = deps.cancelAnimationFrame || (win.cancelAnimationFrame && win.cancelAnimationFrame.bind(win))
+      || clearTimer;
     const vv = win.visualViewport || null;
 
     let frame = null;

@@ -4,12 +4,56 @@
 
 No account or model-provider API key. Two inference runtimes are bundled with the website — WebGPU where a browser offers it, WebAssembly where it does not — and model assets are fetched and cached automatically in the browser. No model server, deployment-time npm step, or model weights in Git.
 
+## Safari and answer-reliability hotfix
+
+- Safari/iOS (including iOS Chrome/Firefox) and hidden tabs no longer start model
+  workers during page opening. A generative request still starts the model on
+  demand. Cached model weights are retained; live workers are released on page
+  exit and recreated after restoration. Pending WASM loads are cleaned up too.
+- Fixed a reproducible viewport error: the real page did not inject timers, but
+  the animation fallback called an undefined `deps.setTimeout` on focus/resize.
+- Conversation downloads attach their anchor, keep the blob URL alive for 60
+  seconds rather than one, and do not replace the app tab if opened as a file.
+- Requested searches with no usable results now report missing evidence instead
+  of silently generating from model memory. Fresh-fact/source-request detection
+  is a heuristic; it is not a comprehensive factual-intent classifier.
+- Web evidence is retained in a compact prompt on small contexts, or the answer
+  is declined if it still cannot fit. Web IDs and local-card IDs are distinct.
+- Generated answers are **buffered until citation checks finish**, then displayed.
+  Unknown numeric citation IDs and HTTP(S) URLs outside supplied sources/the
+  request cause the draft to be withheld. Code examples are excluded. This is
+  citation-membership checking, **not verification that a claim is true or that
+  the cited passage supports it**. Uncited false claims can still pass.
+- Non-writing generation uses a lower default temperature (0.15); instructions
+  allow uncertainty rather than forcing confident source assessments.
+
+This updates the application's inference/retrieval safeguards, not the Qwen
+weights. It cannot guarantee zero hallucinations. Tests use stub inference;
+there is no measured factual-quality improvement on a real-model benchmark yet.
+
+### Safari troubleshooting and validation
+
+Open the actual HTTPS website URL, not a saved `blob:` URL. Blob URLs belong to
+the page that created them and cannot be made into durable bookmarks by this
+patch. The reported intermittent `WebKitBlobResource error 1` has **not** been
+reproduced on the affected device. These are targeted startup/download
+mitigations, not proof that every cause of that error has been eliminated.
+
+Automated checks: `node tests/download.js`, `node tests/viewport.js`,
+`node --experimental-vm-modules tests/model.js`, `node tests/offline.js`,
+`node tests/smoke.js`, and `python -m pytest tests/ -q`.
+With Playwright installed and the app running, run `node tests/browser-safari.js`
+for desktop/mobile WebKit reload, history navigation and downloads, and
+`node tests/browser-ai.js` for Chromium generation integration. Linux WebKit
+emulation is not an actual iPhone/Mac Safari test. Device follow-up should cover
+cold/cached opening, tab restoration, first generation, cancellation, and export.
+
 ## New in 3.5
 
 - **The model persists across refreshes.** The chosen backend (WebGPU or
   WebAssembly) and model id are remembered in the browser for 7 days, so a
   reload skips the GPU probe entirely and starts loading from the browser
-  cache at once — no 1.2 s delay, and the status line reports "loading from
+  cache at once on eligible browsers (Safari/iOS now wait for a request) — no 1.2 s delay, and the status line reports "loading from
   browser cache". A retry always re-probes from scratch.
 - **117 new knowledge cards** (1400+ total) across food and drink, sports,
   brands, geography, science, technology, psychology, economy, practical life,

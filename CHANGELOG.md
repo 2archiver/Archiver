@@ -1,3 +1,21 @@
+## 3.5 hotfix — Safari startup and evidence safeguards
+
+- Defer background model warm-up on Safari/iOS and hidden tabs; keep on-demand
+  generation and cached weights. Release workers on pagehide and fix cleanup of
+  pending/late WASM initialization.
+- Fix the viewport manager's undefined timer fallback on real browser events.
+- Attach conversation-download links and delay blob URL revocation to 60 seconds;
+  isolate file opening from the app's tab.
+- Fail closed on unsuccessful requested lookups, distinguish web/corpus citation
+  IDs, retain evidence when reducing prompts, and withhold generated drafts with
+  unsupported citation IDs/HTTP(S) URLs before display or persistence.
+- Buffer generated output for checking; keep Stop/status feedback. Reduce the
+  non-writing default temperature and remove forced certainty in assessments.
+- Add lifecycle, evidence, context-budget, download and desktop/mobile WebKit
+  regressions; repair two stale selectors/assertions in the Chromium test.
+- Limits: the exact intermittent Safari blob error is not reproduced; citation
+  membership is not factual verification; no model weights were retrained.
+
 # Changelog
 
 ## 3.5 — 2026-09-27

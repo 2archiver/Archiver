@@ -15,7 +15,7 @@ def client(tmp_path, monkeypatch):
 def test_release_assets(client):
     assert client.get("/api/health").json()["version"] == "3.5"
     for asset in ("archiver-comprehension.js", "archiver-engine.js", "archiver-worker.js",
-                  "archiver-viewport.js"):
+                  "archiver-viewport.js", "archiver-download.js"):
         assert client.get("/static/" + asset).status_code == 200
     page = client.get("/").text
     assert 'maximum-scale=1' not in page

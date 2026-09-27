@@ -55,12 +55,12 @@ export async function CreateWebWorkerMLCEngine(worker, model, config) {
     assert.equal(await page.locator('#settingsOverlay').evaluate(el => el.classList.contains('on')), false);
     await page.locator('#settingsBtn').click();
     await page.locator('#saveSettings').click();
-    await page.waitForFunction(() => document.querySelector('#toastBox').textContent.includes('Settings applied'));
+    await page.waitForFunction(() => document.querySelector('#toasts').textContent.includes('Settings applied'));
     assert.equal(await page.locator('#settingsOverlay').evaluate(el => el.classList.contains('on')), false);
     const send = async text => { await page.locator('#chatInput').fill(text); await page.locator('#sendBtn').click(); };
     await send('write a poem about rain');
     await page.waitForFunction(() => window.Archiver.status().loading);
-    assert.match(await page.locator('#aiRuntimeStatus').textContent(), /Preparing/);
+    assert.match(await page.locator('#aiRuntimeStatus').textContent(), /preparing/i);
     await page.waitForFunction(() => document.querySelector('#sendBtn').dataset.stopping === 'false');
     assert.match(await page.locator('.msg-row.ai .msg-body').last().textContent(), /Browser-generated answer/);
     assert.equal(await page.evaluate(() => globalThis.__modelLoads), 1);

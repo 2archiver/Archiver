@@ -61,7 +61,8 @@ function check(ok, message) { assert.ok(ok, message); checks++; }
   await assert.rejects(() => pending, { name: 'AbortError' }); checks++;
   check(A.sources().length === 0, 'stopped search has no stale sources');
   A.__ctx.__fetch = async () => { throw Error('offline'); };
-  check((await A.chat('what is mitosis', [], { search: true })).includes('chromosome'), 'network failure keeps local answer');
+  check((await A.chat('what is mitosis', [], { search: true })).includes('cannot verify'), 'failed requested search reports missing evidence');
+  check((await A.chat('what is mitosis', [], { search: false })).includes('chromosome'), 'local knowledge remains available with WEB off');
   await assert.rejects(() => A.load(), /WebGPU/); checks++;
   check(!A.status().loading && A.mode() === 'grounded', 'unsupported GPU does not wedge instant mode');
   console.log(`${checks} offline/cancellation checks passed`);

@@ -1532,6 +1532,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
 <script src="/static/archiver-comprehension.js"></script>
 <script src="/static/archiver-viewport.js"></script>
 <script src="/static/archiver-engine.js"></script>
+<script src="/static/archiver-download.js"></script>
 
 
 <script>
@@ -2759,9 +2760,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
       if (!state.sessionId) { toast('No active session', 'err'); return; }
       const messages = LocalStore.getMessages(state.sessionId);
       const text = '# Archiver 3.5 conversation\n\n' + messages.map(m => '## ' + (m.role === 'user' ? 'You' : 'Archiver') + '\n\n' + m.content).join('\n\n');
-      const url = URL.createObjectURL(new Blob([text], { type: 'text/markdown;charset=utf-8' }));
-      const link = document.createElement('a'); link.href = url; link.download = 'archiver-conversation.md'; link.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      window.ArchiverDownload.save(text, 'archiver-conversation.md', 'text/markdown;charset=utf-8');
     };
     $('#exportArchive').onclick = () => { window.location.href = '/api/archive/export'; };
 
@@ -2814,7 +2813,8 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     /* 3.4 — warm the model in the background the moment the page opens, so a
        first-time visitor's first open-ended answer does not pay the one-time
        download. A short delay lets first paint win. warm() uses the same
-       guards as the on-demand path (offline, Data Saver, unsupported browser)
+       guards as the on-demand path (offline, Data Saver, unsupported browser).
+       Safari/iOS and hidden tabs defer warm-up until a generative request
        and never throws into the UI. */
     if (window.Archiver && typeof window.Archiver.warm === 'function') {
       if (typeof window.Archiver.wasReadyBefore === 'function' && window.Archiver.wasReadyBefore()) {

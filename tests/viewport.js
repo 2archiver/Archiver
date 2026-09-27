@@ -93,6 +93,17 @@ function env(opts = {}) {
 const wait = ms => new Promise(r => setTimeout(r, ms));
 
 (async () => {
+  // Production supplies no injected timer/RAF functions. The old fallback
+  // called deps.setTimeout (undefined) on the first focus/resize event.
+  let onResize;
+  const minimal = createViewportManager({
+    window: { innerHeight: 800, addEventListener: (event, fn) => { if (event === 'resize') onResize = fn; }, removeEventListener() {} },
+    document: {}
+  });
+  assert.doesNotThrow(() => onResize());
+  await new Promise(resolve => setTimeout(resolve, 25));
+  minimal.dispose();
+
   /* 1. The shell follows the layout viewport, and only that. */
   {
     const e = env();

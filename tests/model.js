@@ -17,7 +17,7 @@ const models = ['Qwen2.5-0.5B-Instruct-q4f16_1-MLC', 'Qwen2.5-0.5B-Instruct-q4f3
 async function fixture(options = {}) {
   const stats = {
     attempts: 0, imports: [], terminated: 0, interrupted: 0, payload: null,
-    adapterCalls: 0, wasm: { attempts: 0, urls: [], exited: 0 }
+    events: {}, adapterCalls: 0, wasm: { attempts: 0, urls: [], exited: 0 }
   };
   const chunks = options.chunks || ['A generated ', 'answer.'];
   const model = {
@@ -44,13 +44,17 @@ async function fixture(options = {}) {
     async exit() { stats.wasm.exited++; }
   }
   const storage = new Map(options.disabled ? [['archiver.ai.enabled', '0']] : []);
+  if (options.cached) storage.set('archiver.engine.v1', JSON.stringify({ backend: 'wasm', model: 'cached.gguf', ts: Date.now() }));
   const ctx = {
     console, clearTimeout, URL, AbortController, DOMException,
+    document: { visibilityState: options.hidden ? 'hidden' : 'visible' },
+    addEventListener: (name, fn) => { stats.events[name] = fn; },
     setTimeout: (fn, ms) => setTimeout(fn, options.timeout && ms >= 8 * 60 * 1000 ? 15 : ms),
     // Present unless the test says this browser has no WebAssembly at all.
     WebAssembly: options.noWasm ? undefined : { instantiate: async () => ({}) },
     navigator: {
       onLine: options.offline ? false : true,
+      userAgent: options.ua || 'Mozilla/5.0 Chrome/130.0 Safari/537.36',
       hardwareConcurrency: 8,
       connection: { saveData: !!options.saveData },
       gpu: options.noGPU ? undefined : { requestAdapter: async hint => {
@@ -361,6 +365,107 @@ const GENERATIVE = 'write a poem about rain';
   const fallback = await timeout.A.chat(GENERATIVE, []);
   assert.match(fallback, /timed out/); assert.equal(timeout.A.status().loading, false);
   assert.ok(timeout.stats.terminated > 0);
+
+  /* Safari navigation: neither cold nor cached tabs prewarm. On-demand works. */
+  for (const ua of [
+    'Mozilla/5.0 (Macintosh) Version/18.0 Safari/605.1.15',
+    'Mozilla/5.0 (iPhone) AppleWebKit/605.1.15 CriOS/130 Mobile Safari/604.1',
+    'Mozilla/5.0 (iPad) AppleWebKit/605.1.15 FxiOS/130 Mobile Safari/605.1.15'
+  ]) {
+    for (const cached of [false, true]) {
+      const safari = await fixture({ ua, cached, noGPU: true });
+      assert.equal(await safari.A.warm(), false);
+      assert.equal(safari.stats.imports.length, 0, 'opening Safari must not load blob workers/weights');
+      await safari.A.chat(GENERATIVE, []);
+      assert.equal(safari.A.mode(), 'neural', 'on-demand generation remains enabled');
+      safari.stats.events.pagehide();
+      assert.equal(safari.A.mode(), 'grounded', 'do not restore detached runtimes from bfcache');
+      assert.ok(safari.stats.wasm.exited > 0);
+      await safari.A.chat(GENERATIVE, []);
+      assert.equal(safari.A.mode(), 'neural', 'restored page can initialize fresh workers');
+    }
+  }
+  const hidden = await fixture({ hidden: true });
+  assert.equal(await hidden.A.warm(), false);
+  assert.equal(hidden.stats.imports.length, 0);
+  const chromeWarm = await fixture();
+  assert.equal(await chromeWarm.A.warm(), true);
+  const abandoned = await fixture({ noGPU: true, wasmPending: true });
+  const abandonedLoad = abandoned.A.load();
+  while (!abandoned.stats.wasm.resolveLoad) await tick();
+  abandoned.stats.events.pagehide();
+  await assert.rejects(abandonedLoad, { name: 'AbortError' });
+  assert.ok(abandoned.stats.wasm.exited > 0, 'release the pending instance, not only global wasm');
+  abandoned.stats.wasm.resolveLoad(); await tick();
+  assert.equal(abandoned.A.mode(), 'grounded');
+
+  /* Evidence failures must not turn into generated guesses, with/without AI ready. */
+  const source = { title: 'Reference', url: 'https://example.org/reference', source: 'Example', extract: 'The object has two moons.' };
+  for (const loaded of [false, true]) {
+    for (const results of [[], [{ ...source, url: 'javascript:alert(1)' }], [{ ...source, extract: '' }]]) {
+      const empty = await fixture();
+      if (loaded) await empty.A.load();
+      empty.stats.fetch = async () => ({ ok: true, json: async () => ({ results }) });
+      let visible = '';
+      const answer = await empty.A.chat('search for the object', [], { onDelta: d => visible += d });
+      assert.match(answer, /cannot verify/);
+      assert.equal(visible, answer);
+      assert.equal(empty.stats.payload, null, 'no inference after an empty/invalid search');
+      assert.equal(empty.A.trace().route, 'insufficient-evidence');
+    }
+  }
+  const outage = await fixture();
+  await outage.A.load();
+  outage.stats.fetch = async () => { throw Error('offline'); };
+  assert.match(await outage.A.chat('search the latest lunar discovery', []), /cannot verify/);
+  assert.equal(outage.stats.payload, null);
+  for (const q of ['What is the current population of Zedland?', 'Cite sources for the population of Zedland']) {
+    const fresh = await fixture();
+    await fresh.A.load();
+    assert.match(await fresh.A.chat(q, []), /Turn on WEB/);
+    assert.equal(fresh.stats.payload, null);
+  }
+
+  /* Withhold fabricated IDs/URLs before ANY generated answer text is emitted. */
+  for (const chunks of [
+    ['There are two moons according to [', '9].'],
+    ['Read https://invented.example/', 'fake-study for proof.'],
+    ['The result is in [C99].']
+  ]) {
+    const bad = await fixture({ chunks });
+    await bad.A.load();
+    bad.stats.fetch = async () => ({ ok: true, json: async () => ({ results: [source] }) });
+    let visible = '';
+    const answer = await bad.A.chat('Explain the object', [], { search: true, onDelta: d => visible += d });
+    assert.match(answer, /withheld/);
+    assert.equal(visible, answer);
+    assert.ok(!visible.includes('invented.example'));
+    assert.equal(bad.A.trace().route, 'citation-rejected');
+  }
+  const good = await fixture({ chunks: ['There are two moons [1].'] });
+  await good.A.load();
+  good.stats.fetch = async () => ({ ok: true, json: async () => ({ results: [source] }) });
+  assert.equal(await good.A.chat('Explain the object', [], { search: true }), 'There are two moons [1].');
+  assert.match(good.stats.payload.messages[0].content, /\[1\] Reference/);
+  assert.equal(good.stats.payload.temperature, 0.15);
+  assert.equal(good.A.trace().citationCheck, 'passed-membership-only');
+  const fabricatedOffline = await fixture({ chunks: ['A study confirms this [1].'] });
+  await fabricatedOffline.A.load();
+  assert.match(await fabricatedOffline.A.chat('Explain the object', []), /withheld/);
+  const codeExample = await fixture({ chunks: ['Use `items[9]` or:\n```js\nfetch("https://example.org/api");\n```'] });
+  await codeExample.A.load();
+  assert.match(await codeExample.A.chat('Write code to read a list', []), /items\[9\]/);
+
+  /* Phone-size contexts retain evidence instead of silently dropping it. */
+  const compact = await fixture({ noGPU: true, chunks: ['There are two moons [1].'] });
+  await compact.A.load();
+  compact.stats.fetch = async () => ({ ok: true, json: async () => ({ results: [source] }) });
+  assert.equal(await compact.A.chat('Explain the object', [], { search: true, system: 'preference '.repeat(400) }), 'There are two moons [1].');
+  assert.match(compact.stats.wasm.payload.messages[0].content, /two moons/);
+  assert.match(compact.A.trace().steps.join(' '), /compact evidence-first/);
+  compact.stats.wasm.payload = null;
+  assert.match(await compact.A.chat('Explain ' + 'object '.repeat(1300), [], { search: true }), /do not fit/);
+  assert.equal(compact.stats.wasm.payload, null, 'never run after evidence is dropped');
 
   console.log('Browser-generation checks passed: same-origin GPU and WASM runtimes, automatic backend choice, Safari CPU fallback, source retry, cache config, small model, enabled-by-default behavior, retry, timeout, cancellation, late results, prompt-specific instructions, a plan line on every prompt, grounded read in prompt and answer, output shaping, per-turn audit trails, roles, and streaming (stub inference).');
 })().catch(e => { console.error(e); process.exit(1); });
