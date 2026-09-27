@@ -5,6 +5,9 @@ services:
     plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: ./run.sh
+    # Deploy health checks hit the cheap JSON endpoint rather than the 166 KB
+    # app shell, so a deploy goes live the moment the API is actually serving.
+    healthCheckPath: /api/health
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9

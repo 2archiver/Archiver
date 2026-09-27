@@ -1,8 +1,31 @@
-# Archiver 3.4
+# Archiver 3.5
 
-**An everyday assistant with instant local tools, open-ended answers from Archiver 3.4 — our own model — and live web search when you ask.**
+**An everyday assistant with instant local tools, open-ended answers from Archiver 3.5 — our own model — and live web search when you ask.**
 
 No account or model-provider API key. Two inference runtimes are bundled with the website — WebGPU where a browser offers it, WebAssembly where it does not — and model assets are fetched and cached automatically in the browser. No model server, deployment-time npm step, or model weights in Git.
+
+## New in 3.5
+
+- **The model persists across refreshes.** The chosen backend (WebGPU or
+  WebAssembly) and model id are remembered in the browser for 7 days, so a
+  reload skips the GPU probe entirely and starts loading from the browser
+  cache at once — no 1.2 s delay, and the status line reports "loading from
+  browser cache". A retry always re-probes from scratch.
+- **117 new knowledge cards** (1400+ total) across food and drink, sports,
+  brands, geography, science, technology, psychology, economy, practical life,
+  culture and philosophy.
+- **Better output from the 0.5B model.** The persona and the eight per-request
+  approaches were rewritten: lead with the answer, no filler openers or
+  sign-offs, sharper code, comparison and numerical behavior.
+- **Safari polish.** Momentum scrolling and overscroll containment on the chat
+  and sidebar, `-webkit-sticky` headers, tap-highlight removal, text-size
+  locking, and a fill-available fallback for the app shell.
+- **The update actually reaches browsers now.** The app shell, engine and
+  knowledge scripts are served with `Cache-Control: no-cache` so Safari
+  revalidates instead of guessing — previously a redeploy could sit unseen
+  behind a heuristic-cache stale copy. `/manifest.json` and
+  `/apple-touch-icon.png` are served (both 404ed before), so Add to Home
+  Screen installs a real standalone app.
 
 ## New in 3.4
 
