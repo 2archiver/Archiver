@@ -1341,12 +1341,39 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       || (typeof document !== 'undefined' && document.visibilityState === 'hidden');
   }
 
+  /* 4.4 — Safari used to skip warm-up entirely, so the cached model only
+     started after a manual Retry in Settings. Now Safari warms too, once the
+     tab is visible and settled, and any failed cached load retries itself
+     once with a fresh attempt (stale bfcache workers are the usual cause). */
+  let autoRetried = false;
+  function whenVisible() {
+    if (typeof document === 'undefined' || document.visibilityState !== 'hidden') return Promise.resolve();
+    return new Promise(res => {
+      const on = () => { if (document.visibilityState !== 'hidden') { document.removeEventListener('visibilitychange', on); res(); } };
+      document.addEventListener('visibilitychange', on);
+    });
+  }
   function warm() {
-    if (deferWarmup()) return Promise.resolve(false);
+    if (deferWarmup()) {
+      return whenVisible()
+        .then(() => new Promise(r => setTimeout(r, 1500)))
+        .then(() => warmNow());
+    }
+    return warmNow();
+  }
+  function warmNow() {
     if (generationReady()) return Promise.resolve(true);
     if (loading) return loading.then(() => true).catch(() => false);
     if (blockReason()) return Promise.resolve(false);
-    return load().then(() => true).catch(() => false);
+    return load().then(() => true).catch(() => {
+      if (autoRetried || blockReason()) return false;
+      autoRetried = true;
+      loadFailure = '';
+      return new Promise(r => setTimeout(r, 2500))
+        .then(() => retryAI())
+        .then(() => true)
+        .catch(() => false);
+    });
   }
 
   /* Returns true if the model was successfully loaded in a previous session

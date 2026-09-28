@@ -14,6 +14,8 @@
   'use strict';
 
   const SEEN_KEY = 'archiver.server.db_created_at';
+  let lastReset = '';
+  let server = null;
 
   // Minimal wasm modules used purely as feature probes (from wasm-feature-detect).
   const SIMD = new Uint8Array([0,97,115,109,1,0,0,0,1,5,1,96,0,1,123,3,2,1,0,10,10,1,8,0,65,0,253,15,253,98,11]);
@@ -107,6 +109,30 @@
     return out;
   }
 
+  /* 4.4 — plain-English checklist shown above the raw report. */
+  async function summary() {
+    const b = browserName();
+    const gpu = await gpuInfo();
+    const w = wasmInfo();
+    const st = await storageInfo();
+    const engine = safe(() => window.Archiver && window.Archiver.status && window.Archiver.status(), null) || {};
+    let prev = null;
+    try { prev = JSON.parse(localStorage.getItem('archiver.engine.v1') || 'null'); } catch (_) {}
+    const rows = [];
+    const add = (ok, label, detail) => rows.push({ ok, label, detail });
+    add(true, 'Browser', b.name + (b.ios ? ' · iOS' : ''));
+    add(navigator.onLine !== false, 'Connection', navigator.onLine === false ? 'Offline' : 'Online');
+    const ready = engine.aiState === 'ready';
+    add(ready ? true : (engine.aiReason ? false : null), 'Model',
+      ready ? 'Loaded and ready' : (engine.aiState === 'loading' ? (engine.progressText || 'Loading automatically') : (engine.aiReason || engine.progressText || 'Not loaded yet — loads automatically')));
+    add(gpu.available ? true : null, 'GPU (WebGPU)', gpu.available ? ((gpu.vendor || 'Available') + (gpu.shaderF16 ? ' · f16' : '')) : 'Not available — using CPU instead (normal on Safari)');
+    add(w.available && w.compiles ? true : false, 'CPU runtime (WebAssembly)', w.available ? ('SIMD ' + (w.simd ? 'yes' : 'no') + ' · threads ' + (w.threads ? 'yes' : 'no')) : 'Missing');
+    add(st.caches.length || st.opfs.length ? true : null, 'Model cache', st.caches.length || st.opfs.length ? ('Cached · ' + st.usage + ' used of ' + st.quota) : 'Empty — first load downloads ~300–400 MB');
+    add(prev ? true : null, 'Last runtime', prev ? (prev.backend === 'wasm' ? 'CPU' : 'GPU') + ' · ' + new Date(prev.ts).toLocaleString() : 'None yet');
+    add(server ? true : null, 'Server', server ? ('Reachable' + (lastReset ? ' · storage reset recently (your browser copy is safe)' : '')) : 'Not checked yet');
+    return rows;
+  }
+
   async function report() {
     const b = browserName();
     const engine = safe(() => window.Archiver && window.Archiver.status && window.Archiver.status(), null);
@@ -127,6 +153,7 @@
     push('Storage', await storageInfo());
     push('Last runtime used', persisted || 'none yet');
     if (engine) push('Engine', engine);
+    if (lastReset) push('Server storage reset seen', lastReset);
     return lines.join('\n');
   }
 
@@ -160,10 +187,10 @@
       'box-shadow:0 10px 40px rgba(0,0,0,.35);font-family:var(--sans,system-ui,sans-serif)';
     const h = el('h2', { id: 'diagTitle' }, 'Diagnostics');
     h.style.cssText = 'margin:0;font-size:18px;font-family:var(--serif,Georgia,serif);letter-spacing:-.01em';
-    const note = el('p', {}, 'Paste this into bug reports. It stays on your device until you copy it.');
+    const note = el('p', {}, '● ok  ○ info  ✕ problem. Nothing leaves your device unless you copy it.');
     note.style.cssText = 'margin:0;font-size:13px;color:var(--ink-2,#626B63)';
     const pre = el('pre', { tabindex: '0', 'aria-live': 'polite' }, 'Collecting…');
-    pre.style.cssText = 'flex:1;overflow:auto;white-space:pre-wrap;word-break:break-word;font-size:12px;margin:0;padding:12px;' +
+    pre.style.cssText = 'min-height:120px;overflow:auto;white-space:pre-wrap;word-break:break-word;font-size:12px;margin:0;padding:12px;' +
       'border-radius:8px;border:1px solid var(--line,#DDDCD4);background:var(--surface-2,#ECE9E1);color:var(--ink,#202521);' +
       'font-family:var(--mono,monospace);line-height:1.6';
     const row = el('div'); row.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap';
@@ -171,7 +198,27 @@
     const clear = el('button', { type: 'button', class: 'btn sm' }, 'Clear cached model weights');
     const close = el('button', { type: 'button', class: 'btn sm' }, 'Close');
     row.append(copy, clear, close);
-    panel.append(h, note, pre, row);
+    const list = el('div', { role: 'list' });
+    list.style.cssText = 'display:grid;gap:6px';
+    const det = el('details');
+    const sum = el('summary', {}, 'Technical details');
+    sum.style.cssText = 'cursor:pointer;font-size:12.5px;color:var(--ink-2,#626B63);margin-bottom:8px';
+    det.append(sum, pre);
+    det.style.cssText = 'flex:1;overflow:auto;display:flex;flex-direction:column';
+    panel.append(h, note, list, det, row);
+    const paint = async () => {
+      list.textContent = '';
+      for (const r of await summary()) {
+        const it = el('div', { role: 'listitem' });
+        it.style.cssText = 'display:flex;gap:10px;align-items:baseline;padding:8px 10px;border:1px solid var(--line,#DDD);border-radius:10px;font-size:13px';
+        const icon = el('span', { 'aria-hidden': 'true' }, r.ok === true ? '●' : r.ok === false ? '✕' : '○');
+        icon.style.cssText = 'width:12px;color:' + (r.ok === false ? 'var(--bad,#c33)' : 'var(--ink,#222)');
+        const lab = el('b', {}, r.label); lab.style.cssText = 'min-width:150px';
+        const d = el('span', {}, r.detail); d.style.cssText = 'color:var(--ink-2,#666);word-break:break-word';
+        it.append(icon, lab, d); list.appendChild(it);
+      }
+    };
+    paint();
     document.body.appendChild(panel);
     close.focus();
     const done = () => { if (panel) { panel.remove(); panel = null; } if (location.hash === '#diag') history.replaceState(null, '', location.pathname + location.search); };
@@ -183,6 +230,7 @@
       const n = await clearModels();
       clear.textContent = 'Cleared ' + n + ' store' + (n === 1 ? '' : 's');
       pre.textContent = await report();
+      paint();
     };
     pre.textContent = await report();
   }
@@ -208,13 +256,13 @@
       const r = await fetch('/api/health', { cache: 'no-store', credentials: 'same-origin' });
       if (!r.ok) return;
       const h = await r.json();
+      server = h;
       const stamp = String(h.db_created_at || '');
       if (!stamp) return;
       const seen = localStorage.getItem(SEEN_KEY);
       const hadLocal = Object.keys(localStorage).some((k) => /^archiver_(sessions|msgs)_v\d/.test(k));
-      if (seen && seen !== stamp && hadLocal) {
-        banner('Server storage was reset (free hosting has no persistent disk). Your browser copy is intact and will sync back.');
-      }
+      // 4.4: no pop-up. The reset is recorded for Diagnostics only.
+      if (seen && seen !== stamp && hadLocal) lastReset = new Date().toISOString();
       localStorage.setItem(SEEN_KEY, stamp);
     } catch (_) {}
   }
