@@ -1,3 +1,50 @@
+## 4.3 — 2026-09-28
+
+### Resilient search, open-minded persona, OLED theme, more topics
+
+- **Search that survives provider blocks.** Two new legs — DuckDuckGo's HTML
+  endpoint and Wikipedia OpenSearch — join the rotation; a second-chance round
+  runs the skipped legs when every primary hit fails the confidence bar; and
+  Bing gets one retry behind a full browser UA when the plain UA is refused
+  (403/429). The Bing parser also tolerates single-quoted attributes, extra
+  classes and attributed snippet paragraphs, with a bare-heading fallback for
+  markup shifts.
+- **One-word queries score honestly.** Proximity for a lone query word used to
+  return 1.0 unconditionally, handing every result +0.20 — enough to clear the
+  relevance bar with zero overlap, so the first junk stub gated as an answer
+  and fallbacks never fired. It now requires the word to actually occur.
+- **The app says why a search came back empty.** The server's provider log and
+  error list reach the client: the Thought-process panel names the upstream
+  cause (e.g. a 403 or a cooldown) instead of silently moving on, and a timed-
+  out search says the server may be waking up. The "warmed" flag is only set
+  after a completed round trip.
+- **Open-minded persona.** The model character and default instructions now
+  commit to takes, engage edgy or unusual questions directly, and decline
+  briefly only for genuine real-world harm — no lectures, no sermons. The 4.2
+  persona migrates in place for banks that never customised it.
+- **69 new knowledge cards (1,515 total).** Strongmen and dictators (Gaddafi,
+  Saddam, Assad, Castro, Pinochet, Franco, Mugabe, Kim Jong Un, Mussolini,
+  Mao, Lenin, Stalin), the ancient world, the Middle East, science,
+  Australia (ANZAC, bushrangers, box jellyfish, funnel-webs, magpies, UV,
+  cane toads), tech and culture.
+- **OLED true-black theme.** A new *OLED — true black* option with pure #000
+  surfaces for self-emissive screens; the browser chrome follows the theme and
+  the saved theme applies before first paint (no white flash on Safari).
+- **Faster.** Retrieval precomputes phrase norms, scores similarity in
+  question-sized time, and shares one scored list per query across passes;
+  the server gzips the app shell and knowledge script (~4x smaller); scripts
+  load deferred without blocking first paint.
+- **Bug fixes.** The diagnostics panel follows the theme instead of hardcoded
+  light colours; memory cards, changelog, session rows, typing indicator,
+  engine dot, recall list and toast variants render styled; retry keeps the
+  full history; "funnel web" no longer opens the WEB-toggle explainer (a
+  topic containing a self-vocabulary word is a topic, not a question about
+  the app).
+- **Tests.** The Node suites were stale (version pins, pre-4.1 thinking and
+  fail-closed semantics, a WASM stub predating the compile check) — all fixed
+  and green, plus `tests/test_search43.py` for the new providers, the
+  second-chance round, the scoring fix, gzip and the shell changes.
+
 ## 4.2 — 2026-09-27
 
 ### Browser capability checks, diagnostics, free-tier hardening

@@ -5,13 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#F4F1EA">
+<script>
+/* 4.3: apply the saved theme before first paint so dark/OLED mode never
+   flashes paper-white. The full script at the end of body keeps this in sync. */
+try {
+  var __t = localStorage.getItem('archiver-theme') || 'system';
+  if (__t === 'light' || __t === 'dark' || __t === 'oled') document.documentElement.setAttribute('data-theme', __t);
+} catch (e) {}
+</script>
 <meta name="description" content="Archiver — A private research desk. Ask, inspect the evidence, and keep what matters.">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Archiver">
 <meta name="format-detection" content="telephone=no">
 <meta name="mobile-web-app-capable" content="yes">
-<title>Archiver 4.2 — Your everyday assistant</title>
+<title>Archiver 4.3 — Your everyday assistant</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
@@ -20,7 +28,7 @@
 <style>
 
 /* ========================================================================
-   ARCHIVER — The Living Archive  (v4.2)
+   ARCHIVER — The Living Archive  (v4.3)
    A contemporary research desk + field journal, digital.
    Quiet, precise, tactile through spacing — not decoration.
    ======================================================================== */
@@ -101,6 +109,9 @@
     --brass:       #D9B26A;
     --brass-soft:  #2A2212;
     --brass-ink:   #F6E8C8;
+    --good:        #4CAF7D;
+    --warn:        #C9A227;
+    --bad:         #D4695C;
     --focus:       #9DC3AB;
     color-scheme: dark;
   }
@@ -150,9 +161,42 @@
     --brass:       #D9B26A;
     --brass-soft:  #2A2212;
     --brass-ink:   #F6E8C8;
+    --good:        #4CAF7D;
+    --warn:        #C9A227;
+    --bad:         #D4695C;
     --focus:       #9DC3AB;
   color-scheme: dark;
 }
+/* OLED — true black. Every large surface is #000 so self-emissive pixels turn
+   fully off (Safari on iPhone, Edge/Chrome on OLED laptops). Accent and text
+   are lifted one step so contrast holds on pure black. */
+:root[data-theme="oled"] {
+    --canvas:      #000000;
+    --surface:     #0A0A0A;
+    --surface-2:   #111111;
+    --surface-3:   #1A1A1A;
+    --line:        #1F1F1F;
+    --line-strong: #2E2E2E;
+    --ink:         #F2F2F2;
+    --ink-2:       #B5B5B5;
+    --ink-3:       #8A8A8A;
+    --ink-faint:   #555555;
+    --accent:      #8FD0A4;
+    --accent-ink:  #04120A;
+    --accent-2:    #A8DDB8;
+    --accent-soft: #0E1F16;
+    --brass:       #D9B26A;
+    --brass-soft:  #241D0E;
+    --brass-ink:   #F6E8C8;
+    --good:        #4CAF7D;
+    --warn:        #C9A227;
+    --bad:         #D4695C;
+    --focus:       #8FD0A4;
+    --shadow-1: 0 1px 2px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.5);
+    --shadow-2: 0 4px 16px rgba(0,0,0,0.6), 0 1px 3px rgba(0,0,0,0.5);
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) { :root[data-theme="oled"] .side-clear-btn:hover { background: #241D0E; } }
 
 /* ---------- Base ---------- */
 * { box-sizing: border-box; }
@@ -417,7 +461,7 @@ a:hover { text-decoration-color: var(--ink); }
 }
 .answer-trace-think span {
   display: block; font-family: var(--mono); font-size: 9.5px; letter-spacing: .07em;
-  text-transform: uppercase; font-weight: 700; color: var(--accent-ink); margin-bottom: 3px;
+  text-transform: uppercase; font-weight: 700; color: var(--accent); margin-bottom: 3px;
 }
 .answer-trace-think p { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--ink); }
 .answer-trace-facts {
@@ -596,6 +640,69 @@ a:hover { text-decoration-color: var(--ink); }
 #engineBar { height: 3px; background: var(--surface-3); border-radius: 999px; overflow: hidden; margin: 0 16px; display: none; }
 #engineBarFill { height: 100%; background: var(--accent); width: 0%; transition: width var(--motion); }
 #engineProgress { font-family: var(--mono); font-size: 11px; color: var(--ink-3); text-align: center; padding: 6px; display: none; }
+.engine-bar { height: 3px; background: var(--surface-3); border-radius: 999px; overflow: hidden; margin: 0 16px; }
+.engine-bar span { display: block; height: 100%; background: var(--accent); width: 0%; transition: width var(--motion); }
+.engine-progress { font-family: var(--mono); font-size: 11px; color: var(--ink-3); text-align: center; padding: 6px; }
+
+/* 4.3: classes the scripts emit that previously had no styles. Without these
+   the engine dot was invisible, the typing indicator was an empty bubble, and
+   the memory cards, changelog and session rows rendered unstyled. */
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-faint); flex: 0 0 7px; }
+.dot.on { background: var(--good); box-shadow: 0 0 0 3px rgba(46,125,91,.18); }
+.dot.warn { background: var(--warn); box-shadow: 0 0 0 3px rgba(138,109,27,.18); }
+.typing-dots { display: inline-flex; gap: 5px; align-items: center; padding: 6px 2px; }
+.typing-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--ink-3); animation: dotBounce 1.2s var(--ease) infinite; }
+.typing-dots i:nth-child(2) { animation-delay: .15s; }
+.typing-dots i:nth-child(3) { animation-delay: .3s; }
+@keyframes dotBounce { 0%, 60%, 100% { opacity: .3; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-3px); } }
+.cursor-blink { display: inline-block; width: 8px; height: 1em; margin-left: 2px; vertical-align: text-bottom; background: var(--accent); animation: cursorBlink 1s steps(2, start) infinite; }
+@keyframes cursorBlink { to { visibility: hidden; } }
+@media (prefers-reduced-motion: reduce) { .typing-dots i, .cursor-blink { animation: none; } .typing-dots i { opacity: .7; } }
+
+.side-empty { padding: 14px 12px; font-size: 12.5px; color: var(--ink-3); text-align: center; }
+.side-item .title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; }
+.del-btn { flex: 0 0 auto; border: 0; background: transparent; color: var(--ink-faint); font-size: 11px; line-height: 1; padding: 4px 6px; border-radius: var(--radius-sm); cursor: pointer; opacity: 0; transition: opacity var(--motion-fast), color var(--motion-fast); }
+.side-item:hover .del-btn, .side-item:focus-within .del-btn { opacity: 1; }
+.del-btn:hover { color: var(--bad); }
+.idx { font-family: var(--mono); font-size: 10px; color: var(--ink-faint); }
+
+.mem-search { margin-bottom: 10px; }
+.mem-search input { width: 100%; background: var(--surface-2); border: var(--border); border-radius: var(--radius-sm); padding: 9px 12px; font-size: 13px; color: var(--ink); outline: 0; }
+.mem-search input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.mem-card { background: var(--surface); border: var(--border); border-radius: var(--radius-md); padding: 11px 12px; box-shadow: var(--shadow-1); transition: border-color var(--motion-fast); }
+.mem-card:hover { border-color: var(--line-strong); }
+.mem-card .top { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; margin-bottom: 7px; }
+.mem-card .txt { font-size: 13px; line-height: 1.55; color: var(--ink); }
+.mem-card .meta { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 7px; font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); }
+.mem-card .row { display: flex; gap: 6px; margin-top: 9px; }
+.mem-card.superseded { opacity: .62; }
+.badge { display: inline-flex; align-items: center; font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-2); background: var(--surface-2); border: var(--border); padding: 2px 7px; border-radius: 999px; }
+.badge.hi { color: var(--brass-ink); background: var(--brass-soft); border-color: var(--brass); }
+.badge.pin { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
+.badge.tag { text-transform: none; letter-spacing: 0; font-weight: 500; }
+
+.recall-item { display: flex; gap: 8px; align-items: baseline; padding: 7px 0; border-bottom: var(--border); font-size: 12.5px; }
+.recall-item:last-child { border-bottom: 0; }
+.recall-item .kind { flex: 0 0 auto; font-family: var(--mono); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--accent); }
+.recall-item .txt { flex: 1; min-width: 0; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recall-item .sc { flex: 0 0 auto; font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); }
+
+.toast.err { border-color: var(--bad); color: var(--ink); background: var(--surface); box-shadow: var(--shadow-2), inset 3px 0 0 var(--bad); }
+.toast.ok { border-color: var(--good); color: var(--ink); background: var(--surface); box-shadow: var(--shadow-2), inset 3px 0 0 var(--good); }
+.toast.mem { border-color: var(--accent); color: var(--ink); background: var(--accent-soft); }
+
+.cl-entry { border: var(--border); border-left-width: 3px; border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: 10px; background: var(--surface); }
+.cl-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.cl-ver { font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--accent); }
+.cl-tag { font-family: var(--mono); font-size: 9.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--accent-ink); background: var(--accent); padding: 2px 7px; border-radius: 999px; }
+.cl-date { margin-left: auto; font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); }
+.cl-title { font-size: 13px; font-weight: 700; color: var(--ink); margin-bottom: 6px; }
+.cl-body { font-size: 12.5px; line-height: 1.6; color: var(--ink-2); }
+.cl-body ul { margin: 0; padding-left: 18px; }
+.cl-body li { margin-bottom: 4px; }
+.cl-body b { color: var(--ink); }
+.cl-body code { font-family: var(--mono); font-size: 11.5px; background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+.cl-foot { margin-top: 6px; font-size: 11.5px; color: var(--ink-3); }
 
 @media (max-width: 900px) {
   .sidebar { position: fixed; top: 0; bottom: 0; left: 0; width: 272px !important; transform: translateX(-100%); transition: transform var(--motion) var(--ease); z-index: 50; }
@@ -970,7 +1077,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
           <path d="M0 10 Q 10 0, 20 10 T 40 10 T 60 10 T 80 10" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round"/>
         </svg>
       </span>
-      <span class="side-label">Archiver <span class="version-tag">4.2</span></span>
+      <span class="side-label">Archiver <span class="version-tag">4.3</span></span>
       <button class="side-x" id="sideClose" aria-label="Close menu" title="Close">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
@@ -1022,7 +1129,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
         </button>
         <div class="model-badge-wrap">
-          <span class="model-name" id="modelLabel">Archiver <span class="version-tag">4.2</span></span>
+          <span class="model-name" id="modelLabel">Archiver <span class="version-tag">4.3</span></span>
           <div class="status-pill" id="topStatusPill" style="display:none !important;"><span class="dot"></span><span id="modelText">ready</span></div>
         </div>
       </div>
@@ -1044,15 +1151,15 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
         <div class="start-badge">LOCAL ANSWERS. YOUR PACE.</div>
         <div class="assistant-orb" aria-hidden="true"></div>
         <div class="start-greeting">What’s on <em>your mind?</em></div>
-        <div class="start-sub">A quick question, a tricky concept, a page of notes. Start here.<br>Instant local tools, open-ended answers from Archiver 4.2 — our own model — and the web only when you ask.</div>
-        <p class="ai-disclosure">Archiver 4.2 is our own model, built on the open Qwen 2.5 0.5B base, and it runs entirely in your browser — no model runs on our server. It starts preparing the moment you open this page, in the background, so your first open-ended answer is ready when you are. Lookup, calculations and note extraction are instant from the first second. The one-time model fetch is a few hundred MB into your browser’s cache (Data Saver pauses it), and Archiver picks WebGPU where the browser has it and a WebAssembly runtime where it does not, so Safari is not left out.</p>
+        <div class="start-sub">A quick question, a tricky concept, a page of notes. Start here.<br>Instant local tools, open-ended answers from Archiver 4.3 — our own model — and the web only when you ask.</div>
+        <p class="ai-disclosure">Archiver 4.3 is our own model, built on the open Qwen 2.5 0.5B base, and it runs entirely in your browser — no model runs on our server. It starts preparing the moment you open this page, in the background, so your first open-ended answer is ready when you are. Lookup, calculations and note extraction are instant from the first second. The one-time model fetch is a few hundred MB into your browser’s cache (Data Saver pauses it), and Archiver picks WebGPU where the browser has it and a WebAssembly runtime where it does not, so Safari is not left out.</p>
         <div class="start-features">
           <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> No model-provider key</span>
           <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Live web when you want it</span>
           <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg> Remembers you</span>
         </div>
         <div class="ob-chips" id="chips"></div>
-        <div style="margin-top:18px; font-size:11px; color:var(--ink-3);">Archiver 4.2 — our own model · Chats can sync to this app’s server</div>
+        <div style="margin-top:18px; font-size:11px; color:var(--ink-3);">Archiver 4.3 — our own model · Chats can sync to this app’s server</div>
       </div>
       <div id="chatThread" class="hidden" role="log" aria-label="Conversation" aria-live="polite" aria-relevant="additions"></div>
     </div>
@@ -1073,7 +1180,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
             </button>
           </div>
         </div>
-        <div class="ai-runtime-status" id="aiRuntimeStatus" role="status" aria-live="polite">Archiver 4.2 · preparing in the background</div>
+        <div class="ai-runtime-status" id="aiRuntimeStatus" role="status" aria-live="polite">Archiver 4.3 · preparing in the background</div>
         <div class="composer-hint">
           <span>Enter to send · Shift+Enter for newline</span>
           <span id="composerStatus" role="status" aria-live="polite"></span>
@@ -1128,20 +1235,20 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     </header>
     <div class="settings-body">
       <fieldset>
-        <legend>Archiver 4.2 — our model</legend>
+        <legend>Archiver 4.3 — our model</legend>
         <div class="engine-box">
           <div class="engine-line">
             <span class="dot on" id="engineDot"></span>
-            <b id="engineMode">Archiver 4.2 · preparing in the background</b>
+            <b id="engineMode">Archiver 4.3 · preparing in the background</b>
             <span class="mtag" id="engineModel"></span>
           </div>
-          <p id="engineBlurb">Archiver 4.2 is our own model, built on the open Qwen 2.5 0.5B base. It runs entirely in your browser, so nothing runs on Render and no one else sees your prompts. It starts preparing the moment you open the page.</p>
+          <p id="engineBlurb">Archiver 4.3 is our own model, built on the open Qwen 2.5 0.5B base. It runs entirely in your browser, so nothing runs on Render and no one else sees your prompts. It starts preparing the moment you open the page.</p>
           <div class="ai-confirmation" id="aiConfirmation" role="status" aria-live="polite">
             <span class="mark" aria-hidden="true">✓</span>
-            <span><strong id="aiConfirmationTitle">Archiver 4.2 is enabled</strong><small id="aiConfirmationDetail">It prepares in the background the moment you open this page.</small></span>
+            <span><strong id="aiConfirmationTitle">Archiver 4.3 is enabled</strong><small id="aiConfirmationDetail">It prepares in the background the moment you open this page.</small></span>
           </div>
-          <p class="desc">Archiver 4.2 is always enabled for writing, explanations, coding and plans. Its status is shown here and beside the chat box. There is nothing to install and no download button: while the page is open it fetches the model once into this browser’s cache and reuses it afterwards, so by the time you type your first open-ended question it is usually already ready. Archiver picks the runtime automatically — WebGPU where the browser has it, and a WebAssembly (CPU) runtime where it does not, which is what most Safari installs get. Keep this page open while it prepares. Offline mode, Data Saver, or a browser with neither runtime will leave the instant tools running instead.</p>
-          <button class="btn" id="retryModel" type="button" hidden>Retry Archiver 4.2</button>
+          <p class="desc">Archiver 4.3 is always enabled for writing, explanations, coding and plans. Its status is shown here and beside the chat box. There is nothing to install and no download button: while the page is open it fetches the model once into this browser’s cache and reuses it afterwards, so by the time you type your first open-ended question it is usually already ready. Archiver picks the runtime automatically — WebGPU where the browser has it, and a WebAssembly (CPU) runtime where it does not, which is what most Safari installs get. Keep this page open while it prepares. Offline mode, Data Saver, or a browser with neither runtime will leave the instant tools running instead.</p>
+          <button class="btn" id="retryModel" type="button" hidden>Retry Archiver 4.3</button>
           <div class="engine-bar" id="engineBar" style="display:none"><span id="engineBarFill"></span></div>
           <div class="engine-progress" id="engineProgress" style="display:none"></div>
         </div>
@@ -1158,7 +1265,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
 
       <fieldset>
         <legend>Memory Bank</legend>
-        <p style="margin-top:0;margin-bottom:10px;font-size:12px;color:var(--ink-3)">Memories are stored on this app’s server. Relevant cached memories can inform Archiver 4.2 when a request needs it.</p>
+        <p style="margin-top:0;margin-bottom:10px;font-size:12px;color:var(--ink-3)">Memories are stored on this app’s server. Relevant cached memories can inform Archiver 4.3 when a request needs it.</p>
         <label class="toggle"><input type="checkbox" id="setAutoExtract"> Learn new memories automatically from chat</label>
         <label class="toggle"><input type="checkbox" id="setAutoDistill"> Auto-distill and consolidate long chats</label>
       </fieldset>
@@ -1167,7 +1274,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
         <legend>Persona & Prompt</legend>
         <div class="field">
           <textarea id="setPersona" spellcheck="false" placeholder="Custom instructions for Archiver..."></textarea>
-          <div class="desc">Instructions for Archiver 4.2 (open-ended answers). Instant lookup and text tools are deterministic.</div>
+          <div class="desc">Instructions for Archiver 4.3 (open-ended answers). Instant lookup and text tools are deterministic.</div>
         </div>
       </fieldset>
 
@@ -1179,9 +1286,10 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
             <option value="system">System (paper / ink)</option>
             <option value="light">Light — warm paper</option>
             <option value="dark">Dark — ink archive</option>
+            <option value="oled">OLED — true black</option>
           </select>
         </div>
-        <div class="desc" style="margin-top:6px;">Light uses warm paper #F4F1EA, dark uses #141917. Accent is archival green #315D4D (light) / #9DC3AB (dark), brass #A67C3D sparingly.</div>
+        <div class="desc" style="margin-top:6px;">Light uses warm paper #F4F1EA, dark uses #141917, OLED uses true black #000000 (pixels off on OLED screens — best for iPhone/Safari and dark rooms). Accent is archival green #315D4D (light) / #9DC3AB (dark) / #8FD0A4 (OLED), brass #A67C3D sparingly.</div>
       </fieldset>
 
       <fieldset>
@@ -1234,8 +1342,8 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
         <legend>Updates</legend>
         <div class="update-row">
           <div class="update-meta">
-            <b>4.2</b><span>2026-09-27 · latest</span>
-            <p>Archiver 4.2 — hardened for the free tier: real WebGPU capability checks with a clean CPU fallback, a diagnostics panel, cross-origin isolation and security headers, rate limits, provider cooldowns and a notice when server storage resets.</p>
+            <b>4.3</b><span>2026-09-28 · latest</span>
+            <p>Archiver 4.3 — search that survives provider blocks (new DuckDuckGo and Wikipedia legs, a second-chance round, browser-UA retry), an open-minded persona with committed takes, 69 new knowledge cards, an OLED true-black theme, faster retrieval, and fixes for the diagnostics panel, memory cards and unstyled UI states.</p>
           </div>
           <button class="btn sm" id="openChangelog" style="white-space:nowrap; flex-shrink:0;">View changelog →</button>
         </div>
@@ -1299,7 +1407,21 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     <div class="changelog-body">
       <div class="changelog-timeline">
         <div class="cl-entry" style="border-color:var(--accent)">
-          <div class="cl-head"><span class="cl-ver">4.2</span><span class="cl-tag">Latest</span><span class="cl-date">2026-09-27</span></div>
+          <div class="cl-head"><span class="cl-ver">4.3</span><span class="cl-tag">Latest</span><span class="cl-date">2026-09-28</span></div>
+          <div class="cl-title">4.3 — resilient search, Grok-like persona, OLED theme, more topics</div>
+          <div class="cl-body">
+            <ul>
+              <li><b>Search that survives blocks.</b> Two new legs (DuckDuckGo HTML, Wikipedia OpenSearch), a second-chance round when the first results all fail the confidence bar, and a browser-UA retry when Bing refuses the first request. The app now says <i>why</i> a search came back empty instead of just looking dead.</li>
+              <li><b>Open-minded persona.</b> The model character and default instructions now commit to takes, engage edgy questions directly, and decline briefly only for genuine real-world harm — no lectures, no sermons.</li>
+              <li><b>69 new knowledge cards (1,515 total).</b> Strongmen and dictators (Gaddafi, Saddam, Assad, Castro, Pinochet, Franco, Mugabe, Kim Jong Un, Mussolini, Mao, Lenin, Stalin), the ancient world, the Middle East, science, Australia (ANZAC, bushrangers, box jellyfish, magpies, UV), tech and culture.</li>
+              <li><b>OLED true-black theme.</b> New <i>OLED — true black</i> option with pure #000 surfaces for self-emissive screens; browser chrome follows the theme and the saved theme applies before first paint (no white flash).</li>
+              <li><b>Faster.</b> Precomputed phrase norms, question-sized similarity math, one scored list per query shared across passes, gzip on the server, and non-blocking script loading.</li>
+              <li><b>Bug fixes.</b> Diagnostics panel follows the theme; memory cards, changelog, session rows, typing indicator, engine dot and toasts all render styled; retry keeps the full history; &quot;funnel web&quot; no longer opens the WEB explainer.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="cl-entry">
+          <div class="cl-head"><span class="cl-ver">4.2</span><span class="cl-date">2026-09-27</span></div>
           <div class="cl-title">4.2 — browser capability checks, diagnostics, free-tier hardening</div>
           <div class="cl-body">
             <ul>
@@ -1576,11 +1698,11 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
 
 <div id="toasts"></div>
 
-<script src="/static/archiver-knowledge.js"></script>
-<script src="/static/archiver-comprehension.js"></script>
-<script src="/static/archiver-viewport.js"></script>
-<script src="/static/archiver-engine.js"></script>
-<script src="/static/archiver-download.js"></script>
+<script src="/static/archiver-knowledge.js" defer></script>
+<script src="/static/archiver-comprehension.js" defer></script>
+<script src="/static/archiver-viewport.js" defer></script>
+<script src="/static/archiver-engine.js" defer></script>
+<script src="/static/archiver-download.js" defer></script>
 <script src="/static/archiver-diag.js" defer></script>
 
 
@@ -2141,7 +2263,11 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     try {
       if (!A) throw new Error('The local engine did not load. Reload the page.');
 
-      const history = LocalStore.getMessages(sid).slice(0, -1);
+      /* 4.3: on a fresh turn the last stored message is the one just added
+         above, so it is dropped (it is passed separately as `text`). On retry
+         nothing was added — slicing would eat the previous user turn. */
+      const stored = LocalStore.getMessages(sid);
+      const history = retrying ? stored : stored.slice(0, -1);
       const keys = new Set((text.toLowerCase().match(/\b[a-z]{4,}\b/g) || []));
       ctx = (state.memories || []).filter(m => !m.superseded_by && (m.pinned || [...keys].some(k => String(m.content).toLowerCase().includes(k)))).slice(0, 6);
       const prep = { message: text, history, system: [state.settings && state.settings.persona || '', ...ctx.map(m => 'Memory: ' + m.content)].join('\n') };
@@ -2407,11 +2533,11 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
       : st.backend === 'webgpu' ? 'on this device’s GPU' : '';
     const fromCache = typeof A.wasReadyBefore === 'function' && A.wasReadyBefore();
     const labels = {
-      ready: 'Archiver 4.2 · active' + (backendWord ? ' ' + backendWord : ''),
-      loading: fromCache ? 'Archiver 4.2 · loading from browser cache…' : 'Archiver 4.2 · preparing…',
-      error: 'Archiver 4.2 unavailable · instant tools ready',
-      paused: 'Archiver 4.2 · waiting for support or connection',
-      idle: fromCache ? 'Archiver 4.2 · loading from browser cache' : 'Archiver 4.2 · preparing in the background'
+      ready: 'Archiver 4.3 · active' + (backendWord ? ' ' + backendWord : ''),
+      loading: fromCache ? 'Archiver 4.3 · loading from browser cache…' : 'Archiver 4.3 · preparing…',
+      error: 'Archiver 4.3 unavailable · instant tools ready',
+      paused: 'Archiver 4.3 · waiting for support or connection',
+      idle: fromCache ? 'Archiver 4.3 · loading from browser cache' : 'Archiver 4.3 · preparing in the background'
     };
     const label = labels[st.aiState] || labels.idle;
     const candidates = (st.backendCandidates || []).slice();
@@ -2428,17 +2554,17 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
       ? st.modelPretty + (st.backend === 'wasm' ? ' · WASM' : st.backend === 'webgpu' ? ' · WebGPU' : '')
       : '';
     $('#aiRuntimeStatus').textContent = label;
-    $('#aiRuntimeStatus').title = st.aiReason || 'Archiver 4.2 handles open-ended writing, explanations, coding and plans; instant tools cover the rest.';
+    $('#aiRuntimeStatus').title = st.aiReason || 'Archiver 4.3 handles open-ended writing, explanations, coding and plans; instant tools cover the rest.';
     if (confirm) {
       const active = st.aiState === 'ready' || (st.aiEnabled && st.aiState === 'idle');
       confirm.className = 'ai-confirmation ' + (st.aiState === 'error' || st.aiState === 'paused' ? 'warn' : active ? 'active' : '');
       confirmTitle.textContent = st.aiState === 'ready'
-        ? 'Archiver 4.2 is active in this browser'
+        ? 'Archiver 4.3 is active in this browser'
         : st.aiState === 'loading'
-          ? 'Archiver 4.2 is preparing'
+          ? 'Archiver 4.3 is preparing'
           : st.aiState === 'error' || st.aiState === 'paused'
-            ? 'Archiver 4.2 is currently unavailable'
-            : 'Archiver 4.2 is enabled';
+            ? 'Archiver 4.3 is currently unavailable'
+            : 'Archiver 4.3 is enabled';
       confirmDetail.textContent = st.aiState === 'ready'
         ? (st.backend === 'wasm'
           ? 'Running the WebAssembly runtime on this device’s CPU because WebGPU is not available here. Writing and explanations work; expect slower output than a GPU browser. Lookup and note tools remain instant.'
@@ -2598,15 +2724,15 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     $('#retryModel').onclick = async () => {
       if (state.streaming || $('#retryModel').disabled) return;
       $('#retryModel').disabled = true;
-      $('#composerStatus').textContent = 'Retrying Archiver 4.2…';
+      $('#composerStatus').textContent = 'Retrying Archiver 4.3…';
       paintEngine();
       $('#retryModel').disabled = true;
       try {
         await window.Archiver.retryAI();
-        toast('Archiver 4.2 is ready', 'ok');
+        toast('Archiver 4.3 is ready', 'ok');
       } catch (err) {
         const st = window.Archiver.status();
-        toast(st.aiReason || st.progressText || err.message || 'Archiver 4.2 could not start', 'err');
+        toast(st.aiReason || st.progressText || err.message || 'Archiver 4.3 could not start', 'err');
       } finally {
         $('#composerStatus').textContent = '';
         paintEngine();
@@ -2808,7 +2934,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     $('#exportBtn').onclick = () => {
       if (!state.sessionId) { toast('No active session', 'err'); return; }
       const messages = LocalStore.getMessages(state.sessionId);
-      const text = '# Archiver 4.2 conversation\n\n' + messages.map(m => '## ' + (m.role === 'user' ? 'You' : 'Archiver') + '\n\n' + m.content).join('\n\n');
+      const text = '# Archiver 4.3 conversation\n\n' + messages.map(m => '## ' + (m.role === 'user' ? 'You' : 'Archiver') + '\n\n' + m.content).join('\n\n');
       window.ArchiverDownload.save(text, 'archiver-conversation.md', 'text/markdown;charset=utf-8');
     };
     $('#exportArchive').onclick = () => { window.location.href = '/api/archive/export'; };
@@ -2898,12 +3024,24 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
   try {
     var sel = document.getElementById('themeSelect');
     var saved = localStorage.getItem('archiver-theme') || 'system';
+    if (sel && ['system','light','dark','oled'].indexOf(saved) < 0) saved = 'system';
     if (sel) sel.value = saved;
+    /* Keep the browser chrome (Safari toolbar, Edge/Chrome top bar) in sync
+       with the theme — otherwise OLED mode keeps a glowing paper header. */
+    function paintChrome(v){
+      var meta = document.querySelector('meta[name="theme-color"]');
+      if (!meta) return;
+      var dark = v === 'dark' || v === 'oled'
+        || (v === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      meta.setAttribute('content', v === 'oled' ? '#000000' : (dark ? '#141917' : '#F4F1EA'));
+    }
     function apply(v){
       if (v==='system') document.documentElement.removeAttribute('data-theme');
       else document.documentElement.setAttribute('data-theme', v);
+      paintChrome(v);
     }
     apply(saved);
+    if (window.matchMedia) window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(){ if ((sel && sel.value) === 'system') paintChrome('system'); });
     if (sel) sel.addEventListener('change', function(){
       try { localStorage.setItem('archiver-theme', sel.value); } catch(e){}
       apply(sel.value);

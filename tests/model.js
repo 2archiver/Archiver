@@ -51,7 +51,9 @@ async function fixture(options = {}) {
     addEventListener: (name, fn) => { stats.events[name] = fn; },
     setTimeout: (fn, ms) => setTimeout(fn, options.timeout && ms >= 8 * 60 * 1000 ? 15 : ms),
     // Present unless the test says this browser has no WebAssembly at all.
-    WebAssembly: options.noWasm ? undefined : { instantiate: async () => ({}) },
+    // 4.3: the engine validates a minimal module (4.2's Edge-strict-mode guard),
+    // so the stub must implement validate as well as instantiate.
+    WebAssembly: options.noWasm ? undefined : { instantiate: async () => ({}), validate: () => true },
     navigator: {
       onLine: options.offline ? false : true,
       userAgent: options.ua || 'Mozilla/5.0 Chrome/130.0 Safari/537.36',
@@ -60,7 +62,18 @@ async function fixture(options = {}) {
       gpu: options.noGPU ? undefined : { requestAdapter: async hint => {
         stats.adapterCalls++;
         if (options.rejectAdapterHint && hint) throw Error('unsupported power preference');
-        return options.noAdapter ? null : { features: new Set(options.f32 ? [] : ['shader-f16']) };
+        if (options.noAdapter) return null;
+        // 4.3: the engine's capability check needs realistic limits (4.2) and a
+        // working 64 MiB canary allocation, or it routes to WASM by design.
+        const mib = options.tinyLimits ? 64 : 256;
+        return {
+          features: new Set(options.f32 ? [] : ['shader-f16']),
+          limits: { maxStorageBufferBindingSize: mib * 1024 * 1024, maxBufferSize: mib * 1024 * 1024 },
+          requestDevice: async () => ({
+            pushErrorScope() {}, popErrorScope: async () => null,
+            createBuffer: () => ({ destroy() {} }), destroy() {}
+          })
+        };
       } }
     },
     localStorage: { getItem: key => storage.get(key) || null, setItem: (key, value) => storage.set(key, value) },
@@ -103,7 +116,7 @@ const GENERATIVE = 'write a poem about rain';
 (async () => {
   /* ---------------- WebGPU backend (unchanged fast path) ---------------- */
   const { A, stats, storage } = await fixture();
-  assert.equal(A.version, '4.0');
+  assert.equal(A.version, '4.3');
   assert.equal(Array.from(A.status().backendCandidates).join(','), 'webgpu,wasm', 'both runtimes are available here');
   for (const q of ['hello', '2+2', 'compare Python and JavaScript', 'summarize: One. Two.']) await A.chat(q, []);
   assert.equal(stats.imports.length, 0, 'instant tasks do not download a model');
@@ -129,7 +142,8 @@ const GENERATIVE = 'write a poem about rain';
   assert.ok(!JSON.stringify(stats.payload).includes('HOSTILE HISTORY'));
   assert.match(stats.payload.messages[0].content, /not a conscious being/);
   assert.match(stats.payload.messages[0].content, /This prompt: Writing request:/);
-  assert.match(stats.payload.messages[0].content, /Begin your reply with exactly one line of the form: Thinking:/);
+  assert.ok(!/Begin your reply with exactly one line/.test(stats.payload.messages[0].content), '4.1+: the Thinking preamble is opt-in, not forced');
+  assert.match(stats.payload.messages[0].content, /Answer directly with no preamble/);
   assert.equal(stats.payload.top_p, 0.9);
   assert.ok(stats.payload.presence_penalty > 0, 'repetition is discouraged for a small model');
   assert.match(await A.chat('write ' + '界'.repeat(4000), []), /too long/);
@@ -143,23 +157,25 @@ const GENERATIVE = 'write a poem about rain';
   assert.equal(storage.get('archiver.ai.enabled'), '1');
   assert.equal(stats.terminated, 0, 'an active engine remains available');
 
-  /* ---------------- thinking is on every prompt ---------------- */
+  /* ---------------- thinking is opt-in since 4.1 ---------------- */
   const thought = await fixture({ chunks: [
     'Thinking: The user wants a short poem about rain, so I will write four plain lines.',
     '\n\nRain falls', ' softly.'
   ] });
   let seen = '';
-  const poem = await thought.A.chat(GENERATIVE, [], { onDelta: d => { seen += d; } });
+  const poem = await thought.A.chat(GENERATIVE, [], { thinking: true, onDelta: d => { seen += d; } });
   assert.equal(poem, 'Rain falls softly.', 'the planning line is lifted out of the visible answer');
   assert.equal(seen, poem, 'and never streamed to the reader either');
   assert.match(thought.A.trace().thinking, /four plain lines/);
   assert.equal(thought.A.trace().planBy, 'model');
   assert.match(thought.A.trace().steps.join(' | '), /planned in one line before answering/);
+  assert.match(thought.stats.payload.messages[0].content, /Begin your reply with exactly one line of the form: Thinking:/,
+    'thinking:true re-enables the planning-line instruction');
 
   /* 3.3: a model that skips its planning line does not leave the panel empty —
      the pipeline's own plan (approach, evidence held, backend) stands in. */
   const noThinking = await fixture({ chunks: ['Just an answer, no plan line.'] });
-  const plain = await noThinking.A.chat(GENERATIVE, []);
+  const plain = await noThinking.A.chat(GENERATIVE, [], { thinking: true });
   assert.equal(plain, 'Just an answer, no plan line.', 'a model that ignores the instruction still answers');
   assert.match(noThinking.A.trace().thinking, /^writing request: produce original wording/);
   assert.match(noThinking.A.trace().thinking, /Generate on the GPU path/);
@@ -242,7 +258,7 @@ const GENERATIVE = 'write a poem about rain';
   assert.ok(!/holds up, with one caveat|cleaner story than the evidence|which is not the same thing as settled/.test(opinion), 'and not the 3.2 stock lines');
 
   await grounded.A.load();
-  const gOut = await grounded.A.chat('who is benito mussolini', [], { search: true });
+  const gOut = await grounded.A.chat('who is benito mussolini', [], { search: true, thinking: true });
   const gSys = grounded.stats.payload.messages[0].content;
   assert.match(gSys, /my draft read:\s+Read Mussolini as an Italian politician/, 'the model receives the server read as a draft');
   assert.match(gSys, /facts they carry: He founded fascism in 1919\.\s*\n/, 'the facts are passed without the draft read glued on');
@@ -399,7 +415,9 @@ const GENERATIVE = 'write a poem about rain';
   abandoned.stats.wasm.resolveLoad(); await tick();
   assert.equal(abandoned.A.mode(), 'grounded');
 
-  /* Evidence failures must not turn into generated guesses, with/without AI ready. */
+  /* Evidence failures must not turn into generated guesses, with/without AI ready.
+     4.3: since 4.1 only time-sensitive/source-requested questions fail closed;
+     ordinary questions degrade to labelled-unverified or local answers. */
   const source = { title: 'Reference', url: 'https://example.org/reference', source: 'Example', extract: 'The object has two moons.' };
   for (const loaded of [false, true]) {
     for (const results of [[], [{ ...source, url: 'javascript:alert(1)' }], [{ ...source, extract: '' }]]) {
@@ -407,11 +425,27 @@ const GENERATIVE = 'write a poem about rain';
       if (loaded) await empty.A.load();
       empty.stats.fetch = async () => ({ ok: true, json: async () => ({ results }) });
       let visible = '';
-      const answer = await empty.A.chat('search for the object', [], { onDelta: d => visible += d });
+      const answer = await empty.A.chat('search the latest lunar discovery', [], { onDelta: d => visible += d });
       assert.match(answer, /cannot verify/);
       assert.equal(visible, answer);
       assert.equal(empty.stats.payload, null, 'no inference after an empty/invalid search');
       assert.equal(empty.A.trace().route, 'insufficient-evidence');
+    }
+  }
+  /* Ordinary explicit searches degrade instead of refusing: a loaded model
+     generates with the unverified flag in its prompt; without a model the
+     local corpus answers. Neither path guesses dressed as verified. */
+  for (const loaded of [false, true]) {
+    const empty = await fixture();
+    if (loaded) await empty.A.load();
+    empty.stats.fetch = async () => ({ ok: true, json: async () => ({ results: [] }) });
+    const answer = await empty.A.chat('search for the object', []);
+    if (loaded) {
+      assert.match(empty.stats.payload.messages[0].content, /UNVERIFIED ANSWER/,
+        'empty search still generates, but flagged unverified in the prompt');
+    } else {
+      assert.ok(!/cannot verify/.test(answer), 'stable questions fall back to local knowledge, not a refusal');
+      assert.equal(empty.stats.payload, null);
     }
   }
   const outage = await fixture();

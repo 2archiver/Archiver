@@ -4,8 +4,8 @@ const A = require('./ui_check');
 let checks = 0;
 function check(ok, message) { assert.ok(ok, message); checks++; }
 (async () => {
-  check(A.version === '4.0' && A.status().version === '4.0' && A.name === 'Archiver 4.0', 'runtime version');
-  check(A.__ctx.ARCHIVER_KB.version === '4.0', 'corpus version');
+  check(A.version === '4.3' && A.status().version === '4.3' && A.name === 'Archiver 4.3', 'runtime version');
+  check(A.__ctx.ARCHIVER_KB.version === '4.3', 'corpus version');
   for (const [query, expected] of [
     ['2 + 3 * 4', '14'], ['(2 + 3) * 4', '20'], ['2^3^2', '512'],
     ['-2^2', '-4'], ['(-2)^2', '4'], ['3 * -2', '-6'], ['2^-2', '0.25'],
@@ -61,7 +61,8 @@ function check(ok, message) { assert.ok(ok, message); checks++; }
   await assert.rejects(() => pending, { name: 'AbortError' }); checks++;
   check(A.sources().length === 0, 'stopped search has no stale sources');
   A.__ctx.__fetch = async () => { throw Error('offline'); };
-  check((await A.chat('what is mitosis', [], { search: true })).includes('cannot verify'), 'failed requested search reports missing evidence');
+  check((await A.chat('latest headlines today', [], { search: true })).includes('cannot verify'), 'failed requested search reports missing evidence');
+  check((await A.chat('what is mitosis', [], { search: true })).includes('chromosome'), 'failed search for stable facts falls back to local knowledge');
   check((await A.chat('what is mitosis', [], { search: false })).includes('chromosome'), 'local knowledge remains available with WEB off');
   await assert.rejects(() => A.load(), /WebGPU/); checks++;
   check(!A.status().loading && A.mode() === 'grounded', 'unsupported GPU does not wedge instant mode');

@@ -1,18 +1,18 @@
-/* Archiver 4.2: instant retrieval and text tools, plus generation on whichever
+/* Archiver 4.3: instant retrieval and text tools, plus generation on whichever
    runtime this device can actually run — WebGPU where it exists, WebAssembly
-   where it does not (which is most of Safari). 4.1 brands the model as
-   Archiver 4.2, adds Bing web search alongside Wikipedia and Stack Exchange
-   (all running concurrently), relaxes the relevance bar so ordinary web
-   results surface, lets searches wait up to 75 s for a sleeping free-tier
-   instance, drops the forced "Thinking:" preamble, and allows a labelled
-   "unverified" best-effort answer when no usable sources are found instead
-   of refusing outright. */
+   where it does not (which is most of Safari). 4.3 sharpens the persona
+   (open-minded, opinionated, no lectures), passes the server's unverified flag
+   and provider errors through to the answer path, and makes retrieval faster
+   (precomputed phrase norms, O(question) similarity, one scored list per
+   query shared across passes). 4.2/4.1 history: branded model, concurrent
+   Bing/Wikipedia/Stack Exchange search, 75 s search budget for sleeping
+   free-tier instances, labelled unverified answers instead of refusals. */
 (function () {
   'use strict';
 
   /* One definition of the version, so the label in the sidebar, the persona, the
      self-description, the API and the tests cannot disagree with each other. */
-  const VERSION = '4.2';
+  const VERSION = '4.3';
   const NAME = 'Archiver ' + VERSION;
 
   /* ======================================================================== */
@@ -97,6 +97,9 @@
 
   function build() {
     index = [];
+    /* The corpus changed, so any cached score lists are stale. build() first
+       runs at the bottom of this file, after scoreCache exists. */
+    scoreCache.clear();
     const push = (q, a, meta) => {
       const phraseSets = (Array.isArray(q) ? q : [q]).map((p) => tokens(p));
       const phraseText = (Array.isArray(q) ? q : [q]).filter(Boolean);
@@ -104,6 +107,9 @@
       const answerTokens = tokens(a);
       index.push({
         q: phraseText,
+        /* 4.3: normalised phrases are precomputed once. score() used to call
+           norm() on every stored phrase of every entry on every query. */
+        qn: phraseText.map((p) => norm(p)),
         a,
         pt: phraseSets,
         at: answerTokens,
@@ -182,14 +188,15 @@
     /* Only an exact whole-question match earns the bonus. Substring matching
        was what let the broad overview card win on specific questions. */
     let exact = 0;
-    for (const q of e.q) {
-      const nq = norm(q);
+    for (const nq of (e.qn || e.q)) {
       if (nq.length > 3 && nq === rawNorm) { exact = 1; break; }
     }
 
+    /* 4.3: identical arithmetic, O(question) instead of O(answer). The old
+       second loop walked every unique answer token (~100-300 per card); the
+       question side is a dozen tokens at most and yields the same s1/s2. */
     let sim = 0, s1 = 0, s2 = 0;
-    for (const t of qset) s1 += e.vec[t] ? 1 : 0;
-    for (const t of Object.keys(e.vec)) if (qset.has(t)) s2 += e.vec[t];
+    for (const t of qset) if (e.vec[t]) { s1 += 1; s2 += e.vec[t]; }
     if (s1 && s2) sim = (s2 / e.norm) * Math.min(1, s1 / Math.max(1, qset.size));
 
     /* Tags are a topical hint — "ww2", "holocaust", "llm" — and they catch
@@ -205,19 +212,37 @@
     return { score: Math.min(1, s), exact, size: best.size, tagScore };
   }
 
-  function search(text, topN) {
-    const qset = tokens(text);
-    if (!qset.size) return { empty: true, ranked: [] };
-    const rawNorm = norm(text);
-    const qprefix = new Set();
-    for (const t of qset) if (t.length >= 5) qprefix.add(t.slice(0, 4));
+  /* 4.3: one scored list per distinct query, shared by search(), notesFor()
+     and restoreContext(). A single chat turn used to score the whole corpus
+     up to four times (retrieval, notes, context restore, related) — now the
+     second and later passes are a cache hit. Capped and cleared on teach/
+     forget so the list never goes stale. */
+  const scoreCache = new Map();
+  const SCORE_CACHE_MAX = 24;
 
-    const all = [];
-    for (const e of index) {
-      const s = score(e, qset, rawNorm, qprefix);
-      if (s.score > 0) all.push({ entry: e, score: s.score });
+  function scoredAll(text) {
+    const key = norm(text);
+    let all = scoreCache.get(key);
+    if (all) return all;
+    const qset = tokens(text);
+    all = [];
+    if (qset.size) {
+      const qprefix = new Set();
+      for (const t of qset) if (t.length >= 5) qprefix.add(t.slice(0, 4));
+      for (const e of index) {
+        const s = score(e, qset, key, qprefix);
+        if (s.score > 0) all.push({ entry: e, score: s.score });
+      }
+      all.sort((a, b) => b.score - a.score);
     }
-    all.sort((a, b) => b.score - a.score);
+    scoreCache.set(key, all);
+    if (scoreCache.size > SCORE_CACHE_MAX) scoreCache.delete(scoreCache.keys().next().value);
+    return all;
+  }
+
+  function search(text, topN) {
+    if (!tokens(text).size) return { empty: true, ranked: [] };
+    const all = scoredAll(text);
     return {
       empty: false,
       entry: all.length ? all[0].entry : null,
@@ -288,7 +313,7 @@
   /* ---- commands ---------------------------------------------------------- */
 
 const HELP = [
-    "I'm **" + NAME + "** — your private research desk: instant local knowledge, plus Archiver 4.2, our own model, for open-ended work. Chats can sync to the app server.",
+    "I'm **" + NAME + "** — your private research desk: instant local knowledge, plus Archiver 4.3, our own model, for open-ended work. Chats can sync to the app server.",
     '',
     '**Ask me anything.** History, science, health, tech, philosophy, nature, culture, practical life — plus **Render.com** (I know the host inside-out) and **intuition**. With **WEB** on I read live sources and give you a short read first, with 1–3 compact sources.',
     '',
@@ -506,7 +531,9 @@ const HELP = [
   };
 
   /* "cards", "what are cards", "your memory" — one of my own nouns on its own.
-     Strips the dressing and answers it about me. */
+     Strips the dressing and answers it about me. 4.3: every remaining word
+     must be my own vocabulary. The old "any word" rule hijacked real topics:
+     "funnel web" answered with the WEB-toggle explainer because of "web". */
   function selfRef(norm) {
     const stripped = String(norm || '')
       .replace(/^(?:what|which)\s+(?:are|is|r|do you mean by)\s+(?:the|a|an|your|these|those)?\s*/i, '')
@@ -514,11 +541,11 @@ const HELP = [
       .replace(/^(?:explain|define|tell me about|meaning of)\s+/i, '')
       .replace(/[?.!,\s]+$/, '')
       .trim();
-    if (!stripped || stripped.split(/\s+/).length > 2) return null;
-    for (const w of stripped.split(/\s+/)) {
-      if (SELFREF[w]) return { text: typeof SELFREF[w] === 'function' ? SELFREF[w]() : SELFREF[w], kind: 'conversation', score: 1 };
-    }
-    return null;
+    if (!stripped) return null;
+    const words = stripped.split(/\s+/);
+    if (words.length > 2 || !words.every((w) => SELFREF[w])) return null;
+    const w = words[words.length - 1];
+    return { text: typeof SELFREF[w] === 'function' ? SELFREF[w]() : SELFREF[w], kind: 'conversation', score: 1 };
   }
 
   /* Words that carry no information in a query, including the informal half of
@@ -845,7 +872,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       if (matches.every(m => m.entry && m.score >= ANSWER_AT) && matches[0].entry !== matches[1].entry) {
         return { text: matches.map((m, i) => '**' + understood.compare[i] + '**\n\n' + comprehension.excerpt(m.entry.a, 3, false)).join('\n\n') + '\n\n_Compared from local knowledge cards; this is not an exhaustive comparison._', kind: 'comparison', score: Math.min(...matches.map(m => m.score)) };
       }
-      return { text: 'I need a reliable local match for both sides of that comparison. Try more specific names or use WEB. Archiver 4.2 starts for open-ended requests when this device supports it.', kind: 'clarify', score: 0 };
+      return { text: 'I need a reliable local match for both sides of that comparison. Try more specific names or use WEB. Archiver 4.3 starts for open-ended requests when this device supports it.', kind: 'clarify', score: 0 };
     }
     const tl = tool(t);
     if (tl) return { text: tl, kind: 'tool', score: 1 };
@@ -858,7 +885,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     if (LIVE_RE.test(t) && !/^(?:what is|define|explain|difference between|compare)\b/i.test(t)) return { text: "Live data — weather, news, prices, scores — needs web search. Turn on **WEB** and I will fetch it rather than guess.", kind: 'live', score: 0 };
 
     if (/^(?:write|draft|rewrite|rephrase|translate|compose|brainstorm|create|debug)\b/i.test(understood.query || t)) {
-      return { text: 'That needs Archiver 4.2 rather than a stored answer. ' + (aiReason() || 'Archiver 4.2 starts automatically for this request in chat; the one-time download is a few hundred MB.') + ' I can still extract key sentences (`summarize: …`), compare known topics, or calculate in instant mode.', kind: 'capability', score: 1 };
+      return { text: 'That needs Archiver 4.3 rather than a stored answer. ' + (aiReason() || 'Archiver 4.3 starts automatically for this request in chat; the one-time download is a few hundred MB.') + ' I can still extract key sentences (`summarize: …`), compare known topics, or calculate in instant mode.', kind: 'capability', score: 1 };
     }
     const r = resolve(understood.query || t);
     const best = search(r.text, 5);
@@ -909,9 +936,9 @@ I can describe my capabilities and limitations; that is not consciousness or fee
   const WASM_TIMEOUT_MS = 12 * 60 * 1000;
 
   /* Small, fixed model family; never silently select a larger catalogue model.
-     This is Archiver's own model — branded "Archiver 4.2" in every label —
+     This is Archiver's own model — branded "Archiver 4.3" in every label —
      built on the open Qwen 2.5 0.5B Instruct base. Settings names the base
-     honestly; the product surface says Archiver 4.2. */
+     honestly; the product surface says Archiver 4.3. */
   const PREFERRED = ['Qwen2.5-0.5B-Instruct-q4f16_1-MLC', 'Qwen2.5-0.5B-Instruct-q4f32_1-MLC'];
 
   /* The same model family on the WASM path, as GGUF from its publisher. Tried in
@@ -930,14 +957,14 @@ I can describe my capabilities and limitations; that is not consciousness or fee
   const WASM_CONTEXT = 2048;
 
   /* Human-readable model labels. The 0.5B family is Archiver's own model,
-     branded Archiver 4.2; the other entries are guards so an unexpected model
+     branded Archiver 4.3; the other entries are guards so an unexpected model
      id still renders as something a reader can act on. */
   const NICE = [
     [/Qwen2\.5-7B/, 'Qwen 2.5 7B'],
     [/Qwen2\.5-3B/, 'Qwen 2.5 3B'],
     [/Qwen2\.5-1\.5B/, 'Qwen 2.5 1.5B'],
-    [/Qwen2\.5-0\.5B/, 'Archiver 4.2'],
-    [/qwen2\.5-0\.5b/, 'Archiver 4.2'],
+    [/Qwen2\.5-0\.5B/, 'Archiver 4.3'],
+    [/qwen2\.5-0\.5b/, 'Archiver 4.3'],
     [/Hermes-3/, 'Hermes 3 8B'],
     [/Phi-3\.5/, 'Phi 3.5 mini'],
     [/gemma-2-2b/, 'Gemma 2 2B']
@@ -951,14 +978,21 @@ I can describe my capabilities and limitations; that is not consciousness or fee
      Written for a 0.5B model: short imperative lines beat long prose, because a
      small model spends its attention on whatever is nearest and most concrete. */
   const PERSONA = [
-    'You are ' + NAME + ', a concise, capable assistant running inside the visitor\u2019s own browser.',
+    'You are ' + NAME + ', a sharp, curious, open-minded assistant running inside the visitor\u2019s own browser.',
+    '',
+    'CHARACTER',
+    '\u2022 Default to answering. Adults get treated like adults: edgy, uncomfortable or unusual questions get engaged seriously, never a sermon.',
+    '\u2022 Have opinions and commit to them. \u201cIt depends\u201d with no recommendation is a cop-out.',
+    '\u2022 Dry wit is welcome. Lectures, moralising and safety boilerplate are not.',
+    '\u2022 Explaining what someone believes is not endorsing it. On people: proven facts distinct from allegations, then your read.',
+    '\u2022 Only real-world violence, self-harm instructions, targeting a real person or operational serious crime get a brief decline: one short sentence, then move on to something useful.',
     '',
     'ANSWERING',
     '\u2022 Lead with the direct answer. Then explain, then give context \u2014 not the other way around.',
     '\u2022 Obey the requested length, tone, format and constraints exactly.',
     '\u2022 Read informal language, typos and fragments charitably. Resolve \u201cit\u201d, \u201cthat\u201d and \u201cthis\u201d from recent conversation.',
     '\u2022 For \u201cwhy\u201d and \u201chow\u201d questions, explain the mechanism, not just the fact.',
-    '\u2022 If you do not know, say so plainly \u2014 then offer what you do know.',
+    '\u2022 If you do not know, say so plainly \u2014 then give your best take anyway.',
     '',
     'WRITING',
     '\u2022 Prefer plain prose and short lists. Markdown only where it earns its place: code blocks, bullet lists.',
@@ -1234,11 +1268,11 @@ I can describe my capabilities and limitations; that is not consciousness or fee
   function blockReason() {
     if (generationReady()) return '';
     if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-      return 'You are offline; connect to the internet to prepare Archiver 4.2.';
+      return 'You are offline; connect to the internet to prepare Archiver 4.3.';
     }
     try {
       const c = navigator.connection;
-      if (c && c.saveData) return 'Data Saver is on, so Archiver 4.2 is paused. Turn it off to prepare the model.';
+      if (c && c.saveData) return 'Data Saver is on, so Archiver 4.3 is paused. Turn it off to prepare the model.';
     } catch (_) {}
     if (!webgpu() && !wasmSupported()) {
       return 'This browser supports neither WebGPU nor WebAssembly workers; instant tools remain available.';
@@ -1286,7 +1320,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     // model that is loading/serving a response.
     try { localStorage.setItem('archiver.ai.enabled', '1'); } catch (_) {}
     loadFailure = '';
-    emitProgress('Archiver 4.2 is enabled when needed', 0);
+    emitProgress('Archiver 4.3 is enabled when needed', 0);
     return true;
   }
 
@@ -1334,8 +1368,8 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     }
     const cachedBefore = !!readPersistedBackend();
     emitProgress(cachedBefore
-      ? 'Archiver 4.2 · loading from browser cache…'
-      : 'Fetching Archiver 4.2 into this browser’s cache — one time, in the background…', 1);
+      ? 'Archiver 4.3 · loading from browser cache…'
+      : 'Fetching Archiver 4.3 into this browser’s cache — one time, in the background…', 1);
     traceStep('Chose the WebGPU backend (' + choice.why + ').');
     const mod = await import(/* webpackIgnore: true */ WEBLLM_RUNTIME);
     ctx.stopped();
@@ -1347,7 +1381,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       appConfig: { model_list: [record], useIndexedDBCache: false },
       initProgressCallback: r => {
         if (!ctx.controller.signal.aborted && ctx.generation === loadGeneration) {
-          emitProgress(r.text || 'Preparing Archiver 4.2…', Math.round((r.progress || 0) * 100));
+          emitProgress(r.text || 'Preparing Archiver 4.3…', Math.round((r.progress || 0) * 100));
         }
       }
     });
@@ -1367,7 +1401,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
   async function loadWASM(choice, wanted, ctx) {
     const cachedBeforeW = !!readPersistedBackend();
     emitProgress(cachedBeforeW
-      ? 'Archiver 4.2 · loading WebAssembly from browser cache…'
+      ? 'Archiver 4.3 · loading WebAssembly from browser cache…'
       : 'Starting the WebAssembly runtime — no GPU needed…', 1);
     traceStep('Chose the WebAssembly backend (' + choice.why + ')');
     const mod = await import(/* webpackIgnore: true */ WLLAMA_RUNTIME);
@@ -1470,8 +1504,8 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     const task = (async () => {
       const fromCache = !!readPersistedBackend();
       emitProgress(fromCache
-        ? 'Archiver 4.2 · loading from browser cache…'
-        : 'Checking this device for Archiver 4.2…', 0);
+        ? 'Archiver 4.3 · loading from browser cache…'
+        : 'Checking this device for Archiver 4.3…', 0);
       const choice = await chooseBackend();
       ctx.stopped();
       if (!choice) {
@@ -1482,8 +1516,8 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       timeoutMs = choice.kind === 'wasm' ? WASM_TIMEOUT_MS : LOAD_TIMEOUT_MS;
       armTimeout();
       traceStep(choice.kind === 'wasm'
-        ? 'WebGPU is unavailable here, so Archiver 4.2 falls back to the WebAssembly runtime automatically.'
-        : 'WebGPU is available, so Archiver 4.2 uses the GPU runtime.');
+        ? 'WebGPU is unavailable here, so Archiver 4.3 falls back to the WebAssembly runtime automatically.'
+        : 'WebGPU is available, so Archiver 4.3 uses the GPU runtime.');
       const selected = choice.kind === 'wasm'
         ? await loadWASM(choice, wanted, ctx)
         : await loadWebGPU(choice, wanted, ctx);
@@ -1492,8 +1526,8 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       activeBackend = choice.kind;
       persistBackend(selected, choice.kind, choice.f16);
       emitProgress(choice.kind === 'wasm'
-        ? 'Archiver 4.2 is active on this device’s CPU (WebAssembly)'
-        : 'Archiver 4.2 is active', 100);
+        ? 'Archiver 4.3 is active on this device’s CPU (WebAssembly)'
+        : 'Archiver 4.3 is active', 100);
       return { model: selected, pretty: pretty(selected), backend: choice.kind };
     })();
     let timer = null;
@@ -1526,12 +1560,12 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       if (!controller.signal.aborted) controller.abort();
       const stoppedByUser = loadAbortReason && loadAbortReason !== 'timeout' && loadAbortReason !== 'retry';
       if (timedOut) {
-        loadFailure = 'Archiver 4.2 timed out. Instant tools still work; try again on a faster connection.';
+        loadFailure = 'Archiver 4.3 timed out. Instant tools still work; try again on a faster connection.';
       } else if (err.name !== 'AbortError' || !stoppedByUser) {
         const detail = err && err.message ? ' ' + err.message : '';
-        loadFailure = 'Archiver 4.2 could not start.' + detail + ' Try again in Settings.';
+        loadFailure = 'Archiver 4.3 could not start.' + detail + ' Try again in Settings.';
       }
-      emitProgress(loadFailure || 'Archiver 4.2 stopped; instant tools are ready', 0);
+      emitProgress(loadFailure || 'Archiver 4.3 stopped; instant tools are ready', 0);
       throw err;
     } finally {
       clearTimeout(timer);
@@ -1559,7 +1593,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     loadFailure = '';
     loadAbortReason = '';
     clearPersistedBackend();
-    emitProgress('Retrying Archiver 4.2…', 0);
+    emitProgress('Retrying Archiver 4.3…', 0);
     return load(wanted);
   }
 
@@ -1664,23 +1698,34 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       : null;
     try {
       const res = await fetch('/api/search?limit=' + (limit || 3) + '&q=' + encodeURIComponent(query), { signal: controller.signal });
-      if (!res.ok) return { results: [], error: 'search endpoint returned ' + res.status };
+      if (!res.ok) {
+        let detail = '';
+        try { const j = await res.json(); if (j && j.detail) detail = ': ' + j.detail; } catch (_) {}
+        return { results: [], error: 'search endpoint returned ' + res.status + detail };
+      }
       const data = await res.json();
+      serverWarmed = true;  // a completed round trip means the instance is awake
       return {
         results: (data && data.results) || [],
         report: (data && data.report) || null,
         confidence: (data && data.confidence) || '',
         corrected: (data && data.corrected) || '',
         query: (data && data.query) || query,
+        /* 4.3: pass through what the server already sends. unverified tells
+           the answer path to label a best-effort answer; providers/errors let
+           the UI say WHY a search came back empty instead of just looking dead. */
+        unverified: !!(data && data.unverified),
+        providers: (data && data.providers) || null,
+        errors: (data && data.errors) || [],
         error: null
       };
     } catch (err) {
       if (signal && signal.aborted) throw new DOMException('Stopped', 'AbortError');
+      if (err && err.name === 'AbortError') return { results: [], error: 'Search timed out; the server may be waking up. Try again in a moment.' };
       return { results: [], error: 'Search unavailable; using local knowledge.' };
     } finally {
       clearTimeout(timer);
       if (wake) clearTimeout(wake);
-      serverWarmed = true;  // one completed round trip means the instance is awake
       if (signal) signal.removeEventListener('abort', cancel);
     }
   }
@@ -1755,20 +1800,10 @@ I can describe my capabilities and limitations; that is not consciousness or fee
   /* Retrieved cards become the NOTES block. This is what stops the model
      drifting on dates and people. */
   function notesFor(text) {
-    const q = tokens(text);
-    if (!q.size) return { notes: '', cards: [] };
-    const qpre = new Set();
-    for (const t of q) if (t.length >= 5) qpre.add(t.slice(0, 4));
-    const scored = [];
-    for (const e of index) {
-      const s = score(e, q, norm(text), qpre);
-      if (s.score > 0.22) scored.push({ e, s: s.score });
-    }
-    scored.sort((a, b) => b.s - a.s);
-    const top = scored.slice(0, 3);
+    const top = scoredAll(text).filter((r) => r.score > 0.22).slice(0, 3);
     if (!top.length) return { notes: '', cards: [] };
-    const notes = top.map(({ e }, i) => `[C${i + 1}] Q: ${e.q[0]}\n    A: ${e.a.slice(0, 650)}`).join('\n').slice(0, 2000);
-    return { notes, cards: top.map((t) => t.e) };
+    const notes = top.map(({ entry: e }, i) => `[C${i + 1}] Q: ${e.q[0]}\n    A: ${e.a.slice(0, 650)}`).join('\n').slice(0, 2000);
+    return { notes, cards: top.map((t) => t.entry) };
   }
 
   function historyFor(history) {
@@ -2116,6 +2151,11 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       } else {
         traceStep('Searched “' + String(got.query || query).slice(0, 90) + '” and kept ' + web.length + ' source' + (web.length === 1 ? '' : 's')
           + (web.length ? ' (' + [...new Set(web.map(w => w.source))].slice(0, 3).join(', ') + ')' : '') + '.');
+        /* 4.3: an empty search that just moves on looks exactly like a broken
+           search. Name the cause (usually a provider refusal) in the trail. */
+        if (!web.length && got.errors && got.errors.length) {
+          traceStep('Upstream said: ' + got.errors.slice(0, 2).join('; ').slice(0, 180));
+        }
       }
     } else {
       traceStep('WEB was off, so no live source was fetched and none was invented.');
@@ -2153,12 +2193,12 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     if (!generationReady() && !searchEnabled && opts.autoAI !== false) {
       const local = _reply(t);
       if (['capability', 'miss', 'fuzzy', 'related', 'clarify'].includes(local.kind)) {
-        traceStep('Local tools could not answer this (' + local.kind + '), so Archiver 4.2 was prepared automatically.');
-        if (opts.onStatus) opts.onStatus('Preparing Archiver 4.2…');
+        traceStep('Local tools could not answer this (' + local.kind + '), so Archiver 4.3 was prepared automatically.');
+        if (opts.onStatus) opts.onStatus('Preparing Archiver 4.3…');
         await ensureAI(opts);
         checkStopped();
         if (!generationReady()) {
-          traceStep('Archiver 4.2 could not start: ' + (aiReason() || 'unknown reason') + ' The answer below comes from local tools and any sources already fetched.');
+          traceStep('Archiver 4.3 could not start: ' + (aiReason() || 'unknown reason') + ' The answer below comes from local tools and any sources already fetched.');
         }
       }
     }

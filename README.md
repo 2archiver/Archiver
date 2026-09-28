@@ -1,8 +1,29 @@
-# Archiver 4.2
+# Archiver 4.3
 
-**An everyday assistant with instant local tools, open-ended answers from Archiver 4.2 — our own model — and live web search when you ask.**
+**An everyday assistant with instant local tools, open-ended answers from Archiver 4.3 — our own model — and live web search when you ask.**
 
 No account or model-provider API key. Two inference runtimes are bundled with the website — WebGPU where a browser offers it, WebAssembly where it does not — and model assets are fetched and cached automatically in the browser. No model server, deployment-time npm step, or model weights in Git.
+
+## New in 4.3 — resilient search, open-minded persona, OLED theme
+
+- **Search that survives provider blocks.** New DuckDuckGo-HTML and
+  Wikipedia-OpenSearch legs, a second-chance round when every primary hit
+  fails the relevance bar, a browser-UA retry when Bing refuses the first
+  request, and a Bing parser that tolerates markup shifts.
+- **One-word queries score honestly.** Relevance for a lone query word no
+  longer clears the bar with zero overlap — the bug that let junk stubs gate
+  as answers and starved the fallbacks.
+- **Empty searches explain themselves.** The Thought-process panel names the
+  upstream cause (a 403, a cooldown) instead of silently moving on.
+- **Open-minded persona.** Committed takes, edgy questions engaged directly,
+  brief declines only for genuine real-world harm — no lectures, no sermons.
+- **69 new knowledge cards (1,515 total)** — strongmen and dictators,
+  the ancient world, the Middle East, science, Australia, tech, culture.
+- **OLED true-black theme**, applied before first paint with matching browser
+  chrome. Faster retrieval, gzipped assets (~4x smaller), deferred scripts.
+- **Bug fixes:** theme-following diagnostics, styled memory cards/changelog/
+  session rows/typing indicator/toasts, retry keeps full history, and
+  "funnel web" no longer opens the WEB explainer.
 
 ## New in 4.2 — capability checks, diagnostics, hardening
 
@@ -203,7 +224,7 @@ constraint it serves.
 | `forget: question` | Removes a taught card (not a memory-bank entry) |
 | `help` | Lists commands |
 
-The bundled corpus has 1,329 cards across history, science, language, technology, and everyday topics. `cards` reports the actual count, including taught cards. Coverage and depth vary. Weak matches are labeled; open-ended requests prepare browser generation when supported, rather than substituting an unrelated card. If browser generation cannot start, the response explains the limitation.
+The bundled corpus has 1,515 cards across history, science, language, technology, Australia and everyday topics. `cards` reports the actual count, including taught cards. Coverage and depth vary. Weak matches are labeled; open-ended requests prepare browser generation when supported, rather than substituting an unrelated card. If browser generation cannot start, the response explains the limitation.
 
 **WEB** enables live search. An explicit request such as `search …` also enables search for that turn. Greetings, exact tools, and pasted-text extraction do not need a search request. Search failures fall back to local knowledge. Citations are evidence to inspect, not guarantees of truth.
 
