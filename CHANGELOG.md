@@ -1,3 +1,13 @@
+## 4.4 — 2026-09-28
+
+### Monochrome redesign, Safari auto-load, calmer diagnostics
+
+- **New mobile-first UI.** A dark monochrome glass header and composer, wave greeting, compact mono labels, and a high-contrast send button make the interface calmer and easier to scan.
+- **Safari loads Qwen automatically.** Safari now waits until the page is visible, warms the cached model without a Settings detour, and retries one stale-cache failure automatically.
+- **No storage bubble.** Server database resets are recorded quietly for diagnostics instead of interrupting the user with a white pop-up.
+- **Simpler diagnostics.** A plain-English checklist appears first; the full technical report remains available when needed.
+- **Shorter Settings copy.** Long model, theme, memory, and diagnostics explanations are reduced to concise guidance.
+
 ## 4.3 — 2026-09-28
 
 ### Resilient search, open-minded persona, OLED theme, more topics
