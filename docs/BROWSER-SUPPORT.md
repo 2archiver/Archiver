@@ -1,8 +1,9 @@
 # Browser support matrix (Archiver 4.3)
 
 Archiver picks a runtime per device at the moment a request first needs the
-model. It never starts a model worker on page open (the Safari hotfix rule
-still applies everywhere).
+model. It does not start a model worker on page open in Safari. On other browsers,
+only a previously cached model is restored after first paint; new downloads
+wait for a request.
 
 **Runtime choice (4.2, unchanged in 4.3):** WebLLM on WebGPU only when *all* of these pass,
 otherwise wllama (llama.cpp → WebAssembly, CPU):
