@@ -1,7 +1,7 @@
 {
-  "name": "Archiver 5 — Your everyday assistant",
+  "name": "Archiver 5.2 — Your everyday assistant",
   "short_name": "Archiver",
-  "description": "Archiver 5 — our own model, running directly in your browser. Instant local tools, open-ended answers on WebGPU or Safari-optimised WebAssembly, and live web when you ask. Every answer shows what it did.",
+  "description": "Archiver 5.2 — our own model, running directly in your browser. Instant local tools, open-ended answers on WebGPU or Safari-optimised WebAssembly, and live web when you ask. Every answer shows what it did.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

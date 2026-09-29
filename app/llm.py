@@ -1,6 +1,6 @@
 """LLM providers for Archiver.
 
-Archiver 5.1 runs its own model in the visitor's browser (WebGPU / WebAssembly).
+Archiver 5.2 runs its own model in the visitor's browser (WebGPU / WebAssembly).
 Server-side `llm.py` supports:
   * mock    — offline echo provider used for tests and for demoing the
               memory pipeline without an API key.
@@ -19,7 +19,7 @@ from typing import AsyncIterator
 import httpx
 
 DEFAULT_MODELS = {
-    "local": "Archiver 5.1 (in-browser)",
+    "local": "Archiver 5.2 (in-browser)",
     "openai": "gpt-4o-mini",
     "mock": "archiver-mock-1",
 }
