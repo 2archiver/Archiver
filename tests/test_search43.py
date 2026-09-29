@@ -156,7 +156,7 @@ def test_app_shell_is_gzipped_but_vendor_and_streams_are_untouched(client):
     # Explicit refusal is respected.
     plain = client.get("/", headers={"Accept-Encoding": "gzip;q=0"})
     assert plain.headers.get("content-encoding") != "gzip"
-    assert "Archiver 5" in plain.text
+    assert "Archiver 5.1" in plain.text
     # The vendor routes keep their own single Vary header.
     vendor = client.get("/static/vendor/wllama-3.6.1.js", headers={"Accept-Encoding": "gzip"})
     assert vendor.headers["vary"] == "Accept-Encoding"
@@ -166,7 +166,10 @@ def test_shell_carries_oled_theme_and_fixed_styles(client):
     page = client.get("/").text
     assert 'data-theme="oled"' in page
     assert '<option value="oled">OLED — true black</option>' in page
-    for cls in (".typing-dots", ".cursor-blink", ".mem-card", ".cl-entry",
-                ".toast.err", ".dot.on", ".recall-item"):
+    for cls in (".cursor-blink", ".mem-card", ".cl-entry",
+                ".toast.err", ".dot.on", ".recall-item", ".think-live"):
         assert cls in page, cls
+    # 5.1: one loading indicator. The bubble's bouncing dots are gone; the
+    # status line that names the step actually running is the only one.
+    assert ".typing-dots" not in page
     assert 'defer></script>' in page or 'defer>' in page

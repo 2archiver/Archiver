@@ -1,8 +1,41 @@
-# Archiver 4.3
+# Archiver 5.1
 
-**An everyday assistant with instant local tools, open-ended answers from Archiver 4.3 — our own model — and live web search when you ask.**
+**An everyday assistant with instant local tools, open-ended answers from Archiver 5.1 — our own model — and live web search when you ask.**
 
 No account or model-provider API key. Two inference runtimes are bundled with the website — WebGPU where a browser offers it, WebAssembly where it does not — and model assets are fetched and cached automatically in the browser. No model server, deployment-time npm step, or model weights in Git.
+
+## New in 5.1 — no blank answers, cached replies, ten Sopranos cards
+
+- **Blank answers are gone.** A reply that would have rendered as nothing — an
+  empty model turn, a truncated first delta, a cancelled request — is now
+  detected and recovered from: the stream is retried from the last good token,
+  and if the model still produces nothing the answer says so plainly instead of
+  leaving an empty bubble. Both the offline and the live-web paths are covered.
+- **Repeats are instant.** Generated answers are cached in the browser, so
+  asking the same thing again is answered from cache rather than paying prefill
+  and decode a second time. Instant (non-model) answers are not cached.
+- **The composer warms up while you type.** As soon as there is enough text to
+  be worth answering, the recall that feeds a generated reply is prepared in the
+  background, so the first token arrives sooner.
+- **Settings apply as you change them.** The Apply button is gone because it
+  never did anything: the persona saves as you type (debounced) and the toggles
+  and search count save on change, with a small "Saved" confirmation. Done and
+  Escape still flush a pending edit.
+- **One loading indicator, not two.** The bouncing dots and the live status
+  line were showing at the same time; the status line is the only one now.
+- **Cleaner start page.** The emblem above the greeting is gone (the mark stays
+  in the sidebar and the top bar), and the six example questions are new —
+  a Sopranos finale question, a live-web question, a Napoleon vs Alexander
+  comparison, a rate-limit decorator request, a notes summary, and a
+  calculation.
+- **Ten new knowledge cards (1,526 total).** The Sopranos — the cast, the
+  episodes, the finale's ending, the locations, the influence.
+- **Safari/iPhone tuning.** Fields no longer auto-resize text, the sidebar and
+  memory lists contain their own rubber-banding instead of dragging the shell,
+  and the conversation thread opts out of Safari's scroll anchoring so a
+  growing row cannot fight the "keep the newest line visible" logic during a
+  stream. The existing layout-viewport shell sizing, keyboard tracking,
+  safe-area insets and 16px fields are unchanged.
 
 ## New in 4.3 — resilient search, open-minded persona, OLED theme
 
@@ -224,7 +257,7 @@ constraint it serves.
 | `forget: question` | Removes a taught card (not a memory-bank entry) |
 | `help` | Lists commands |
 
-The bundled corpus has 1,515 cards across history, science, language, technology, Australia and everyday topics. `cards` reports the actual count, including taught cards. Coverage and depth vary. Weak matches are labeled; open-ended requests prepare browser generation when supported, rather than substituting an unrelated card. If browser generation cannot start, the response explains the limitation.
+The bundled corpus has 1,526 cards across history, science, language, technology, Australia and everyday topics. `cards` reports the actual count, including taught cards. Coverage and depth vary. Weak matches are labeled; open-ended requests prepare browser generation when supported, rather than substituting an unrelated card. If browser generation cannot start, the response explains the limitation.
 
 **WEB** enables live search. An explicit request such as `search …` also enables search for that turn. Greetings, exact tools, and pasted-text extraction do not need a search request. Search failures fall back to local knowledge. Citations are evidence to inspect, not guarantees of truth.
 
@@ -236,12 +269,12 @@ download button. Greetings, calculations, stored-topic answers, and text
 extraction do not trigger an expensive model download.
 
 - **Two bundled runtimes, chosen automatically:** `web/vendor/web-llm-0.2.80.js` when the browser exposes a usable WebGPU adapter, otherwise `web/vendor/wllama-3.6.1.js` plus `wllama-3.6.1.wasm` on the CPU. Both are unmodified upstream builds, shared by the page and worker, served same-origin, precompressed, with long-lived versioned caching, their licenses, and checksum-verified reproduction scripts. The WASM binary is served as `application/wasm` so streaming compilation works. No inference-library CDN dependency at runtime.
-- **Compact model:** Qwen2.5 **0.5B** Instruct Q4 on both paths. The GPU path chooses f16 or f32 by adapter capability; the WASM path uses a GGUF of the same model, tried from three upstream artifacts in order so one renamed file cannot disable the fallback. It never tries a larger model.
+- **Compact model:** the **Qwen 3 0.6B** family (Archiver 5.1) at Q4 on both paths. The GPU path chooses f16 or f32 by adapter capability; the WASM path uses a GGUF of the same model, tried from three upstream artifacts in order so one renamed file cannot disable the fallback. It never tries a larger model.
 - **Automatic assets:** the first generative request fetches weights directly from the upstream model/library hosts, not through Render — a few hundred MB on GPU, ~490 MB of GGUF on CPU. Each runtime caches them in browser storage and reuses them when storage permits. Clearing browser data or cache eviction can require another transfer.
 - **Device requirements:** HTTPS (or localhost) and enough free memory. The GPU path additionally needs WebGPU and sufficient GPU memory; the WASM path needs neither, only WebAssembly workers, which every current browser has. Without `Cross-Origin-Opener-Policy`/`Cross-Origin-Embedder-Policy` headers, wllama detects that and runs single-threaded — intended here, since COEP would put every cross-origin model fetch behind a CORP requirement.
 - **Graceful fallback:** offline, Data Saver, or initialization errors leave instant tools available and say why. A missing or unusable GPU is no longer a dead end — it selects the WASM runtime. Initialization is bounded, failed initialization is isolated, and **Try browser generation again** starts a fresh worker. Stop cancels initialization as well as generation.
 - **Browser generation:** always enabled and started on demand for open-ended tasks. Settings shows which runtime is enabled, loading, active, or unavailable; a retry action is available when initialization fails. The first-use model download requires a network connection. Initialization is allowed up to eight minutes on mobile Safari's GPU path and twelve on the WASM path, which compiles an 8 MB module before it can start on the weights.
-- **iPhone/Safari:** safe-area insets, layout-viewport shell sizing with the keyboard tracked separately (`--kb-height`, `kb-open`, `kb-cramped`), document-scroll restoration only on a genuine keyboard close, pinch-zoom and toolbar-collapse guards, frame-batched and debounced measurement, overlays that make room for the keyboard, 16px fields on touch, storage guards, and CPU generation when iOS Safari does not expose usable WebGPU. Add Archiver to Home Screen for standalone mode. The logic lives in `web/archiver-viewport.js` and is tested in `tests/viewport.js`.
+- **iPhone/Safari:** safe-area insets, layout-viewport shell sizing with the keyboard tracked separately (`--kb-height`, `kb-open`, `kb-cramped`), document-scroll restoration only on a genuine keyboard close, pinch-zoom and toolbar-collapse guards, frame-batched and debounced measurement, overlays that make room for the keyboard, 16px fields on touch, storage guards, text-size/overscroll/scroll-anchoring fixes, and CPU generation when iOS Safari does not expose usable WebGPU. Add Archiver to Home Screen for standalone mode. The logic lives in `web/archiver-viewport.js` and is tested in `tests/viewport.js`.
 - **Bounded context:** this is a small model with a 4K context on GPU and 2K on CPU. Very long generation requests may need splitting, and reference notes are dropped before your request is ever truncated. History and notes are bounded rather than pretending to provide unlimited recall.
 
 The bundled runtimes are imported in Chromium in the browser tests. Weight

@@ -20,11 +20,20 @@ async function fixture(options = {}) {
     events: {}, adapterCalls: 0, wasm: { attempts: 0, urls: [], exited: 0 }
   };
   const chunks = options.chunks || ['A generated ', 'answer.'];
+  /* A queue of chunk sets: each inference call takes the next one, so a test can
+     make the first pass blank and the retry succeed (5.1's recovery path). */
+  const nextChunks = () => {
+    if (options.chunkQueue && options.chunkQueue.length) {
+      return options.chunkQueue.length > 1 ? options.chunkQueue.shift() : options.chunkQueue[0];
+    }
+    return chunks;
+  };
   const model = {
     interruptGenerate() { stats.interrupted++; },
     chat: { completions: { create: async args => {
       stats.payload = args;
-      return (async function* () { for (const c of chunks) yield { choices: [{ delta: { content: c } }] }; })();
+      const set = nextChunks();
+      return (async function* () { for (const c of set) yield { choices: [{ delta: { content: c } }] }; })();
     } } }
   };
   class WllamaStub {
@@ -39,7 +48,7 @@ async function fixture(options = {}) {
     }
     async createChatCompletion(opts) {
       stats.wasm.payload = opts;
-      for (const c of chunks) opts.onData({ choices: [{ delta: { content: c }, finish_reason: null }] });
+      for (const c of nextChunks()) opts.onData({ choices: [{ delta: { content: c }, finish_reason: null }] });
     }
     async exit() { stats.wasm.exited++; }
   }
@@ -116,8 +125,8 @@ const GENERATIVE = 'write a poem about rain';
 (async () => {
   /* ---------------- WebGPU backend (unchanged fast path) ---------------- */
   const { A, stats, storage } = await fixture();
-  assert.equal(A.version, '5');
-  assert.equal(A.name, 'Archiver 5');
+  assert.equal(A.version, '5.1');
+  assert.equal(A.name, 'Archiver 5.1');
   assert.equal(Array.from(A.status().backendCandidates).join(','), 'webgpu,wasm', 'both runtimes are available here');
   for (const q of ['hello', '2+2', 'compare Python and JavaScript', 'summarize: One. Two.']) await A.chat(q, []);
   assert.equal(stats.imports.length, 0, 'instant tasks do not download a model');
@@ -440,6 +449,24 @@ const GENERATIVE = 'write a poem about rain';
       assert.equal(safari.A.mode(), 'neural', 'restored page can initialize fresh workers');
     }
   }
+  /* 5.1 — iPhone warms on intent, not on page load. */
+  const IPHONE_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 '
+    + '(KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1';
+  const iphone = await fixture({ ua: IPHONE_UA, cached: true, noGPU: true });
+  assert.equal(await iphone.A.warm(), false, 'a Safari tab still does not warm during navigation');
+  assert.equal(iphone.stats.imports.length, 0, 'and fetches nothing yet');
+  assert.equal(await iphone.A.prepare('2+2'), false, 'a calculation needs no model');
+  assert.equal(await iphone.A.prepare('hi'), false, 'a greeting needs no model');
+  assert.equal(iphone.stats.imports.length, 0, 'still nothing fetched');
+  assert.equal(await iphone.A.prepare('Compare the causes of the first world war in detail'), true,
+    'an open-ended question starts the already-cached load');
+  assert.ok(iphone.stats.imports.length > 0, 'the runtime comes from our own origin');
+  assert.equal(iphone.A.mode(), 'neural', 'and the model ends up serving');
+  /* A first visit on the same device still waits: no surprise download. */
+  const firstVisit = await fixture({ ua: IPHONE_UA, noGPU: true });
+  assert.equal(await firstVisit.A.prepare('Compare the causes of the first world war in detail'), false,
+    'a first visit does not download on a metered connection');
+  assert.equal(firstVisit.stats.imports.length, 0);
   const hidden = await fixture({ hidden: true });
   assert.equal(await hidden.A.warm(), false);
   assert.equal(hidden.stats.imports.length, 0);
@@ -525,6 +552,64 @@ const GENERATIVE = 'write a poem about rain';
   const fabricatedOffline = await fixture({ chunks: ['A study confirms this [1].'] });
   await fabricatedOffline.A.load();
   assert.match(await fabricatedOffline.A.chat('Explain the object', []), /withheld/);
+  /* 5.1 — an empty model reply is recovered, never rendered as a blank bubble. */
+  for (const chunks of [['   '], ['\n\n\n'], ['…'], []]) {
+    const blank = await fixture({ chunks });
+    await blank.A.load();
+    let visible = '';
+    const answer = await blank.A.chat(GENERATIVE, [], { onDelta: d => visible += d });
+    assert.ok(answer.trim().length > 20, 'an empty model reply still produces text');
+    assert.match(answer, /returned no text/);
+    assert.equal(visible, answer, 'and the reader is shown exactly that text');
+    assert.equal(blank.A.trace().route, 'generated');
+  }
+  /* …and when a retry recovers, the recovered text is the answer. */
+  const recovers = await fixture({ chunkQueue: [['   '], ['A real answer about rain.']] });
+  await recovers.A.load();
+  let recoveredVisible = '';
+  const recovered = await recovers.A.chat(GENERATIVE, [], { onDelta: d => recoveredVisible += d });
+  assert.equal(recovered, 'A real answer about rain.', 'the compact retry produced the answer');
+  assert.equal(recoveredVisible, recovered);
+  assert.match(recovers.A.trace().steps.join(' '), /Retrying once with a compact direct-answer prompt/,
+    'and the trail says the first pass was empty and a retry ran');
+
+  /* 5.1 — the answer cache serves a repeat without running the model again. */
+  const cache = await fixture({ chunks: ['Rain falls softly on the window and the day holds still for a moment.'] });
+  await cache.A.load();
+  const first = await cache.A.chat('write a short line about rain', [], { onDelta: () => {} });
+  const callsBefore = cache.stats.attempts;
+  const payloadsBefore = cache.stats.payload;
+  let cachedVisible = '';
+  const secondAnswer = await cache.A.chat('Write a short line about rain.', [], { onDelta: d => cachedVisible += d });
+  assert.equal(secondAnswer, first, 'the same question returns the stored answer');
+  assert.equal(cachedVisible, secondAnswer, 'and streams it to the reader');
+  assert.equal(cache.stats.payload, payloadsBefore, 'no inference ran on the cache hit');
+  assert.equal(cache.A.trace().route, 'generated-cache');
+  assert.match(cache.A.trace().runtime, /cache/);
+  assert.equal(cache.A.status().cachedAnswers, 1, 'one entry is stored');
+  assert.equal(callsBefore, cache.stats.attempts, 'the model load was not repeated either');
+  /* A different persona is a different answer, so it must miss and re-run —
+     the stub always returns the same text, so the observable difference is that
+     inference ran again and a second entry was stored. */
+  const personaPayloadBefore = cache.stats.payload;
+  const withPersona = await cache.A.chat('write a short line about rain', [], { system: 'Answer like a pirate.' });
+  assert.notEqual(cache.stats.payload, personaPayloadBefore, 'a changed persona invalidates the cached answer');
+  assert.match(String(cache.stats.payload.messages[0].content), /Answer like a pirate/, 'and the new persona reached the model');
+  assert.equal(cache.A.status().cachedAnswers, 2, 'and is stored under its own key');
+  /* A differently worded question is also a miss: the key is the prompt. */
+  const other = await cache.A.chat('write a long line about snow', [], {});
+  assert.notEqual(cache.A.status().cachedAnswers, 2, 'a different question is stored separately');
+  void other;
+  assert.equal(cache.A.clearAnswerCache(), true);
+  assert.equal(cache.A.status().cachedAnswers, 0, 'clearing empties the cache');
+
+  /* 5.1 — answers that could go stale are never cached or replayed. */
+  const live = await fixture({ chunks: ['The answer is live.'] });
+  await live.A.load();
+  live.stats.fetch = async () => ({ ok: true, json: async () => ({ results: [source] }) });
+  await live.A.chat('search the current price of oil', [], { search: true });
+  assert.equal(live.A.status().cachedAnswers, 0, 'a web-grounded answer is not stored');
+
   const codeExample = await fixture({ chunks: ['Use `items[9]` or:\n```js\nfetch("https://example.org/api");\n```'] });
   await codeExample.A.load();
   assert.match(await codeExample.A.chat('Write code to read a list', []), /items\[9\]/);

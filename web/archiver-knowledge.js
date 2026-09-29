@@ -3156,10 +3156,97 @@ const MORE34 = [
     }
   ];
 
+  /* ---------------------------------------------------------------------- */
+  /* 5.1 — THE SOPRANOS (ten cards)                                         */
+  /*                                                                        */
+  /* The show is the single most-cited example of prestige television, so a */
+  /* corpus that answers questions about TV history needs it. Dates and     */
+  /* counts below are the well-established ones; where the record is        */
+  /* genuinely contested (the finale) the card says so instead of picking   */
+  /* a side.                                                               */
+  /* ---------------------------------------------------------------------- */
+
+  const SOPRANOS = [
+    {
+      id: 'sop-overview',
+      q: ['the sopranos', 'what is the sopranos', 'who are the sopranos', 'tell me about the sopranos',
+          'sopranos hbo', 'sopranos tv show', 'sopranos series', 'how many seasons of the sopranos',
+          'how many sopranos episodes', 'when did the sopranos air', 'who is tony soprano',
+          'tony soprano', 'tony soprano character', 'what is the sopranos about'],
+      a: 'The Sopranos is an American crime drama created by David Chase that ran on HBO from 10 January 1999 to 10 June 2007 — six seasons, 86 episodes (the sixth was split into 12 and 9 episodes). It follows Tony Soprano, a New Jersey mob boss who has panic attacks and starts seeing a psychiatrist, and spends its runtime on the seam between his two families: the DiMeo crime family and the one at home. It won 21 Primetime Emmy Awards, including Outstanding Drama Series in 2004 (the first cable series to win it) and 2007, plus two Peabody Awards. It is the standard answer to "what started prestige television" — the show that made HBO\'s reputation and made serialised, morally uncomfortable drama the default ambition for everyone who followed.',
+      tags: ['culture', 'television', 'crime', 'sopranos']
+    },
+    {
+      id: 'sop-gandolfini',
+      q: ['james gandolfini', 'who played tony soprano', 'gandolfini', 'james gandolfini death',
+          'how did james gandolfini die', 'gandolfini emmys', 'tony soprano actor'],
+      a: 'James Gandolfini (18 September 1961 – 19 June 2013), born in Westwood, New Jersey, played Tony Soprano and won three Primetime Emmy Awards for Outstanding Lead Actor in a Drama Series (2000, 2001 and 2003), along with five Screen Actors Guild Awards and a Golden Globe. He was 6\'1", built like the part, and repeatedly said the role frightened him. He died of a heart attack in Rome on 19 June 2013, aged 51, while on holiday with his family; he was due in Sicily days later to collect an award at the Taormina Film Festival. His son Michael Gandolfini played a young Tony in the 2021 prequel film. Chase\'s verdict after his death was blunt: without Gandolfini there is no Sopranos.',
+      tags: ['culture', 'television', 'sopranos', 'figures']
+    },
+    {
+      id: 'sop-finale',
+      q: ['sopranos finale', 'made in america sopranos', 'did tony die', 'does tony soprano die',
+          'sopranos ending explained', 'why did the sopranos cut to black', 'sopranos last scene',
+          'dont stop believin sopranos'],
+      a: '"Made in America", the 86th and final episode, aired on 10 June 2007, was written and directed by Chase, and drew about 11.9 million US viewers. The family meet for onion rings at the Holsten\'s diner in Bloomfield, New Jersey; Journey\'s "Don\'t Stop Believin\'" plays on the jukebox; the screen cuts to black and holds for roughly ten seconds with no credits music. Chase wanted the black to run all the way to the HBO whoosh but the Directors Guild of America would not waive the credits. Whether Tony died is deliberately unresolved and Chase has never settled it: he referred to it as "that death scene" in 2019, said in a 2021 interview that the death was what he originally had in mind (before issuing a denial), and told TV Insider in 2024 that the scene means Tony *could* die. The safest reading is his own: the ceiling he was going for was "don\'t stop believing" — the attachments are worth it whether you go tonight or some other night.',
+      tags: ['culture', 'television', 'sopranos']
+    },
+    {
+      id: 'sop-cast',
+      q: ['sopranos cast', 'who is in the sopranos', 'who plays carmela soprano', 'who plays christopher moltisanti',
+          'who plays dr melfi', 'sopranos characters', 'who played junior soprano', 'who plays paulie walnuts',
+          'who plays silvio dante', 'sopranos actors'],
+      a: 'The core cast: James Gandolfini as Tony; Edie Falco as Carmela (three Emmys, 1999, 2001, 2003); Michael Imperioli as Christopher Moltisanti (Emmy, 2004); Lorraine Bracco as Dr. Jennifer Melfi; Dominic Chianese as Corrado "Junior" Soprano; Aida Turturro as Janice; Jamie-Lynn Sigler as Meadow and Robert Iler as A.J.; Steven Van Zandt (Bruce Springsteen\'s E Street Band guitarist) as Silvio Dante; Tony Sirico as Paulie Walnuts; Drea de Matteo as Adriana La Cerva (Emmy, 2004); Joe Pantoliano as Ralph Cifaretto (Emmy, 2003); Vincent Pastore as Big Pussy Bonpensiero. Sirico, who had a mob-adjacent past in real life, accepted the part on the condition that Paulie would never be written as an informant — a clause the show honoured.',
+      tags: ['culture', 'television', 'sopranos']
+    },
+    {
+      id: 'sop-melfi',
+      q: ['dr melfi', 'jennifer melfi', 'tony sopranos psychiatrist', 'sopranos therapist',
+          'why did melfi stop seeing tony', 'sopranos therapy', 'lorraine bracco sopranos'],
+      a: 'Dr. Jennifer Melfi (Lorraine Bracco) is the psychiatrist Tony sees after his first panic attack, and the therapy sessions are the engine of the show: Tony works on his anxiety while lying to her about his actual job, and she is one of the few people he cannot threaten. In the season three finale, "Army of One", she reads a study suggesting that talk therapy helps sociopaths become better at manipulating people, and ends the treatment — a decision she does not explain to him. She is raped earlier that season in "Employee of the Month" and chooses not to report it, a plotline that divided viewers and was reportedly discussed by Chase for years. The show\'s framing device is that the mobster gets the treatment and the audience gets the sessions.',
+      tags: ['culture', 'television', 'sopranos']
+    },
+    {
+      id: 'sop-theme',
+      q: ['sopranos theme song', 'woke up this morning', 'alabama 3 sopranos', 'sopranos opening song',
+          'sopranos music', 'what song plays at the start of the sopranos'],
+      a: 'The opening theme is "Woke Up This Morning" by Alabama 3 — a British band of acid-house refugees playing country-blues with a slide guitar and a vocal that arrives like a threat — in its "Chosen One Mix". Chase\'s music supervision became famous for using songs as commentary rather than wallpaper, and for paying for expensive, obscure tracks instead of stock library music. The finale\'s use of Journey\'s "Don\'t Stop Believin\'" sent a song most of the culture had written off back into heavy rotation; the show\'s final scene is the reason many people still hear that song and think of a diner.',
+      tags: ['culture', 'television', 'sopranos', 'music']
+    },
+    {
+      id: 'sop-locations',
+      q: ['where was the sopranos filmed', 'sopranos filming locations', 'bada bing club', 'satin dolls sopranos',
+          'satriales pork store', 'sopranos house', 'where is the sopranos house', 'new jersey sopranos'],
+      a: 'New Jersey is a character. Exteriors were shot on location across the state; interiors mostly at Silvercup Studios in Long Island City, which also stood in for Melfi\'s office and the back room of the Bada Bing. The Bada Bing\'s front of house is a real strip club, Satin Dolls, on Route 17 in Lodi. Satriale\'s Pork Store was 101 Kearny Avenue in Kearny, a building used only for filming and demolished in 2007 (rebuilt in Paterson for the 2021 film). Tony\'s house is a private residence at 14 Aspen Drive in North Caldwell — interiors there were used only in the pilot, after which a matching set was built. The opening-credits drive is the Lincoln Tunnel out of Manhattan into New Jersey.',
+      tags: ['culture', 'television', 'sopranos', 'new jersey']
+    },
+    {
+      id: 'sop-many-saints',
+      q: ['the many saints of newark', 'sopranos movie', 'sopranos prequel', 'sopranos film',
+          'many saints of newark 2021', 'is there a sopranos movie'],
+      a: 'The Many Saints of Newark (2021) is the Sopranos prequel film, written by Chase and Lawrence Konner and directed by Alan Taylor. It is set in 1967–72 Newark against the riots that gutted the city, and follows young Tony Soprano — played by James Gandolfini\'s son Michael — alongside Dickie Moltisanti (Alessandro Nivoli), Christopher\'s father. Ray Liotta, Vera Farmiga, Jon Bernthal and Corey Stoll co-star. Reviews were mixed, and the recurring complaint was that the film explains things the show deliberately left unexplained: Chase has said the film was conceived as a companion piece rather than a prequel in the usual sense.',
+      tags: ['culture', 'television', 'sopranos', 'film']
+    },
+    {
+      id: 'sop-pine-barrens',
+      q: ['pine barrens sopranos', 'sopranos pine barrens episode', 'best sopranos episode',
+          'who directed pine barrens', 'sopranos russian episode'],
+      a: '"Pine Barrens" (season 3, episode 11) is the episode most often named the show\'s best. Paulie and Christopher are sent to collect a debt from a Russian, the plan collapses, they shove him into the Pine Barrens woodland, and he escapes — leaving them lost in the snow overnight with no car, no coat and no plan. It was directed by Steve Buscemi, who had appeared on the show and went on to direct several of its best episodes, and it works because the comedy is played completely straight: two murderers undone by weather and their own incompetence. Chase has said the fate of the Russian was never meant to be resolved; no sequel episode was ever made.',
+      tags: ['culture', 'television', 'sopranos']
+    },
+    {
+      id: 'sop-legacy',
+      q: ['sopranos legacy', 'why is the sopranos important', 'sopranos influence', 'did the sopranos start prestige tv',
+          'best tv show ever sopranos', 'sopranos golden age of television'],
+      a: 'The Sopranos is the hinge between the TV that came before and the TV after: an HBO series that treated its audience as adults, put an unlikable protagonist at the centre, and made the point that a show could be a novel. Its immediate children are The Wire, Deadwood, Mad Men (Matthew Weiner was a Sopranos writer and producer) and Breaking Bad, and the antihero-plus-moral-collapse template it popularised is still the default for prestige drama. The price of that influence is visible too: two decades of "difficult male protagonist" shows are its direct descendants. It is routinely placed at or near the top of "best series ever" lists — the BBC\'s 2021 critics\' poll of the 100 greatest TV series of the 21st century put it first.',
+      tags: ['culture', 'television', 'sopranos', 'history']
+    }
+  ];
+
   window.ARCHIVER_KB = {
-    version: '5',
+    version: '5.1',
     generated: '2026-09-29',
-    cards: [...WW2, ...FIGURES, ...TECH, ...GENERAL, ...WORDS, ...SCIENCE, ...WORLD, ...LANGUAGE, ...EVERYDAY, ...MORE, ...MORE24, ...HIST25, ...LIGHT, ...OFFLINE31, ...MORE34, ...MORE43],
+    cards: [...WW2, ...FIGURES, ...TECH, ...GENERAL, ...WORDS, ...SCIENCE, ...WORLD, ...LANGUAGE, ...EVERYDAY, ...MORE, ...MORE24, ...HIST25, ...LIGHT, ...OFFLINE31, ...MORE34, ...MORE43, ...SOPRANOS],
     note: 'Grounded offline corpus. Charges are not convictions; contested history is not a "side".'
   };
 })();

@@ -1,15 +1,16 @@
-/* Archiver 5: our own model in your browser, plus instant retrieval and text
+/* Archiver 5.1: our own model in your browser, plus instant retrieval and text
    tools — running on WebGPU where it exists and on a Safari-optimised
-   WebAssembly runtime where it does not. Archiver 5 upgrades the on-device base
-   to Qwen 3 0.6B, compacts CPU prefill prompts for Safari, suppresses
-   unrequested thinking chains and trailing repetition loops, and expands local
-   deterministic tools (including unit conversions). */
+   WebAssembly runtime where it does not. Archiver 5.1 fixes the blank-answer
+   bug on the CPU path (an empty reply is now recovered instead of shown),
+   streams generated text as it arrives, adds a browser-side answer cache so a
+   repeated question is served instantly, and tunes the WebAssembly runtime for
+   iPhone-class hardware. */
 (function () {
   'use strict';
 
   /* One definition of the version, so the label in the sidebar, the persona, the
      self-description, the API and the tests cannot disagree with each other. */
-  const VERSION = '5';
+  const VERSION = '5.1';
   const NAME = 'Archiver ' + VERSION;
 
   /* ======================================================================== */
@@ -352,7 +353,7 @@
   /* ---- commands ---------------------------------------------------------- */
 
 const HELP = [
-    "I'm **" + NAME + "** — your private research desk: instant local knowledge, plus Archiver 5, our own model, for open-ended work. Chats can sync to the app server.",
+    "I'm **" + NAME + "** — your private research desk: instant local knowledge, plus Archiver 5.1, our own model, for open-ended work. Chats can sync to the app server.",
     '',
     '**Ask me anything.** History, science, health, tech, philosophy, nature, culture, practical life — plus **Render.com** (I know the host inside-out) and **intuition**. With **WEB** on I read live sources and give you a short read first, with 1–3 compact sources.',
     '',
@@ -879,7 +880,7 @@ const HELP = [
     const live = generationReady();
     return `I'm **${NAME}** — Archiver’s own on-device model and assistant. ${live ? 'A language model is running in this browser — ' + runtimeLabel() + '.' : 'I am in instant mode: stored knowledge and text tools, not a running language model.'}
 
-I can search ${index.length} local cards, compare topics, calculate, convert units, extract key sentences from pasted text, and follow this conversation. ${live ? 'I can also generate writing, code, and explanations on-device with zero third-party cloud AI providers, and every answer carries a Thought process panel listing the tools, evidence and runtime it actually used.' : 'For open-ended writing and reasoning, the website automatically prepares Archiver 5 — our own compact on-device model — on WebGPU where the browser has it, and on the Safari-optimised WebAssembly runtime where it does not, so Safari is not left out. ' + (aiReason() || 'The first use fetches a few hundred MB, then the browser caches the assets. There is no manual download step.')}
+I can search ${index.length} local cards, compare topics, calculate, convert units, extract key sentences from pasted text, and follow this conversation. ${live ? 'I can also generate writing, code, and explanations on-device with zero third-party cloud AI providers, and every answer carries a Thought process panel listing the tools, evidence and runtime it actually used.' : 'For open-ended writing and reasoning, the website automatically prepares Archiver 5.1 — our own compact on-device model — on WebGPU where the browser has it, and on the Safari-optimised WebAssembly runtime where it does not, so Safari is not left out. ' + (aiReason() || 'The first use fetches a few hundred MB, then the browser caches the assets. There is no manual download step.')}
 
 I can describe my capabilities and limitations; that is not consciousness or feelings. I do not browse unless WEB is on or you explicitly ask to search. Chats and memories can sync to this app’s server; taught cards are stored in this browser. No model-provider API key is needed.`;
   }
@@ -911,7 +912,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       if (matches.every(m => m.entry && m.score >= ANSWER_AT) && matches[0].entry !== matches[1].entry) {
         return { text: matches.map((m, i) => '**' + understood.compare[i] + '**\n\n' + comprehension.excerpt(m.entry.a, 3, false)).join('\n\n') + '\n\n_Compared from local knowledge cards; this is not an exhaustive comparison._', kind: 'comparison', score: Math.min(...matches.map(m => m.score)) };
       }
-      return { text: 'I need a reliable local match for both sides of that comparison. Try more specific names or use WEB. Archiver 5 starts for open-ended requests when this device supports it.', kind: 'clarify', score: 0 };
+      return { text: 'I need a reliable local match for both sides of that comparison. Try more specific names or use WEB. Archiver 5.1 starts for open-ended requests when this device supports it.', kind: 'clarify', score: 0 };
     }
     const tl = tool(t);
     if (tl) return { text: tl, kind: 'tool', score: 1 };
@@ -924,7 +925,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     if (LIVE_RE.test(t) && !/^(?:what is|define|explain|difference between|compare)\b/i.test(t)) return { text: "Live data — weather, news, prices, scores — needs web search. Turn on **WEB** and I will fetch it rather than guess.", kind: 'live', score: 0 };
 
     if (/^(?:write|draft|rewrite|rephrase|translate|compose|brainstorm|create|debug)\b/i.test(understood.query || t)) {
-      return { text: 'That needs Archiver 5 rather than a stored answer. ' + (aiReason() || 'Archiver 5 starts automatically for this request in chat; the one-time download is a few hundred MB.') + ' I can still extract key sentences (`summarize: …`), compare known topics, or calculate in instant mode.', kind: 'capability', score: 1 };
+      return { text: 'That needs Archiver 5.1 rather than a stored answer. ' + (aiReason() || 'Archiver 5.1 starts automatically for this request in chat; the one-time download is a few hundred MB.') + ' I can still extract key sentences (`summarize: …`), compare known topics, or calculate in instant mode.', kind: 'capability', score: 1 };
     }
     const r = resolve(understood.query || t);
     const best = search(r.text, 5);
@@ -975,10 +976,10 @@ I can describe my capabilities and limitations; that is not consciousness or fee
   const WASM_TIMEOUT_MS = 12 * 60 * 1000;
 
   /* Small, fixed model family; never silently select a larger catalogue model.
-     This is Archiver's own model — branded "Archiver 5" in every label —
+     This is Archiver's own model — branded "Archiver 5.1" in every label —
      built on the open Qwen 3 0.6B architecture and tuned for WebGPU and
      Safari WebAssembly. Settings names the base honestly; the product surface
-     says Archiver 5. */
+     says Archiver 5.1. */
   const PREFERRED = ['Qwen3-0.6B-q4f16_1-MLC', 'Qwen3-0.6B-q4f32_1-MLC'];
   const LEGACY_PREFERRED = ['Qwen2.5-0.5B-Instruct-q4f16_1-MLC', 'Qwen2.5-0.5B-Instruct-q4f32_1-MLC'];
 
@@ -999,18 +1000,18 @@ I can describe my capabilities and limitations; that is not consciousness or fee
   const WASM_CONTEXT = 2048;
 
   /* Human-readable model labels. The 0.6B family is Archiver's own model,
-     branded Archiver 5; the other entries are guards so an unexpected model
+     branded Archiver 5.1; the other entries are guards so an unexpected model
      id still renders as something a reader can act on. */
   const NICE = [
     [/Qwen3-8B/i, 'Qwen 3 8B'],
     [/Qwen3-4B/i, 'Qwen 3 4B'],
     [/Qwen3-1\.7B/i, 'Qwen 3 1.7B'],
-    [/Qwen3-0\.6B/i, 'Archiver 5'],
+    [/Qwen3-0\.6B/i, 'Archiver 5.1'],
     [/Qwen2\.5-7B/i, 'Qwen 2.5 7B'],
     [/Qwen2\.5-3B/i, 'Qwen 2.5 3B'],
     [/Qwen2\.5-1\.5B/i, 'Qwen 2.5 1.5B'],
-    [/Qwen2\.5-0\.5B/i, 'Archiver 5'],
-    [/qwen2\.5-0\.5b/i, 'Archiver 5'],
+    [/Qwen2\.5-0\.5B/i, 'Archiver 5.1'],
+    [/qwen2\.5-0\.5b/i, 'Archiver 5.1'],
     [/Hermes-3/i, 'Hermes 3 8B'],
     [/Phi-3\.5/i, 'Phi 3.5 mini'],
     [/gemma-2-2b/i, 'Gemma 2 2B']
@@ -1061,7 +1062,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
 
   /* Safari / WebAssembly CPU-optimised persona. On CPU, every system-prompt
      token costs prefill latency before the first output token appears. This
-     compact persona preserves Archiver 5's character, honesty rules, and
+     compact persona preserves Archiver 5.1's character, honesty rules, and
      anti-filler discipline in under half the tokens. */
   const SAFARI_CPU_PERSONA = [
     'You are ' + NAME + ', Archiver\u2019s own sharp, direct model running on-device in the browser.',
@@ -1347,11 +1348,11 @@ I can describe my capabilities and limitations; that is not consciousness or fee
   function blockReason() {
     if (generationReady()) return '';
     if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-      return 'You are offline; connect to the internet to prepare Archiver 5.';
+      return 'You are offline; connect to the internet to prepare Archiver 5.1.';
     }
     try {
       const c = navigator.connection;
-      if (c && c.saveData) return 'Data Saver is on, so Archiver 5 is paused. Turn it off to prepare the model.';
+      if (c && c.saveData) return 'Data Saver is on, so Archiver 5.1 is paused. Turn it off to prepare the model.';
     } catch (_) {}
     if (!webgpu() && !wasmSupported()) {
       return 'This browser supports neither WebGPU nor WebAssembly workers; instant tools remain available.';
@@ -1399,7 +1400,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     // model that is loading/serving a response.
     try { localStorage.setItem('archiver.ai.enabled', '1'); } catch (_) {}
     loadFailure = '';
-    emitProgress('Archiver 5 is enabled when needed', 0);
+    emitProgress('Archiver 5.1 is enabled when needed', 0);
     return true;
   }
 
@@ -1452,6 +1453,38 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     return !!readPersistedBackend();
   }
 
+  /* Warm on intent rather than on page load.
+
+     Safari on iOS must not allocate a worker and a few hundred megabytes of
+     model memory during a navigation — a restored tab can be killed for it —
+     so the page-load warm-up is deliberately deferred there and generation
+     waits for the first real question. The cost is that the first open-ended
+     question on an iPhone pays the whole load time while the reader waits.
+
+     prepare() closes that gap without touching a metered connection: it starts
+     the same load the moment the reader begins typing something that is
+     obviously not a calculation, a greeting or a command, and only when the
+     weights are already in this browser's cache. Nothing new is downloaded, the
+     page has already painted, and by the time Send is pressed the model is
+     usually serving. It is a no-op everywhere else, and a no-op on a first
+     visit. */
+  let preparing = false;
+  function prepare(prompt) {
+    if (preparing) return Promise.resolve(false);
+    if (!deferWarmup()) return Promise.resolve(false);      // desktop already warms on load
+    if (!wasReadyBefore()) return Promise.resolve(false);   // first visit waits for a request
+    if (generationReady() || loading) return Promise.resolve(!!loading || generationReady());
+    const text = String(prompt || '');
+    if (text.trim().length < 12) return Promise.resolve(false);
+    // Only open-ended work needs the model; these are all answered instantly.
+    if (/^(?:hi|hey|hello|yo|thanks|bye|help|\?)\b/i.test(text.trim())) return Promise.resolve(false);
+    if (/^(?:teach|learn|forget|summarize|extract|count words|translate):/i.test(text.trim())) return Promise.resolve(false);
+    if (tool(text) || converse(text)) return Promise.resolve(false);
+    if (blockReason()) return Promise.resolve(false);
+    preparing = true;
+    return warmNow().catch(() => false).then((ok) => { preparing = false; return ok; });
+  }
+
   /* ---- WebGPU backend ----------------------------------------------------- */
 
   async function loadWebGPU(choice, wanted, ctx) {
@@ -1464,8 +1497,8 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     }
     const cachedBefore = !!readPersistedBackend();
     emitProgress(cachedBefore
-      ? 'Archiver 5 · loading from browser cache…'
-      : 'Fetching Archiver 5 into this browser’s cache — one time, in the background…', 1);
+      ? 'Archiver 5.1 · loading from browser cache…'
+      : 'Fetching Archiver 5.1 into this browser’s cache — one time, in the background…', 1);
     traceStep('Chose the WebGPU backend (' + choice.why + ').');
     const mod = await import(/* webpackIgnore: true */ WEBLLM_RUNTIME);
     ctx.stopped();
@@ -1477,7 +1510,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       appConfig: { model_list: [record], useIndexedDBCache: false },
       initProgressCallback: r => {
         if (!ctx.controller.signal.aborted && ctx.generation === loadGeneration) {
-          emitProgress(r.text || 'Preparing Archiver 5…', Math.round((r.progress || 0) * 100));
+          emitProgress(r.text || 'Preparing Archiver 5.1…', Math.round((r.progress || 0) * 100));
         }
       }
     });
@@ -1497,13 +1530,21 @@ I can describe my capabilities and limitations; that is not consciousness or fee
   async function loadWASM(choice, wanted, ctx) {
     const cachedBeforeW = !!readPersistedBackend();
     emitProgress(cachedBeforeW
-      ? 'Archiver 5 · loading WebAssembly from browser cache…'
+      ? 'Archiver 5.1 · loading WebAssembly from browser cache…'
       : 'Starting the Safari-optimised WebAssembly runtime — no GPU needed…', 1);
     traceStep('Chose the WebAssembly backend (' + choice.why + ')');
     const mod = await import(/* webpackIgnore: true */ WLLAMA_RUNTIME);
     ctx.stopped();
     const Wllama = mod.Wllama || (mod.default && mod.default.Wllama);
     if (typeof Wllama !== 'function') throw new Error('The bundled WebAssembly runtime did not export its loader.');
+    /* Pull the WebAssembly binary into the HTTP cache while the weights are
+       being fetched. On the CPU path it is otherwise a second sequential
+       download of several megabytes after the model file has already landed,
+       and on a repeat visit it is the difference between a warm start and a
+       cold one. Failures are irrelevant — wllama fetches it again itself. */
+    try {
+      if (typeof fetch === 'function') fetch(WLLAMA_WASM, { cache: 'force-cache' }).catch(() => {});
+    } catch (_) {}
     const instance = new Wllama(
       { default: WLLAMA_WASM },
       {
@@ -1513,11 +1554,22 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       }
     );
     ctx.wasm = instance;
-    const threads = Math.max(1, Math.min(4, Math.floor((navigator.hardwareConcurrency || 2) / 2)));
+    /* Thread and batch shape follow the CPU we are actually on. Apple mobile
+       silicon is big.LITTLE — an A15 has two performance cores and four
+       efficiency cores — so decode wants a thread count that fills the
+       performance pair plus one efficiency core and no more, while prefill
+       wants a big batch so the whole system prompt is ingested in a handful of
+       NEON passes instead of a dozen. Desktops and Androids keep the old
+       conservative shape, which is tuned for cores that behave alike. */
+    const appleMobile = /iPad|iPhone|iPod/.test(String(navigator.userAgent || ''));
+    const cores = Number(navigator.hardwareConcurrency) || 2;
+    const threads = appleMobile
+      ? Math.max(3, Math.min(4, cores - 2))
+      : Math.max(1, Math.min(4, Math.floor(cores / 2)));
     const params = {
       n_gpu_layers: 0,
       n_ctx: WASM_CONTEXT,
-      n_batch: 256,
+      n_batch: appleMobile ? 512 : 256,
       n_threads: threads,
       kv_unified: true,
       cache_type_k: 'q8_0',
@@ -1525,7 +1577,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       progressCallback: ({ loaded, total }) => {
         if (ctx.controller.signal.aborted || ctx.generation !== loadGeneration) return;
         const pct = total > 0 ? Math.round((loaded / total) * 100) : 0;
-        emitProgress('Fetching Archiver 5 weights for the WebAssembly runtime… ' + pct + '%', Math.min(99, pct));
+        emitProgress('Fetching Archiver 5.1 weights for the WebAssembly runtime… ' + pct + '%', Math.min(99, pct));
       }
     };
     if (ctx.signal) params.signal = ctx.signal;
@@ -1560,7 +1612,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
           } catch (_) {}
           clearPersistedBackend();
           try {
-            emitProgress('Refreshing browser cache for Archiver 5…', 2);
+            emitProgress('Refreshing browser cache for Archiver 5.1…', 2);
             await instance.loadModelFromUrl(url, Object.assign({}, params, { useCache: false }));
             if (ctx.controller.signal.aborted || ctx.generation !== loadGeneration) {
               exitWasm(instance);
@@ -1625,8 +1677,8 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     const task = (async () => {
       const fromCache = !!readPersistedBackend();
       emitProgress(fromCache
-        ? 'Archiver 5 · loading from browser cache…'
-        : 'Checking this device for Archiver 5…', 0);
+        ? 'Archiver 5.1 · loading from browser cache…'
+        : 'Checking this device for Archiver 5.1…', 0);
       const choice = await chooseBackend();
       ctx.stopped();
       if (!choice) {
@@ -1637,8 +1689,8 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       timeoutMs = choice.kind === 'wasm' ? WASM_TIMEOUT_MS : LOAD_TIMEOUT_MS;
       armTimeout();
       traceStep(choice.kind === 'wasm'
-        ? 'WebGPU is unavailable here, so Archiver 5 falls back to the WebAssembly runtime automatically.'
-        : 'WebGPU is available, so Archiver 5 uses the GPU runtime.');
+        ? 'WebGPU is unavailable here, so Archiver 5.1 falls back to the WebAssembly runtime automatically.'
+        : 'WebGPU is available, so Archiver 5.1 uses the GPU runtime.');
       const selected = choice.kind === 'wasm'
         ? await loadWASM(choice, wanted, ctx)
         : await loadWebGPU(choice, wanted, ctx);
@@ -1647,8 +1699,8 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       activeBackend = choice.kind;
       persistBackend(selected, choice.kind, choice.f16);
       emitProgress(choice.kind === 'wasm'
-        ? 'Archiver 5 is active on this device’s CPU (WebAssembly)'
-        : 'Archiver 5 is active', 100);
+        ? 'Archiver 5.1 is active on this device’s CPU (WebAssembly)'
+        : 'Archiver 5.1 is active', 100);
       return { model: selected, pretty: pretty(selected), backend: choice.kind };
     })();
     let timer = null;
@@ -1684,12 +1736,12 @@ I can describe my capabilities and limitations; that is not consciousness or fee
         clearPersistedBackend();
       }
       if (timedOut) {
-        loadFailure = 'Archiver 5 timed out. Instant tools still work; try again on a faster connection.';
+        loadFailure = 'Archiver 5.1 timed out. Instant tools still work; try again on a faster connection.';
       } else if (err.name !== 'AbortError' || !stoppedByUser) {
         const detail = err && err.message ? ' ' + err.message : '';
-        loadFailure = 'Archiver 5 could not start.' + detail + ' Try again in Settings.';
+        loadFailure = 'Archiver 5.1 could not start.' + detail + ' Try again in Settings.';
       }
-      emitProgress(loadFailure || 'Archiver 5 stopped; instant tools are ready', 0);
+      emitProgress(loadFailure || 'Archiver 5.1 stopped; instant tools are ready', 0);
       throw err;
     } finally {
       clearTimeout(timer);
@@ -1717,7 +1769,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     loadFailure = '';
     loadAbortReason = '';
     clearPersistedBackend();
-    emitProgress('Retrying Archiver 5…', 0);
+    emitProgress('Retrying Archiver 5.1…', 0);
     return load(wanted);
   }
 
@@ -1747,6 +1799,58 @@ I can describe my capabilities and limitations; that is not consciousness or fee
   /* Both runtimes speak an OpenAI-shaped streaming API, so the prompt assembly,
      the sampling settings and the thinking-line handling live in one place and
      cannot drift apart between GPU and CPU. */
+  /* Both runtimes stream OpenAI-shaped chunks — but they are two independent
+     implementations and only one of them is ours, so read every shape either
+     has been observed to emit instead of assuming the exact property path
+     exists. A runtime that puts the final piece on `message.content`, or hands
+     back a bare string, must not silently produce an empty answer: that
+     assumption is what produced blank replies on the CPU path. */
+  function pieceOf(chunk) {
+    if (!chunk) return '';
+    if (typeof chunk === 'string') return chunk;
+    const choices = chunk.choices;
+    if (!Array.isArray(choices) || !choices.length) {
+      return typeof chunk.content === 'string' ? chunk.content : '';
+    }
+    const first = choices[0] || {};
+    const delta = first.delta || first.message || {};
+    if (typeof delta.content === 'string') return delta.content;
+    if (typeof first.content === 'string') return first.content;
+    return '';
+  }
+
+  /* Coalesce streamed pieces before handing them on. On the CPU path the
+     runtime calls back once per token from a worker message, and on an iPhone
+     each callback costs a layout pass; batching them into one update keeps the
+     text flowing without the jank. Flush is always eventual — never delayed
+     past a macrotask — so the reader still sees text within a frame or two. */
+  function makePieceCoalescer(onPiece) {
+    let pending = '';
+    let scheduled = false;
+    const flush = () => {
+      scheduled = false;
+      if (!pending) return;
+      const batch = pending;
+      pending = '';
+      onPiece(batch);
+    };
+    return {
+      push(piece) {
+        if (!piece) return;
+        pending += piece;
+        if (scheduled) return;
+        scheduled = true;
+        try {
+          const ric = typeof requestAnimationFrame === 'function' ? requestAnimationFrame : null;
+          if (ric) ric(flush);
+          else setTimeout(flush, 0);
+        } catch (_) { setTimeout(flush, 0); }
+      },
+      flush,
+      get pending() { return pending; }
+    };
+  }
+
   async function generateStream(messages, params) {
     const sampling = {
       temperature: params.temperature,
@@ -1757,14 +1861,20 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       presence_penalty: 0.35
     };
     let acc = '';
+    const emit = params.batch === false
+      ? piece => { if (piece) { acc += piece; params.onPiece(piece); } }
+      : (() => {
+        const batcher = makePieceCoalescer(piece => { if (piece) { acc += piece; params.onPiece(piece); } });
+        params.coalescer = batcher;
+        return piece => batcher.push(piece);
+      })();
     if (activeBackend === 'webgpu') {
       const stream = await engine.chat.completions.create({ messages, ...sampling, stream: true });
       for await (const chunk of stream) {
         params.checkStopped();
-        const d = chunk && chunk.choices && chunk.choices[0] && chunk.choices[0].delta;
-        const piece = d && d.content;
-        if (piece) { acc += piece; params.onPiece(piece); }
+        emit(pieceOf(chunk));
       }
+      if (params.coalescer) params.coalescer.flush();
       return acc;
     }
     wasmAbort = new AbortController();
@@ -1773,21 +1883,28 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       if (params.signal.aborted) { wasmAbort = null; throw new DOMException('Stopped', 'AbortError'); }
       params.signal.addEventListener('abort', abort, { once: true });
     }
+    /* Qwen 3 defaults to a hidden thinking pass, which on a CPU budget of a
+       few hundred tokens can consume the whole generation and leave nothing
+       visible to show. wllama forwards `chat_template_kwargs` to the model's
+       own chat template, so the documented switch is passed through here
+       instead of relying on a "/no_think" string glued into the prompt. */
+    const wantsThinking = params.thinking === true;
     try {
       await wasm.createChatCompletion({
         messages,
         ...sampling,
         stream: true,
         abortSignal: wasmAbort.signal,
+        chat_template_kwargs: { enable_thinking: !!wantsThinking },
         onData: chunk => {
           params.checkStopped();
-          const d = chunk && chunk.choices && chunk.choices[0] && chunk.choices[0].delta;
-          const piece = d && d.content;
-          if (piece) { acc += piece; params.onPiece(piece); }
+          emit(pieceOf(chunk));
         }
       });
+      if (params.coalescer) params.coalescer.flush();
       return acc;
     } finally {
+      if (params.coalescer) params.coalescer.flush();
       if (params.signal) params.signal.removeEventListener('abort', abort);
       wasmAbort = null;
     }
@@ -2218,6 +2335,141 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     };
   }
 
+  /* Display stream for a generated answer that is still being written.
+
+     Text is released as it is produced, with one exception: the line currently
+     being written is held back whenever it could still turn out to be a
+     citation or a URL, because those are exactly what the validation step is
+     allowed to withdraw. A reader therefore never sees a fabricated reference,
+     even for a frame, while ordinary prose still streams live. */
+  function makeSafeDisplayStream(onDelta) {
+    let shown = 0;
+    const release = (text, force) => {
+      const body = String(text || '');
+      if (body.length <= shown) return;
+      let limit = body.length;
+      if (!force) {
+        const lastBreak = body.lastIndexOf('\n');
+        const line = body.slice(Math.max(shown, lastBreak + 1));
+        if (/[[\]]|https?:/i.test(line)) limit = Math.max(shown, lastBreak + 1);
+      }
+      if (limit > shown) {
+        const chunk = body.slice(shown, limit);
+        shown = limit;
+        onDelta(chunk);
+      }
+    };
+    return {
+      push: (text) => release(text, false),
+      finish: (text) => release(text, true),
+      reset() { shown = 0; },
+      get shown() { return shown; }
+    };
+  }
+
+  /* A model answer with no letters, digits or code in it is not an answer: it
+     is whitespace, a stray marker, or a stop token. Treated as empty. */
+  function isBlankAnswer(text) {
+    const body = String(text || '');
+    if (!body.trim()) return true;
+    return !/[\p{L}\p{N}]/u.test(body);
+  }
+
+  /* What the reader is told when the model genuinely produced nothing. It says
+     what happened and what still works, and it reads back any sources that were
+     fetched — an empty bubble is never the outcome. */
+  function emptyAnswerNotice(web, recovered) {
+    const lead = 'Archiver 5.1 ran and returned no text — the on-device model spent its budget on nothing readable'
+      + (recovered ? ' even after a retry with a shorter prompt' : '')
+      + '. That is a model failure, not a question I cannot answer.';
+    const options = [];
+    if (web && web.length) {
+      options.push('**What the sources say**\n' + web.map((w, i) =>
+        `${i + 1}. [${w.title}](${w.url}) — _${w.source}_`).join('\n'));
+    }
+    options.push('You can ask me to `summarize:` pasted text, compare two topics I know, or calculate — those run instantly without the model. Or try the question again, sometimes differently worded.');
+    return lead + '\n\n' + options.join('\n\n');
+  }
+
+  /* ---- answer cache ------------------------------------------------------ */
+
+  /* A generated answer costs real seconds on a phone CPU. Re-asking the same
+     question — a rephrased retry, the same chip twice, a follow-up that lands
+     back on the same words — should not pay that cost again.
+
+     The cache lives in this browser only (it is the same privacy boundary as
+     taught cards), is keyed on the normalised prompt together with the context
+     that shaped the answer (web on/off, backend, model, and a hash of the
+     system block, so a changed persona or memory set is a different answer),
+     expires after 7 days, and holds at most 40 entries. Answers that need live
+     data are never stored and never served. */
+  const ANSWER_CACHE_KEY = 'archiver.answers.v1';
+  const ANSWER_CACHE_MAX = 40;
+  const ANSWER_CACHE_TTL = 7 * 24 * 60 * 60 * 1000;
+  const ANSWER_CACHE_MIN = 40;      // shorter than this is a one-liner, not worth storing
+  const ANSWER_CACHE_CAP = 12000;   // characters per stored answer
+
+  let answerCache = [];
+  try {
+    const parsed = JSON.parse(localStorage.getItem(ANSWER_CACHE_KEY) || '[]');
+    answerCache = Array.isArray(parsed) ? parsed : [];
+  } catch (_) { answerCache = []; }
+  answerCache = answerCache.filter((e) => e && typeof e.k === 'string' && typeof e.a === 'string'
+    && e.ts && (Date.now() - e.ts) < ANSWER_CACHE_TTL);
+
+  const persistAnswerCache = () => {
+    try { localStorage.setItem(ANSWER_CACHE_KEY, JSON.stringify(answerCache.slice(0, ANSWER_CACHE_MAX))); }
+    catch (_) { /* private mode / quota: the cache is an optimisation, never a requirement */ }
+  };
+
+  const shortHash = (value) => {
+    let h = 0x811c9dc5;
+    const text = String(value || '');
+    for (let i = 0; i < text.length; i++) {
+      h ^= text.charCodeAt(i);
+      h = (h * 0x01000193) >>> 0;
+    }
+    return h.toString(36);
+  };
+
+  const answerCacheKey = (prompt, system, meta) => [
+    String(prompt || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().slice(0, 240),
+    meta && meta.search ? 'web' : 'local',
+    (meta && meta.backend) || '',
+    (meta && meta.model) || '',
+    shortHash(system)
+  ].join('\u0001');
+
+  /* Never store or serve an answer whose subject can change between questions,
+     or one that is a refusal — a cached refusal would outlive the reason. */
+  const cacheableAnswer = (text) => !!text
+    && text.length >= ANSWER_CACHE_MIN
+    && !/^I could not validate the citations/.test(text)
+    && !/^I do not have live sources/.test(text)
+    && !/^I could not retrieve usable live sources/.test(text)
+    && !/^That message is too long/.test(text)
+    && !/^The question and retrieved evidence do not fit/.test(text);
+
+  function lookupAnswer(prompt, system, meta) {
+    const key = answerCacheKey(prompt, system, meta);
+    const hit = answerCache.find((e) => e.k === key);
+    if (!hit) return null;
+    // Refresh recency so a repeated question is the last thing evicted.
+    answerCache = [hit].concat(answerCache.filter((e) => e !== hit));
+    hit.ts = Date.now();
+    persistAnswerCache();
+    return hit;
+  }
+
+  function rememberAnswer(prompt, answer, meta) {
+    if (!cacheableAnswer(answer)) return false;
+    const key = answerCacheKey(prompt, meta && meta.system, meta);
+    const entry = { k: key, a: String(answer).slice(0, ANSWER_CACHE_CAP), ts: Date.now(), model: (meta && meta.model) || '' };
+    answerCache = [entry].concat(answerCache.filter((e) => e.k !== key)).slice(0, ANSWER_CACHE_MAX);
+    persistAnswerCache();
+    return true;
+  }
+
   /* Async streaming chat. History is [{role, content}].
 
      Every call — a greeting, a calculation, a corpus hit, a generated essay —
@@ -2369,12 +2621,12 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     if (!generationReady() && !searchEnabled && opts.autoAI !== false) {
       const local = _reply(t);
       if (['capability', 'miss', 'fuzzy', 'related', 'clarify'].includes(local.kind)) {
-        traceStep('Local tools could not answer this (' + local.kind + '), so Archiver 5 was prepared automatically.');
-        if (opts.onStatus) opts.onStatus('Preparing Archiver 5…');
+        traceStep('Local tools could not answer this (' + local.kind + '), so Archiver 5.1 was prepared automatically.');
+        if (opts.onStatus) opts.onStatus('Preparing Archiver 5.1…');
         await ensureAI(opts);
         checkStopped();
         if (!generationReady()) {
-          traceStep('Archiver 5 could not start: ' + (aiReason() || 'unknown reason') + ' The answer below comes from local tools and any sources already fetched.');
+          traceStep('Archiver 5.1 could not start: ' + (aiReason() || 'unknown reason') + ' The answer below comes from local tools and any sources already fetched.');
         }
       }
     }
@@ -2540,11 +2792,45 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     traceStep('Built the prompt: 1 system block, ' + retained.length + ' history turn' + (retained.length === 1 ? '' : 's')
       + ', 1 user turn — about ' + used + ' of ' + (ctxBudget - maxTokens - 256) + ' usable input tokens, leaving ' + maxTokens + ' for the answer.');
 
+    /* ---- answer cache ---------------------------------------------------- */
+    /* Same question, same context, same runtime: the stored answer is returned
+       instead of running inference again. Only reached with WEB off, because a
+       live-data answer must never be replayed from yesterday. */
+    if (!searchEnabled) {
+      const cached = lookupAnswer(t, opts.system, { search: false, backend: activeBackend, model: pretty(activeModel) });
+      if (cached) {
+        traceStep('Answered from this browser’s answer cache: the same prompt, persona and runtime were answered before, so no inference ran.');
+        tracePlan('Cached answer: the same question and context were answered earlier in this browser, so the stored reply is returned directly and the model is not run again.');
+        const note = 'Returned from this browser’s answer cache (stored ' + new Date(cached.ts).toLocaleString() + '). No model inference ran for this turn.';
+        traceStep(note);
+        onDelta(cached.a);
+        checkStopped();
+        previousAnswer = cached.a;
+        lastSources = [];
+        noteTurn(t, { text: cached.a, topic: cards[0] ? cards[0].q[0] : '' });
+        finish('generated-cache', {
+          intent: audit.intent,
+          runtime: 'on-device cache',
+          backend: activeBackend,
+          model: pretty(activeModel),
+          ms: Math.max(0, Date.now() - audit.startedAt),
+          output: { tokens: Math.round(cached.a.length / 4), chars: cached.a.length, ms: 0, rate: 0 }
+        });
+        return cached.a;
+      }
+    }
+
     // Validate the complete generated answer before it reaches the UI or memory.
-    // Checking after streaming would expose fabricated citations before removal.
+    // Checking after streaming would expose fabricated citations before removal,
+    // so the display stream holds back any line that could still turn out to be
+    // a citation or a URL and releases it only once the answer is validated.
     const shaper = makeShaper(() => {});
     let rawOut = '';
     const record = piece => { rawOut += piece; shaper.push(piece); };
+    /* Everything else streams as it is produced: an answer that takes 40
+       seconds on an iPhone CPU should show its first sentences the moment they
+       exist, not hold a blank bubble until the very end. */
+    const display = makeSafeDisplayStream(piece => onDelta(piece));
     const gate = wantsThinking
       ? makeThinkingGate(record, thought => {
         audit.thinking = thought;
@@ -2560,14 +2846,21 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       checkStopped();
       if (opts.onGeneration) opts.onGeneration();
       if (opts.onStatus && activeBackend === 'wasm') opts.onStatus('Generating on this device’s CPU…');
-      await generateStream(messages, {
-        temperature: opts.temperature != null ? opts.temperature : (approachKind(t) === 'writing' ? 0.35 : 0.15),
-        maxTokens,
-        signal: opts.signal,
-        checkStopped,
-        onPiece: piece => { if (gate) gate.push(piece); else record(piece); }
-      });
-      if (gate) gate.finish();
+      const runOnce = async (msgs, cap) => {
+        display.reset();
+        rawOut = '';
+        await generateStream(msgs, {
+          temperature: opts.temperature != null ? opts.temperature : (approachKind(t) === 'writing' ? 0.35 : 0.15),
+          maxTokens: cap,
+          signal: opts.signal,
+          checkStopped,
+          thinking: wantsThinking,
+          onPiece: piece => { if (gate) gate.push(piece); else record(piece); }
+        });
+        if (gate) gate.finish();
+        return shaper.finish();
+      };
+      let generatedAnswer = await runOnce(messages, maxTokens);
       if (!audit.thinking && THINK_TAG_BLOCK_RE.test(rawOut)) {
         const tagMatch = THINK_TAG_BLOCK_RE.exec(rawOut);
         const inner = tagMatch && tagMatch[1].replace(/[*_`]/g, '').replace(/\s+/g, ' ').trim();
@@ -2577,7 +2870,30 @@ I can describe my capabilities and limitations; that is not consciousness or fee
           traceStep('Lifted the model’s <think> block into this panel; the visible reply starts after it.');
         }
       }
-      const generatedAnswer = shaper.finish();
+
+      /* ---- blank-answer recovery ---------------------------------------- *
+         An empty reply is the worst outcome available: the bubble renders
+         nothing at all and the reader has no idea whether the model ran. It
+         happens for two reasons on a small model — it spent its whole token
+         budget inside a hidden thinking pass, or it emitted only whitespace
+         and stop tokens. Both are recoverable, so retry once with a shorter,
+         flatter prompt that forbids the thinking preamble, and only then fall
+         back to an honest explanation. */
+      let recovered = false;
+      if (isBlankAnswer(generatedAnswer)) {
+        checkStopped();
+        recovered = true;
+        traceStep('The model produced no visible text — the whole generation budget went on hidden thinking or whitespace. Retrying once with a compact direct-answer prompt.');
+        const retrySys = (activeBackend === 'wasm' ? SAFARI_CPU_PERSONA : PERSONA)
+          + '\n\nAnswer the question directly in plain prose. No preamble, no planning line, no thinking. Start with the first sentence of the answer.\n';
+        const retryCap = Math.max(96, Math.min(256, maxTokens));
+        const retryAnswer = await runOnce([{ role: 'system', content: retrySys }, ...turns], retryCap);
+        if (!isBlankAnswer(retryAnswer)) {
+          generatedAnswer = retryAnswer;
+          traceStep('The retry produced ' + generatedAnswer.length + ' characters of visible answer.');
+        }
+      }
+
       let answer = generatedAnswer;
       if (invalidCitation(answer, web, t, citationCards)) {
         answer = 'I could not validate the citations in the generated answer, so I have withheld it. Please provide a reliable source or narrow the question.';
@@ -2586,6 +2902,9 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       } else {
         audit.citationCheck = 'passed-membership-only';
         traceStep('Checked citation IDs and URLs against supplied evidence/request; factual support is not automatically verified.');
+        /* Nothing is worth releasing for a blank answer — the notice below
+           replaces it wholesale. */
+        if (!isBlankAnswer(answer)) display.finish(answer);
       }
       checkStopped();
       const elapsed = Math.max(1, ((typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now()) - startedAt);
@@ -2614,14 +2933,29 @@ I can describe my capabilities and limitations; that is not consciousness or fee
         model: pretty(activeModel),
         ms: wallMs
       });
-      const finalAnswer = answer.trim()
-        || '(the model returned nothing — try rephrasing, or reload the model)';
-      onDelta(finalAnswer);
+
+      /* Never return an empty string: the caller renders exactly what it is
+         given, so an empty answer would show the reader nothing at all. */
+      let finalAnswer = answer.trim();
+      if (isBlankAnswer(finalAnswer)) {
+        finalAnswer = emptyAnswerNotice(web, recovered);
+        traceStep('The model still returned nothing after the retry, so the answer says so instead of rendering an empty bubble.');
+        onDelta(finalAnswer);
+      } else if (answer !== generatedAnswer) {
+        /* The citation check replaced the text; anything already streamed is
+           superseded, so the reader gets one coherent reply. */
+        onDelta(finalAnswer);
+      }
       checkStopped();
       if (cards.length) topic = cards[0];
       lastSources = web.map((w) => ({ title: w.title, url: w.url, source: w.source }));
       previousAnswer = finalAnswer;
       noteTurn(t, { text: finalAnswer, topic: cards[0] ? cards[0].q[0] : '' });
+      if (!isBlankAnswer(finalAnswer) && !/^I could not validate the citations/.test(finalAnswer)) {
+        rememberAnswer(t, finalAnswer, {
+          search: searchEnabled, backend: activeBackend, model: pretty(activeModel), system: opts.system
+        });
+      }
       return finalAnswer;
     } catch (err) {
       finish('failed', { intent: audit.intent, runtime: 'error', note: (err && err.message) || String(err) });
@@ -2657,6 +2991,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     chat,
     load,
     warm,
+    prepare,
     wasReadyBefore,
     onProgress,
     setAIEnabled,
@@ -2693,7 +3028,10 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       progressText: progress.text,
       cards: index.length,
       kb: KB.length,
-      taught: taught.length
+      taught: taught.length,
+      /* How many generated answers this browser can serve without running the
+         model again. */
+      cachedAnswers: answerCache.length
     }),
     reset: () => {
       lastSources = [];
@@ -2706,6 +3044,13 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       trace = null;
     },
     teach, forget, learned, help: () => HELP,
+    /* The answer cache: what this browser has stored, and how to clear it. */
+    cachedAnswers: () => answerCache.map((e) => ({ chars: e.a.length, model: e.model, stored: e.ts })),
+    clearAnswerCache: () => {
+      answerCache = [];
+      try { localStorage.removeItem(ANSWER_CACHE_KEY); } catch (_) {}
+      return true;
+    },
     webSearch, sources: () => lastSources.slice(),
     interpretation: () => reportStructured(lastReport, lastSources.length),
     report: () => lastReport,
