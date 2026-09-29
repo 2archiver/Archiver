@@ -34,6 +34,8 @@ const base = process.env.BASE_URL || 'http://127.0.0.1:8000';
       await page.waitForFunction(() => window.Archiver && document.querySelector('#setPersona').value);
       assert.equal(await page.evaluate(() => Archiver.warm()), false);
       assert.equal(requests.some(u => u.includes('/static/vendor/')), false);
+      assert.doesNotMatch(await page.locator('#aiRuntimeStatus').textContent(), /loading from browser cache/i,
+        'idle cached Safari tab must not appear stuck on loading from browser cache');
       const send = async text => {
         await page.locator('#chatInput').fill(text);
         await page.locator('#sendBtn').click();

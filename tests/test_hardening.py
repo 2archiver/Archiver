@@ -141,7 +141,7 @@ def test_concurrency_cap_returns_503_but_health_still_answers():
 
 def test_health_reports_boot_and_db_stamps_and_ping(client):
     body = client.get("/api/health").json()
-    assert body["version"] == "4.3"
+    assert body["version"] == "5"
     assert body["boot_id"] and body["db_created_at"] > 0 and body["ephemeral_disk"] is True
     # Stable across calls within one process.
     assert client.get("/api/health").json()["db_created_at"] == body["db_created_at"]

@@ -1,11 +1,10 @@
 """LLM providers for Archiver.
 
-Supported:
-  * openai  — any OpenAI-compatible /v1/chat/completions endpoint
-              (OpenAI, OpenRouter, Groq, Together, Ollama, LM Studio…)
-  * anthropic — /v1/messages
+Archiver 5 runs its own model in the visitor's browser (WebGPU / WebAssembly).
+Server-side `llm.py` supports:
   * mock    — offline echo provider used for tests and for demoing the
               memory pipeline without an API key.
+  * openai  — optional OpenAI-compatible /v1/chat/completions endpoint.
 
 Streaming is exposed as an async generator of text deltas.
 """
@@ -20,18 +19,17 @@ from typing import AsyncIterator
 import httpx
 
 DEFAULT_MODELS = {
+    "local": "Archiver 5 (in-browser)",
     "openai": "gpt-4o-mini",
-    "anthropic": "claude-3-5-haiku-latest",
     "mock": "archiver-mock-1",
 }
 
 DEFAULT_BASE_URLS = {
+    "local": "",
     "openai": "https://api.openai.com/v1",
-    "anthropic": "https://api.anthropic.com/v1",
     "mock": "local",
 }
 
-ANTHROPIC_VERSION = "2023-06-01"
 TIMEOUT = httpx.Timeout(180.0, connect=15.0)
 
 
@@ -51,12 +49,7 @@ async def stream_completion(
     max_tokens: int = 1024,
 ) -> AsyncIterator[str]:
     provider = (provider or "mock").lower()
-    if provider == "anthropic":
-        async for chunk in _anthropic(
-            model, system, messages, api_key, base_url, temperature, max_tokens
-        ):
-            yield chunk
-    elif provider == "openai":
+    if provider == "openai":
         async for chunk in _openai(
             model, system, messages, api_key, base_url, temperature, max_tokens
         ):
@@ -128,52 +121,6 @@ async def _openai(
                         delta = choices[0].get("delta", {}).get("content")
                         if delta:
                             yield delta
-        except httpx.HTTPError as exc:  # pragma: no cover - network path
-            raise ProviderError(f"request failed: {exc}") from exc
-
-
-async def _anthropic(
-    model: str, system: str, messages: list[dict], api_key: str,
-    base_url: str, temperature: float, max_tokens: int,
-) -> AsyncIterator[str]:
-    payload = {
-        "model": model or DEFAULT_MODELS["anthropic"],
-        "system": system,
-        "messages": [
-            {"role": m["role"], "content": m["content"]}
-            for m in messages
-            if m["role"] in ("user", "assistant")
-        ],
-        "temperature": temperature,
-        "max_tokens": max_tokens,
-        "stream": True,
-    }
-    headers = {
-        "Content-Type": "application/json",
-        "x-api-key": api_key,
-        "anthropic-version": ANTHROPIC_VERSION,
-    }
-    url = f"{_base('anthropic', base_url)}/messages"
-    async with httpx.AsyncClient(timeout=TIMEOUT) as client:
-        try:
-            async with client.stream("POST", url, json=payload, headers=headers) as r:
-                if r.status_code >= 400:
-                    raise ProviderError(
-                        f"Anthropic returned {r.status_code}: "
-                        f"{(await r.aread()).decode('utf-8', 'replace')[:400]}"
-                    )
-                async for line in r.aiter_lines():
-                    line = line.strip()
-                    if not line.startswith("data:"):
-                        continue
-                    try:
-                        obj = json.loads(line[5:].strip())
-                    except ValueError:
-                        continue
-                    if obj.get("type") == "content_block_delta":
-                        text = obj.get("delta", {}).get("text")
-                        if text:
-                            yield text
         except httpx.HTTPError as exc:  # pragma: no cover - network path
             raise ProviderError(f"request failed: {exc}") from exc
 

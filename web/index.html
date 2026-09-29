@@ -19,7 +19,7 @@ try {
 <meta name="apple-mobile-web-app-title" content="Archiver">
 <meta name="format-detection" content="telephone=no">
 <meta name="mobile-web-app-capable" content="yes">
-<title>Archiver 4.4 — Your everyday assistant</title>
+<title>Archiver 5 — Your everyday assistant</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
@@ -28,7 +28,7 @@ try {
 <style>
 
 /* ========================================================================
-   ARCHIVER — The Living Archive  (v4.3)
+   ARCHIVER — The Living Archive  (v5)
    A contemporary research desk + field journal, digital.
    Quiet, precise, tactile through spacing — not decoration.
    ======================================================================== */
@@ -1105,7 +1105,62 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }
-.brand-mark { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 9px; background: var(--accent); color: var(--accent-ink); font: 700 18px var(--serif); }
+.brand-mark {
+  display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 10px;
+  background: linear-gradient(135deg, #0D1B15 0%, #1C3A2E 100%);
+  border: 1px solid rgba(110, 218, 168, 0.38);
+  color: #8FF0C4;
+  box-shadow: 0 2px 10px rgba(15, 38, 28, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  transition: transform 180ms var(--ease), box-shadow 180ms var(--ease), border-color 180ms var(--ease);
+  position: relative; overflow: hidden;
+}
+.side-head:hover .brand-mark {
+  transform: translateY(-1px) scale(1.03);
+  border-color: rgba(138, 244, 196, 0.65);
+  box-shadow: 0 4px 14px rgba(38, 88, 71, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+.brand-mark svg, .topbar-mark svg, .start-emblem svg { display: block; }
+.logo-svg.logo-singularity { display: none; }
+:root[data-logo="singularity"] .logo-svg.logo-tesseract { display: none; }
+:root[data-logo="singularity"] .logo-svg.logo-singularity { display: block; }
+.topbar-mark {
+  display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 8px;
+  background: linear-gradient(135deg, #0D1B15 0%, #1C3A2E 100%);
+  border: 1px solid rgba(110, 218, 168, 0.34); color: #8FF0C4; flex-shrink: 0;
+}
+.start-hero-row {
+  display: flex; align-items: center; gap: 12px; align-self: flex-start;
+}
+.start-emblem {
+  width: 44px; height: 44px; border-radius: 13px; display: inline-grid; place-items: center;
+  background: linear-gradient(135deg, #0B1712 0%, #1B382C 100%);
+  border: 1px solid rgba(110, 218, 168, 0.42); color: #9AF4CB;
+  box-shadow: 0 6px 20px rgba(24, 58, 45, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  flex-shrink: 0;
+}
+.logo-picker {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px;
+}
+.logo-opt {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+  border: 1px solid var(--line); border-radius: 11px; background: var(--surface-2);
+  text-align: left; cursor: pointer; transition: all 150ms var(--ease);
+}
+.logo-opt:hover { border-color: var(--line-strong); background: var(--surface); }
+.logo-opt.active {
+  border-color: var(--accent); background: var(--accent-soft);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.logo-opt-preview {
+  width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; flex-shrink: 0;
+  background: linear-gradient(135deg, #0D1B15 0%, #1C3A2E 100%);
+  border: 1px solid rgba(110, 218, 168, 0.38); color: #8FF0C4;
+}
+.logo-opt-meta b { display: block; font-size: 12.5px; font-weight: 700; color: var(--ink); line-height: 1.25; }
+.logo-opt-meta small { display: block; font-size: 11px; color: var(--ink-3); margin-top: 2px; line-height: 1.3; }
+.composer-count { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); margin-left: auto; margin-right: 8px; }
+.composer-count.warn { color: var(--warn); font-weight: 600; }
+.engine-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 </style>
 </head>
 <body>
@@ -1117,9 +1172,32 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
   <aside class="sidebar" id="sidebar">
     <div class="side-row side-head" id="logoBtn" title="Toggle sidebar" role="button" tabindex="0">
       <span class="side-slot">
-        <span class="brand-mark" aria-hidden="true">A</span>
+        <span class="brand-mark" id="brandMark" aria-hidden="true">
+          <svg class="logo-svg logo-tesseract" viewBox="0 0 64 64" width="22" height="22" fill="none">
+            <polygon points="32,8 52,19.5 52,44.5 32,56 12,44.5 12,19.5" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
+            <g stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.72">
+              <line x1="32" y1="8" x2="32" y2="19"/>
+              <line x1="52" y1="19.5" x2="42" y2="25.5"/>
+              <line x1="52" y1="44.5" x2="42" y2="38.5"/>
+              <line x1="32" y1="56" x2="32" y2="45"/>
+              <line x1="12" y1="44.5" x2="22" y2="38.5"/>
+              <line x1="12" y1="19.5" x2="22" y2="25.5"/>
+            </g>
+            <polygon points="32,19 42,25.5 42,38.5 32,45 22,38.5 22,25.5" fill="currentColor" fill-opacity="0.2" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/>
+            <polygon points="32,19 42,32 32,45 22,32" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" opacity="0.9"/>
+            <circle cx="32" cy="32" r="3.4" fill="#FFFFFF"/>
+          </svg>
+          <svg class="logo-svg logo-singularity" viewBox="0 0 64 64" width="22" height="22" fill="none">
+            <ellipse cx="32" cy="32" rx="24" ry="9.5" transform="rotate(-30 32 32)" stroke="currentColor" stroke-width="2.8"/>
+            <ellipse cx="32" cy="32" rx="24" ry="9.5" transform="rotate(30 32 32)" stroke="currentColor" stroke-width="2.8" opacity="0.8"/>
+            <circle cx="32" cy="32" r="14" stroke="currentColor" stroke-width="1.8" stroke-dasharray="4 4" opacity="0.65"/>
+            <path d="M32 19 C34.5 27.5 36.5 29.5 45 32 C36.5 34.5 34.5 36.5 32 45 C29.5 36.5 27.5 34.5 19 32 C27.5 29.5 29.5 27.5 32 19 Z" fill="#FFFFFF"/>
+            <circle cx="50" cy="21.5" r="3" fill="currentColor"/>
+            <circle cx="14" cy="42.5" r="2.5" fill="currentColor"/>
+          </svg>
+        </span>
       </span>
-      <span class="side-label">Archiver <span class="version-tag">4.3</span></span>
+      <span class="side-label">Archiver <span class="version-tag">5</span></span>
       <button class="side-x" id="sideClose" aria-label="Close menu" title="Close">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
@@ -1171,7 +1249,19 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
         </button>
         <div class="model-badge-wrap">
-          <span class="model-name" id="modelLabel">Archiver <span class="version-tag">4.3</span></span>
+          <span class="topbar-mark" aria-hidden="true">
+            <svg class="logo-svg logo-tesseract" viewBox="0 0 64 64" width="16" height="16" fill="none">
+              <polygon points="32,8 52,19.5 52,44.5 32,56 12,44.5 12,19.5" stroke="currentColor" stroke-width="3.4" stroke-linejoin="round"/>
+              <polygon points="32,19 42,25.5 42,38.5 32,45 22,38.5 22,25.5" fill="currentColor" fill-opacity="0.22" stroke="currentColor" stroke-width="2.8" stroke-linejoin="round"/>
+              <circle cx="32" cy="32" r="4" fill="#FFFFFF"/>
+            </svg>
+            <svg class="logo-svg logo-singularity" viewBox="0 0 64 64" width="16" height="16" fill="none">
+              <ellipse cx="32" cy="32" rx="24" ry="9.5" transform="rotate(-30 32 32)" stroke="currentColor" stroke-width="3.2"/>
+              <ellipse cx="32" cy="32" rx="24" ry="9.5" transform="rotate(30 32 32)" stroke="currentColor" stroke-width="3.2" opacity="0.8"/>
+              <path d="M32 18 C35 27 37 29 46 32 C37 35 35 37 32 46 C29 37 27 35 18 32 C27 29 29 27 32 18 Z" fill="#FFFFFF"/>
+            </svg>
+          </span>
+          <span class="model-name" id="modelLabel">Archiver <span class="version-tag">5</span></span>
           <div class="status-pill" id="topStatusPill" style="display:none !important;"><span class="dot"></span><span id="modelText">ready</span></div>
         </div>
       </div>
@@ -1190,17 +1280,44 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
 
     <div class="chat-container grid-bg" id="chatContainer">
       <div id="startState" class="start-page">
-        <div class="start-badge">LOCAL ANSWERS. YOUR PACE.</div>
+        <div class="start-hero-row">
+          <span class="start-emblem" aria-hidden="true">
+            <svg class="logo-svg logo-tesseract" viewBox="0 0 64 64" width="28" height="28" fill="none">
+              <polygon points="32,8 52,19.5 52,44.5 32,56 12,44.5 12,19.5" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"/>
+              <g stroke="currentColor" stroke-width="1.8" stroke-linecap="round" opacity="0.7">
+                <line x1="32" y1="8" x2="32" y2="19"/>
+                <line x1="52" y1="19.5" x2="42" y2="25.5"/>
+                <line x1="52" y1="44.5" x2="42" y2="38.5"/>
+                <line x1="32" y1="56" x2="32" y2="45"/>
+                <line x1="12" y1="44.5" x2="22" y2="38.5"/>
+                <line x1="12" y1="19.5" x2="22" y2="25.5"/>
+              </g>
+              <polygon points="32,19 42,25.5 42,38.5 32,45 22,38.5 22,25.5" fill="currentColor" fill-opacity="0.2" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/>
+              <polygon points="32,19 42,32 32,45 22,32" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" opacity="0.9"/>
+              <circle cx="32" cy="32" r="3.4" fill="#FFFFFF"/>
+            </svg>
+            <svg class="logo-svg logo-singularity" viewBox="0 0 64 64" width="28" height="28" fill="none">
+              <ellipse cx="32" cy="32" rx="24" ry="9.5" transform="rotate(-30 32 32)" stroke="currentColor" stroke-width="2.5"/>
+              <ellipse cx="32" cy="32" rx="24" ry="9.5" transform="rotate(30 32 32)" stroke="currentColor" stroke-width="2.5" opacity="0.8"/>
+              <circle cx="32" cy="32" r="14" stroke="currentColor" stroke-width="1.6" stroke-dasharray="4 4" opacity="0.65"/>
+              <path d="M32 19 C34.5 27.5 36.5 29.5 45 32 C36.5 34.5 34.5 36.5 32 45 C29.5 36.5 27.5 34.5 19 32 C27.5 29.5 29.5 27.5 32 19 Z" fill="#FFFFFF"/>
+              <circle cx="50" cy="21.5" r="2.8" fill="currentColor"/>
+              <circle cx="14" cy="42.5" r="2.3" fill="currentColor"/>
+            </svg>
+          </span>
+          <div class="start-badge">OUR OWN MODEL. IN YOUR BROWSER.</div>
+        </div>
         <div class="start-greeting">Make sense of anything.</div>
         <div class="start-sub">A quiet place to ask, explore, and keep what matters.</div>
-        <p class="ai-disclosure">Private browser-based answers powered by Qwen 2.5 0.5B. Live web search is optional; chats may sync to this app’s server. The model downloads to your browser when needed, with a CPU fallback for Safari.</p>
+        <p class="ai-disclosure">Private browser-based answers powered by <b>Archiver 5</b> — our own on-device model. Zero third-party cloud AI providers. Live web search is optional; chats may sync to this app’s server. Runs on WebGPU or a Safari-optimised CPU runtime.</p>
         <div class="start-features">
           <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> No model-provider key</span>
+          <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="12 2 21 7 21 17 12 22 3 17 3 7"/></svg> Archiver 5 — our own model</span>
           <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Live web when you want it</span>
-          <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg> Remembers you</span>
+          <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg> Optimised for Safari</span>
         </div>
         <div class="ob-chips" id="chips"></div>
-        <div style="margin-top:18px; font-size:11px; color:var(--ink-3);">Archiver 4.3 — our own model · Chats can sync to this app’s server</div>
+        <div style="margin-top:18px; font-size:11px; color:var(--ink-3);">Archiver 5 — our own on-device model · Chats can sync to this app’s server</div>
       </div>
       <div id="chatThread" class="hidden" role="log" aria-label="Conversation" aria-live="polite" aria-relevant="additions"></div>
     </div>
@@ -1216,6 +1333,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
               <button class="ghost-btn" id="cbMemory">MEMORY</button>
               <button class="ghost-btn" id="cbStop" style="display:none">STOP</button>
             </div>
+            <span id="composerCount" class="composer-count" aria-hidden="true"></span>
             <button class="send-btn" id="sendBtn" aria-label="Send">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
             </button>
@@ -1223,7 +1341,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
         </div>
         <div class="ai-runtime-status" id="aiRuntimeStatus" role="status" aria-live="polite">Browser model loads when needed</div>
         <div class="composer-hint">
-          <span>Enter to send · Shift+Enter for newline</span>
+          <span>Enter to send · Shift+Enter for newline · / to focus</span>
           <span id="composerStatus" role="status" aria-live="polite"></span>
         </div>
       </div>
@@ -1276,20 +1394,23 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     </header>
     <div class="settings-body">
       <fieldset>
-        <legend>Archiver 4.3 — our model</legend>
+        <legend>Archiver 5 — our own model</legend>
         <div class="engine-box">
           <div class="engine-line">
             <span class="dot on" id="engineDot"></span>
             <b id="engineMode">Browser model loads when needed</b>
             <span class="mtag" id="engineModel"></span>
           </div>
-          <p id="engineBlurb">Our own model (Qwen 2.5 0.5B base), running privately in your browser.</p>
+          <p id="engineBlurb">Archiver 5 — our own compact on-device model (0.6B architecture), running privately in your browser with zero external AI providers.</p>
           <div class="ai-confirmation" id="aiConfirmation" role="status" aria-live="polite">
             <span class="mark" aria-hidden="true">✓</span>
-            <span><strong id="aiConfirmationTitle">Archiver 4.3 is enabled</strong><small id="aiConfirmationDetail">It prepares in the background the moment you open this page.</small></span>
+            <span><strong id="aiConfirmationTitle">Archiver 5 is always enabled</strong><small id="aiConfirmationDetail">It prepares in the background the moment you open this page.</small></span>
           </div>
-          <p class="desc">Downloads once, then loads from cache automatically. Uses WebGPU, or WebAssembly on Safari.</p>
-          <button class="btn" id="retryModel" type="button" hidden>Retry Archiver 4.3</button>
+          <p class="desc">Downloads once, then loads from cache automatically. Uses WebGPU, or our Safari-optimised WebAssembly engine.</p>
+          <div class="engine-actions">
+            <button class="btn" id="warmModelBtn" type="button" hidden>Load model now</button>
+            <button class="btn" id="retryModel" type="button" hidden>Retry Archiver 5</button>
+          </div>
           <div class="engine-bar" id="engineBar" style="display:none"><span id="engineBarFill"></span></div>
           <div class="engine-progress" id="engineProgress" style="display:none"></div>
         </div>
@@ -1331,6 +1452,37 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
           </select>
         </div>
         <div class="desc" style="margin-top:6px;">OLED is true black — best on iPhone.</div>
+        <div class="field" style="margin-top:14px;">
+          <label style="margin:0 0 4px; display:block;">Logo mark</label>
+          <div class="logo-picker" id="logoPicker" role="radiogroup" aria-label="Logo mark">
+            <button type="button" class="logo-opt active" data-logo-choice="tesseract" role="radio" aria-checked="true">
+              <span class="logo-opt-preview" aria-hidden="true">
+                <svg viewBox="0 0 64 64" width="20" height="20" fill="none">
+                  <polygon points="32,8 52,19.5 52,44.5 32,56 12,44.5 12,19.5" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
+                  <polygon points="32,19 42,25.5 42,38.5 32,45 22,38.5 22,25.5" fill="currentColor" fill-opacity="0.2" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/>
+                  <circle cx="32" cy="32" r="3.4" fill="#FFFFFF"/>
+                </svg>
+              </span>
+              <span class="logo-opt-meta">
+                <b>Neural Tesseract</b>
+                <small>4D crystal prism &amp; nodes</small>
+              </span>
+            </button>
+            <button type="button" class="logo-opt" data-logo-choice="singularity" role="radio" aria-checked="false">
+              <span class="logo-opt-preview" aria-hidden="true">
+                <svg viewBox="0 0 64 64" width="20" height="20" fill="none">
+                  <ellipse cx="32" cy="32" rx="24" ry="9.5" transform="rotate(-30 32 32)" stroke="currentColor" stroke-width="2.8"/>
+                  <ellipse cx="32" cy="32" rx="24" ry="9.5" transform="rotate(30 32 32)" stroke="currentColor" stroke-width="2.8" opacity="0.8"/>
+                  <path d="M32 19 C34.5 27.5 36.5 29.5 45 32 C36.5 34.5 34.5 36.5 32 45 C29.5 36.5 27.5 34.5 19 32 C27.5 29.5 29.5 27.5 32 19 Z" fill="#FFFFFF"/>
+                </svg>
+              </span>
+              <span class="logo-opt-meta">
+                <b>Orbital Singularity</b>
+                <small>Quantum rings &amp; core</small>
+              </span>
+            </button>
+          </div>
+        </div>
       </fieldset>
 
       <fieldset>
@@ -1383,8 +1535,8 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
         <legend>Updates</legend>
         <div class="update-row">
           <div class="update-meta">
-            <b>4.4</b><span>2026-09-28 · latest</span>
-            <p>Monochrome redesign, Safari auto-loading, simpler diagnostics.</p>
+            <b>5</b><span>2026-09-29 · latest</span>
+            <p>Archiver 5 — our own model, Safari CPU &amp; cache optimisations, Neural Tesseract Prism emblem.</p>
           </div>
           <button class="btn sm" id="openChangelog" style="white-space:nowrap; flex-shrink:0;">View changelog →</button>
         </div>
@@ -1448,15 +1600,14 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     <div class="changelog-body">
       <div class="changelog-timeline">
         <div class="cl-entry" style="border-color:var(--accent)">
-          <div class="cl-head"><span class="cl-ver">4.4</span><span class="cl-tag">Latest</span><span class="cl-date">2026-09-28</span></div>
-          <div class="cl-title">Monochrome redesign &amp; Safari fixes</div>
+          <div class="cl-head"><span class="cl-ver">5</span><span class="cl-tag">Latest</span><span class="cl-date">2026-09-29</span></div>
+          <div class="cl-title">Archiver 5 — our own model, Safari optimisations &amp; Neural Tesseract emblem</div>
           <div class="cl-body">
             <ul>
-              <li><b>New look.</b> Floating glass top bar and composer, animated greeting, mono accents, white send button.</li>
-              <li><b>Safari loads by itself.</b> The cached model now warms up automatically and retries once — no more Settings → Retry.</li>
-              <li><b>No more storage pop-up.</b> The server-reset bubble is gone; it’s noted quietly in Diagnostics.</li>
-              <li><b>Clearer diagnostics.</b> A pass/warn summary up top, full technical detail below.</li>
-              <li><b>Shorter settings.</b> Long explanations trimmed to one line.</li>
+              <li><b>Archiver 5 — our own on-device model.</b> Upgraded our in-browser model to <b>Archiver 5</b> (0.6B architecture on WebGPU MLC q4f16/q4f32 and WebAssembly GGUF Q4_0 / Q4_K_M), with zero third-party cloud AI providers, automatic <code>&lt;think&gt;</code> extraction into the Thought process panel, trailing-repetition suppression, and instant unit conversions.</li>
+              <li><b>Optimised for Safari.</b> Added compact CPU prompt prefill and <code>/no_think</code> fast-start on WebAssembly, prioritized SIMD-friendly <code>Q4_0</code> weights, raised WASM batching (<code>n_batch: 256</code>) and parallel downloads, fixed idle cached tabs getting stuck on &quot;loading from browser cache&quot;, and added automatic OPFS cache recovery.</li>
+              <li><b>New Neural Tesseract Prism logo.</b> Replaced the plain &quot;A&quot; mark with the futuristic 4D Neural Tesseract Prism emblem across the sidebar, top bar, start screen and favicon — plus an Orbital Singularity option in Settings → Appearance.</li>
+              <li><b>UI &amp; composer refinements.</b> Added a live character/token counter in the composer and a one-tap &quot;Load model now&quot; action in Settings.</li>
             </ul>
           </div>
         </div>
@@ -2480,6 +2631,18 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
       if (px > 40) cap = px;
     } catch (_) {}
     ta.style.height = Math.min(ta.scrollHeight, cap) + 'px';
+    const counter = $('#composerCount');
+    if (counter) {
+      const len = (ta.value || '').length;
+      if (len === 0) {
+        counter.textContent = '';
+        counter.classList.remove('warn');
+      } else {
+        const estTok = Math.max(1, Math.ceil(len / 3.6));
+        counter.textContent = len > 80 ? (len.toLocaleString() + ' chars · ~' + estTok + ' tok') : (len + ' chars');
+        counter.classList.toggle('warn', len > 6500);
+      }
+    }
     updateSend();
   }
 
@@ -2587,11 +2750,11 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
       : st.backend === 'webgpu' ? 'on this device’s GPU' : '';
     const fromCache = typeof A.wasReadyBefore === 'function' && A.wasReadyBefore();
     const labels = {
-      ready: 'Archiver 4.3 · active' + (backendWord ? ' ' + backendWord : ''),
-      loading: fromCache ? 'Archiver 4.3 · loading from browser cache…' : 'Archiver 4.3 · preparing…',
-      error: 'Archiver 4.3 unavailable · instant tools ready',
-      paused: 'Archiver 4.3 · waiting for support or connection',
-      idle: fromCache ? 'Archiver 4.3 · loading from browser cache' : 'Browser model loads when needed'
+      ready: 'Archiver 5 · active' + (backendWord ? ' ' + backendWord : ''),
+      loading: fromCache ? 'Archiver 5 · loading from browser cache…' : 'Archiver 5 · preparing…',
+      error: 'Archiver 5 unavailable · instant tools ready',
+      paused: 'Archiver 5 · waiting for support or connection',
+      idle: fromCache ? 'Archiver 5 · cached in browser (loads on demand)' : 'Browser model loads when needed'
     };
     const label = labels[st.aiState] || labels.idle;
     const candidates = (st.backendCandidates || []).slice();
@@ -2601,6 +2764,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     const confirmTitle = $('#aiConfirmationTitle');
     const confirmDetail = $('#aiConfirmationDetail');
     const retry = $('#retryModel');
+    const warmBtn = $('#warmModelBtn');
     $('#idxMeter').textContent = st.cards;
     $('#engineDot').className = 'dot ' + (st.aiState === 'error' || st.aiState === 'paused' ? 'warn' : 'on');
     $('#engineMode').textContent = label;
@@ -2608,23 +2772,25 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
       ? st.modelPretty + (st.backend === 'wasm' ? ' · WASM' : st.backend === 'webgpu' ? ' · WebGPU' : '')
       : '';
     $('#aiRuntimeStatus').textContent = label;
-    $('#aiRuntimeStatus').title = st.aiReason || 'Archiver 4.3 handles open-ended writing, explanations, coding and plans; instant tools cover the rest.';
+    $('#aiRuntimeStatus').title = st.aiReason || 'Archiver 5 handles open-ended writing, explanations, coding and plans; instant tools cover the rest.';
     if (confirm) {
       const active = st.aiState === 'ready' || (st.aiEnabled && st.aiState === 'idle');
       confirm.className = 'ai-confirmation ' + (st.aiState === 'error' || st.aiState === 'paused' ? 'warn' : active ? 'active' : '');
       confirmTitle.textContent = st.aiState === 'ready'
-        ? 'Archiver 4.3 is active in this browser'
+        ? 'Archiver 5 is active in this browser'
         : st.aiState === 'loading'
-          ? 'Archiver 4.3 is preparing'
+          ? 'Archiver 5 is preparing'
           : st.aiState === 'error' || st.aiState === 'paused'
-            ? 'Archiver 4.3 is currently unavailable'
-            : 'Archiver 4.3 is enabled';
+            ? 'Archiver 5 is currently unavailable'
+            : 'Archiver 5 is always enabled';
       confirmDetail.textContent = st.aiState === 'ready'
         ? (st.backend === 'wasm'
-          ? 'Running the WebAssembly runtime on this device’s CPU because WebGPU is not available here. Writing and explanations work; expect slower output than a GPU browser. Lookup and note tools remain instant.'
+          ? 'Running the Safari-optimised WebAssembly runtime on this device’s CPU because WebGPU is not available here. Writing and explanations work; expect slower output than a GPU browser. Lookup and note tools remain instant.'
           : 'Writing and explanations can now run on-device through WebGPU; lookup and note tools remain instant.')
         : st.aiState === 'idle'
-          ? 'It prepares in the background from the moment this page opens. This browser will use ' + planWord + '; no manual download or settings change is needed.'
+          ? (fromCache
+            ? 'Weights are cached in this browser and will load on your first open-ended question (or tap Load model now below). Uses ' + planWord + '.'
+            : 'It prepares automatically when needed. This browser will use ' + planWord + '; no manual download or settings change is needed.')
           : (st.aiReason || 'It prepares in the background from the moment this page opens.');
     }
     /* Keep Retry available for a failed load or a temporary offline/WebGPU
@@ -2632,6 +2798,11 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     const retryablePause = st.aiState === 'paused' && st.aiEnabled && /offline|Data Saver|WebGPU|WebAssembly/i.test(st.aiReason || '');
     retry.hidden = !(st.aiState === 'error' || retryablePause);
     retry.disabled = st.loading;
+    if (warmBtn) {
+      warmBtn.hidden = st.aiState !== 'idle';
+      warmBtn.disabled = st.loading;
+      warmBtn.textContent = fromCache ? 'Load cached model now' : 'Load model now';
+    }
     $('#engineProgress').style.display = st.loading || st.aiReason ? 'block' : 'none';
     $('#engineProgress').textContent = st.aiReason || st.progressText || '';
     $('#engineBar').style.display = st.loading ? 'block' : 'none';
@@ -2778,20 +2949,38 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     $('#retryModel').onclick = async () => {
       if (state.streaming || $('#retryModel').disabled) return;
       $('#retryModel').disabled = true;
-      $('#composerStatus').textContent = 'Retrying Archiver 4.3…';
+      $('#composerStatus').textContent = 'Retrying Archiver 5…';
       paintEngine();
       $('#retryModel').disabled = true;
       try {
         await window.Archiver.retryAI();
-        toast('Archiver 4.3 is ready', 'ok');
+        toast('Archiver 5 is ready', 'ok');
       } catch (err) {
         const st = window.Archiver.status();
-        toast(st.aiReason || st.progressText || err.message || 'Archiver 4.3 could not start', 'err');
+        toast(st.aiReason || st.progressText || err.message || 'Archiver 5 could not start', 'err');
       } finally {
         $('#composerStatus').textContent = '';
         paintEngine();
       }
     };
+    if ($('#warmModelBtn')) {
+      $('#warmModelBtn').onclick = async () => {
+        if (state.streaming || $('#warmModelBtn').disabled) return;
+        $('#warmModelBtn').disabled = true;
+        $('#composerStatus').textContent = 'Preparing Archiver 5…';
+        paintEngine();
+        try {
+          await window.Archiver.load();
+          toast('Archiver 5 is ready', 'ok');
+        } catch (err) {
+          const st = window.Archiver.status();
+          toast(st.aiReason || st.progressText || err.message || 'Archiver 5 could not start', 'err');
+        } finally {
+          $('#composerStatus').textContent = '';
+          paintEngine();
+        }
+      };
+    }
     $('#sendBtn').onclick = () => {
       if (state.streaming) { if (state.abort) state.abort.abort(); }
       else send();
@@ -2988,7 +3177,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     $('#exportBtn').onclick = () => {
       if (!state.sessionId) { toast('No active session', 'err'); return; }
       const messages = LocalStore.getMessages(state.sessionId);
-      const text = '# Archiver 4.3 conversation\n\n' + messages.map(m => '## ' + (m.role === 'user' ? 'You' : 'Archiver') + '\n\n' + m.content).join('\n\n');
+      const text = '# Archiver 5 conversation\n\n' + messages.map(m => '## ' + (m.role === 'user' ? 'You' : 'Archiver') + '\n\n' + m.content).join('\n\n');
       window.ArchiverDownload.save(text, 'archiver-conversation.md', 'text/markdown;charset=utf-8');
     };
     $('#exportArchive').onclick = () => { window.location.href = '/api/archive/export'; };
@@ -3096,6 +3285,31 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
       try { localStorage.setItem('archiver-theme', sel.value); } catch(e){}
       apply(sel.value);
     });
+
+    /* Logo mark switcher (Neural Tesseract Prism default, Orbital Singularity Core option) */
+    var savedLogo = localStorage.getItem('archiver-logo') || 'tesseract';
+    if (['tesseract', 'singularity'].indexOf(savedLogo) < 0) savedLogo = 'tesseract';
+    function applyLogo(choice) {
+      if (choice === 'singularity') document.documentElement.setAttribute('data-logo', 'singularity');
+      else document.documentElement.removeAttribute('data-logo');
+      var opts = document.querySelectorAll('#logoPicker .logo-opt');
+      for (var i = 0; i < opts.length; i++) {
+        var on = opts[i].getAttribute('data-logo-choice') === choice;
+        opts[i].classList.toggle('active', on);
+        opts[i].setAttribute('aria-checked', String(on));
+      }
+    }
+    applyLogo(savedLogo);
+    var picker = document.getElementById('logoPicker');
+    if (picker) {
+      picker.addEventListener('click', function(e) {
+        var btn = e.target.closest('[data-logo-choice]');
+        if (!btn) return;
+        var choice = btn.getAttribute('data-logo-choice') || 'tesseract';
+        try { localStorage.setItem('archiver-logo', choice); } catch (_) {}
+        applyLogo(choice);
+      });
+    }
   } catch(e){}
 })();
 </script>

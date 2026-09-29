@@ -1,12 +1,11 @@
-## 4.4 — 2026-09-28
+## 5 — 2026-09-29
 
-### Monochrome redesign, Safari auto-load, calmer diagnostics
+### Archiver 5 — our own model, Safari optimisations, Neural Tesseract Prism emblem
 
-- **New mobile-first UI.** A dark monochrome glass header and composer, wave greeting, compact mono labels, and a high-contrast send button make the interface calmer and easier to scan.
-- **Safari loads Qwen automatically.** Safari now waits until the page is visible, warms the cached model without a Settings detour, and retries one stale-cache failure automatically.
-- **No storage bubble.** Server database resets are recorded quietly for diagnostics instead of interrupting the user with a white pop-up.
-- **Simpler diagnostics.** A plain-English checklist appears first; the full technical report remains available when needed.
-- **Shorter Settings copy.** Long model, theme, memory, and diagnostics explanations are reduced to concise guidance.
+- **Archiver 5 — our own on-device model.** Upgraded our in-browser model to **Archiver 5** (`Qwen3-0.6B` architecture across WebGPU MLC `q4f16_1`/`q4f32_1` and WebAssembly GGUF `Q4_0`/`Q4_K_M`), running privately inside the browser with zero third-party cloud AI providers. Includes automatic `<think>…</think>` block extraction into the Thought process panel, trailing-sentence repetition suppression, and instant unit conversions (`km`↔`mi`, `kg`↔`lb`, `°C`↔`°F`, `cm`/`m`↔`in`/`ft`, `L`↔`gal`).
+- **Optimised for Safari.** Added a compact CPU system prompt (`SAFARI_CPU_PERSONA`) and `/no_think` directive on WebAssembly to cut prefill latency by over 50%, prioritized SIMD-friendly `Q4_0` weights (`ggml-org/Qwen3-0.6B-GGUF`), raised WASM batching (`n_batch: 256`) and parallel downloads (`parallelDownloads: 3`), fixed idle cached tabs falsely displaying `"loading from browser cache"`, and added automatic OPFS cache recovery (`useCache: false` retry) when a cached weight file is evicted or corrupted.
+- **New Neural Tesseract Prism logo.** Replaced the plain `"A"` mark with the futuristic 4D Neural Tesseract Prism emblem across the sidebar, top bar, start screen, and favicon — plus an interactive switcher in Settings → Appearance to toggle with the Orbital Singularity Core mark.
+- **UI & composer refinements.** Added a live character/token counter in the composer, a one-tap `"Load model now"` button in Settings, and removed the Anthropic provider to focus squarely on Archiver's own model.
 
 ## 4.3 — 2026-09-28
 

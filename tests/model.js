@@ -12,7 +12,7 @@ const vm = require('node:vm');
 const GPU_RUNTIME = '/static/vendor/web-llm-0.2.80.js';
 const WASM_RUNTIME = '/static/vendor/wllama-3.6.1.js';
 const WASM_BINARY = '/static/vendor/wllama-3.6.1.wasm';
-const models = ['Qwen2.5-0.5B-Instruct-q4f16_1-MLC', 'Qwen2.5-0.5B-Instruct-q4f32_1-MLC'];
+const models = ['Qwen3-0.6B-q4f16_1-MLC', 'Qwen3-0.6B-q4f32_1-MLC'];
 
 async function fixture(options = {}) {
   const stats = {
@@ -76,7 +76,7 @@ async function fixture(options = {}) {
         };
       } }
     },
-    localStorage: { getItem: key => storage.get(key) || null, setItem: (key, value) => storage.set(key, value) },
+    localStorage: { getItem: key => storage.get(key) || null, setItem: (key, value) => storage.set(key, value), removeItem: key => storage.delete(key) },
     Worker: class { terminate() { stats.terminated++; } },
     // Throws unless a test installs a search stub on stats.fetch.
     fetch: (...args) => { if (stats.fetch) return stats.fetch(...args); throw Error('unexpected fetch'); }
@@ -116,7 +116,8 @@ const GENERATIVE = 'write a poem about rain';
 (async () => {
   /* ---------------- WebGPU backend (unchanged fast path) ---------------- */
   const { A, stats, storage } = await fixture();
-  assert.equal(A.version, '4.3');
+  assert.equal(A.version, '5');
+  assert.equal(A.name, 'Archiver 5');
   assert.equal(Array.from(A.status().backendCandidates).join(','), 'webgpu,wasm', 'both runtimes are available here');
   for (const q of ['hello', '2+2', 'compare Python and JavaScript', 'summarize: One. Two.']) await A.chat(q, []);
   assert.equal(stats.imports.length, 0, 'instant tasks do not download a model');
@@ -199,6 +200,23 @@ const GENERATIVE = 'write a poem about rain';
   const fenced = await fixture({ chunks: ['Here is code:\n```js\nconst a = 1;'] });
   const closed = await fenced.A.chat('write a function', []);
   assert.equal((closed.match(/```/g) || []).length, 2, 'an unclosed code fence is closed');
+
+  /* Qwen 3 <think>...</think> blocks are stripped from the visible answer and
+     lifted into the Thought process panel. */
+  const qwenThink = await fixture({ chunks: ['<think>\nPlan the haiku carefully.\n</think>\n\n', 'Silent winter snow\n', 'Blankets every quiet branch.'] });
+  let qwenSeen = '';
+  const qwenReply = await qwenThink.A.chat(GENERATIVE, [], { onDelta: d => { qwenSeen += d; } });
+  assert.equal(qwenReply, 'Silent winter snow\nBlankets every quiet branch.', '<think> block stripped from visible output');
+  assert.equal(qwenSeen, qwenReply, '<think> block never streamed to the reader');
+  assert.match(qwenThink.A.trace().thinking, /Plan the haiku carefully/);
+  assert.equal(qwenThink.A.trace().planBy, 'model');
+
+  /* Trailing sentence repetition loop is suppressed on small models. */
+  const repeated = await fixture({ chunks: ['Photosynthesis converts light into chemical energy. ', 'It happens inside chloroplasts. ', 'It happens inside chloroplasts.'] });
+  let repSeen = '';
+  const repReply = await repeated.A.chat(GENERATIVE, [], { onDelta: d => { repSeen += d; } });
+  assert.equal(repReply, 'Photosynthesis converts light into chemical energy. It happens inside chloroplasts.', 'duplicate trailing sentence stripped');
+  assert.equal(repSeen, repReply, 'streamed text matches deduplicated answer');
 
   /* ---------------- the audit trail covers every prompt ---------------- */
   const audit = await fixture();
@@ -294,9 +312,13 @@ const GENERATIVE = 'write a poem about rain';
     assert.equal(w.stats.wasm.pathConfig.default, WASM_BINARY, 'the WASM binary is same-origin');
     assert.equal(w.stats.wasm.params.n_gpu_layers, 0, 'CPU-only: no WebGPU shim on the fallback path');
     assert.ok(w.stats.wasm.params.n_ctx === 2048);
+    assert.equal(w.stats.wasm.params.n_batch, 256, 'Safari WASM batch size tuned for faster prefill');
     assert.ok(w.stats.wasm.params.n_threads >= 1 && w.stats.wasm.params.n_threads <= 4);
     assert.equal(w.stats.wasm.urls[0], w.A.WASM_SOURCES[0], 'weights come from the publisher, automatically');
+    assert.match(w.A.WASM_SOURCES[0], /Qwen3-0\.6B-Q4_0\.gguf/, 'Q4_0 prioritized first for fast Safari CPU SIMD decoding');
+    assert.match(w.stats.wasm.payload.messages[0].content, /\/no_think/, 'Safari CPU path appends /no_think when thinking is not requested');
     assert.match(w.A.reply('who are you').text, /WebAssembly/);
+    assert.match(w.A.trace().steps.join(' | '), /Safari\/CPU prompt compaction/, 'the trail notes Safari CPU prompt compaction');
     assert.match(w.A.trace().steps.join(' | '), /WebAssembly/, 'the trail says which runtime answered');
     assert.equal(w.A.trace().runtime, 'on-device cpu');
     assert.equal(w.stats.wasm.payload.stream, true);
@@ -310,6 +332,23 @@ const GENERATIVE = 'write a poem about rain';
   assert.equal(retrySource.stats.wasm.urls.length, 2, 'the next published source is tried');
   assert.equal(retrySource.stats.wasm.urls[1], retrySource.A.WASM_SOURCES[1]);
   assert.match(retrySource.A.trace().steps.join(' | '), /Model source unavailable/);
+
+  /* Safari cache recovery: if a cached WASM model fails on first open (e.g.
+     corrupted OPFS entry), it clears the stale cache and retries the same URL
+     with useCache: false before moving on. Also stale Qwen2.5 cache entries
+     are automatically invalidated. */
+  const staleCache = await fixture({ noGPU: true });
+  staleCache.storage.set('archiver.engine.v1', JSON.stringify({
+    model: 'Qwen2.5-0.5B-Instruct-q4f16_1-MLC', backend: 'wasm', f16: false, ts: Date.now()
+  }));
+  assert.equal(staleCache.A.wasReadyBefore(), false, 'obsolete Qwen2.5 cache entry is invalidated');
+  assert.equal(staleCache.storage.has('archiver.engine.v1'), false, 'stale entry removed from localStorage');
+  const corruptedCache = await fixture({ noGPU: true, cached: true, wasmFailFirst: true });
+  assert.equal(corruptedCache.A.wasReadyBefore(), true);
+  assert.equal(await corruptedCache.A.chat(GENERATIVE, []), 'A generated answer.');
+  assert.equal(corruptedCache.stats.wasm.urls[0], corruptedCache.A.WASM_SOURCES[0]);
+  assert.equal(corruptedCache.stats.wasm.urls[1], corruptedCache.A.WASM_SOURCES[0], 'same URL retried with useCache:false after cache error');
+  assert.equal(corruptedCache.stats.wasm.params.useCache, false, 'useCache:false passed on recovery retry');
 
   /* Cancellation and timeout on the WASM path. */
   const wasmCancel = await fixture({ noGPU: true, wasmPending: true });

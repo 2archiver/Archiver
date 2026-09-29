@@ -6,8 +6,8 @@ const base = process.env.BASE_URL || 'http://127.0.0.1:8000';
 const runtime = '/static/vendor/web-llm-0.2.80.js';
 const mockRuntime = `
 export const prebuiltAppConfig = { model_list: [
-  { model_id: 'Qwen2.5-0.5B-Instruct-q4f16_1-MLC' },
-  { model_id: 'Qwen2.5-0.5B-Instruct-q4f32_1-MLC' }
+  { model_id: 'Qwen3-0.6B-q4f16_1-MLC' },
+  { model_id: 'Qwen3-0.6B-q4f32_1-MLC' }
 ] };
 export class WebWorkerMLCEngineHandler { onmessage() {} }
 export async function CreateWebWorkerMLCEngine(worker, model, config) {
@@ -32,7 +32,7 @@ export async function CreateWebWorkerMLCEngine(worker, model, config) {
     const packaged = await real.evaluate(async url => {
       const mod = await import(url);
       return { create: typeof mod.CreateWebWorkerMLCEngine, worker: typeof mod.WebWorkerMLCEngineHandler,
-        small: mod.prebuiltAppConfig.model_list.some(m => m.model_id === 'Qwen2.5-0.5B-Instruct-q4f16_1-MLC') };
+        small: mod.prebuiltAppConfig.model_list.some(m => m.model_id === 'Qwen3-0.6B-q4f16_1-MLC') };
     }, runtime);
     assert.deepEqual(packaged, { create: 'function', worker: 'function', small: true });
     await real.close();
