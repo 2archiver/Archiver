@@ -985,11 +985,18 @@ I can describe my capabilities and limitations; that is not consciousness or fee
   /* The same model family on the WASM path, as GGUF from its publishers.
      Ordered with Q4_0 first: 4-bit block quantization uses fast SIMD/NEON dot
      products in llama.cpp on Apple Silicon (Mac & iPhone Safari), decoding
-     nearly 2x faster than Q8_0 while using ~40% less RAM. */
+     nearly 2x faster than Q8_0 while using ~40% less RAM.
+     5.3: Qwen3 first, Qwen2.5 (Archiver 4.3) as automatic fallback — if every
+     Qwen3 artifact 404s or is CORS-blocked, the WASM path still starts rather
+     than leaving Safari without generation. */
   const WASM_SOURCES = [
     'https://huggingface.co/ggml-org/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q4_0.gguf',
     'https://huggingface.co/unsloth/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q4_K_M.gguf',
-    'https://huggingface.co/Qwen/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q8_0.gguf'
+    'https://huggingface.co/Qwen/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q8_0.gguf',
+    // 4.3 fallback — Qwen2.5 0.5B, proven on this WASM runtime and on Render-free
+    'https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_0.gguf',
+    'https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf',
+    'https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q8_0.gguf'
   ];
 
   /* A phone has less memory than a laptop, and a 0.6B model holding a long KV
@@ -1484,8 +1491,6 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     if (preparing) return Promise.resolve(false);
     if (generationReady() || loading) return Promise.resolve(!!loading || generationReady());
     if (!wasReadyBefore()) {
-      // 5.2: async cache check may still allow prepare, but sync path returns false for first visit
-      // To avoid blocking typing, we kick off async check and warm if cache found
       hasCachedWeightsAsync().then(has => {
         if (has && !generationReady() && !loading && !blockReason()) {
           preparing = true;
@@ -1496,7 +1501,8 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     }
     if (blockReason()) return Promise.resolve(false);
     const text = String(prompt || '').trim();
-    if (text.length < 8) return Promise.resolve(false);
+    // 5.3: trigger earlier — 5 chars not 8, so \"write\"-style GPU prompts warm sooner
+    if (text.length < 5) return Promise.resolve(false);
     if (/^(?:hi|hey|hello|yo|thanks|bye|help|\?)\b/i.test(text)) return Promise.resolve(false);
     if (/^(?:teach|learn|forget|summarize|extract|count words|translate):/i.test(text)) return Promise.resolve(false);
     if (tool(text) || converse(text)) return Promise.resolve(false);
@@ -1508,52 +1514,63 @@ I can describe my capabilities and limitations; that is not consciousness or fee
 
   async function loadWebGPU(choice, wanted, ctx) {
     const halfPrecision = !!choice.f16;
-    const selected = wanted || PREFERRED[halfPrecision ? 0 : 1];
-    const allowed = PREFERRED.includes(selected) || LEGACY_PREFERRED.includes(selected);
-    if (!allowed || (!halfPrecision && selected.includes('f16'))) {
-      throw new Error('That model is not supported by this device.');
-    }
-    const cachedBefore = !!readPersistedBackend();
-    emitProgress(cachedBefore
-      ? 'Archiver 5.2 · loading from browser cache…'
-      : 'Fetching Archiver 5.2 into this browser’s cache — one time, in the background…', 1);
-    traceStep('Chose the WebGPU backend (' + choice.why + ').');
-    const mod = await import(/* webpackIgnore: true */ WEBLLM_RUNTIME);
-    ctx.stopped();
-    const records = mod.prebuiltAppConfig && mod.prebuiltAppConfig.model_list;
-    const record = Array.isArray(records) && records.find(m => m.model_id === selected);
-    if (!record) throw new Error('The bundled runtime does not include the configured model.');
-    ctx.worker = new Worker('/static/archiver-worker.js', { type: 'module' });
-    let candidate = null;
-    try {
-      candidate = await mod.CreateWebWorkerMLCEngine(ctx.worker, selected, {
-        appConfig: { model_list: [record], useIndexedDBCache: false },
-        initProgressCallback: r => {
-          if (!ctx.controller.signal.aborted && ctx.generation === loadGeneration) {
-            // 5.2: ensure progress shown even when cached (WebLLM may skip callback when cached)
-            const pct = r && typeof r.progress === 'number' ? Math.round(r.progress * 100) : 0;
-            emitProgress(r.text || (cachedBefore ? 'Archiver 5.2 · loading from browser cache…' : 'Preparing Archiver 5.2…'), pct || (cachedBefore ? 50 : 0));
-          }
-        }
-      });
-    } catch (err) {
-      try { ctx.worker.terminate(); } catch (_) {}
-      ctx.worker = null;
-      throw err;
-    }
-    ctx.stopped();
-    engine = candidate;
-    modelWorker = ctx.worker;
-    // 5.2: if engine exposes device lost, listen and clear backend
-    try {
-      if (engine && engine._device && engine._device.lost) {
-        engine._device.lost.then(info => {
-          traceStep('GPU device lost: ' + (info && info.message ? info.message : 'unknown'));
-          releaseBackend();
-        }).catch(() => {});
+    // 5.3: try the preferred Qwen3 model first; on failure fall back to the
+    // Archiver 4.3 Qwen2.5 model which is smaller and proven on this runtime.
+    const primary = wanted || PREFERRED[halfPrecision ? 0 : 1];
+    const candidatesGPU = wanted ? [wanted]
+      : halfPrecision ? [PREFERRED[0], LEGACY_PREFERRED[0]]
+      : [PREFERRED[1], LEGACY_PREFERRED[1]];
+    let lastErr = null;
+    for (const selected of candidatesGPU) {
+      const allowed = PREFERRED.includes(selected) || LEGACY_PREFERRED.includes(selected);
+      if (!allowed || (!halfPrecision && selected.includes('f16'))) continue;
+      const cachedBefore = !!readPersistedBackend();
+      emitProgress(cachedBefore
+        ? 'Archiver 5.2 · loading from browser cache…'
+        : 'Fetching Archiver 5.2 into this browser’s cache — one time, in the background…', 1);
+      if (candidatesGPU.length > 1 && selected !== primary) {
+        traceStep('Retrying WebGPU load with fallback ' + pretty(selected) + ' (Archiver 4.3 model).');
+      } else {
+        traceStep('Chose the WebGPU backend (' + choice.why + ').');
       }
-    } catch (_) {}
-    return selected;
+      const mod = await import(/* webpackIgnore: true */ WEBLLM_RUNTIME);
+      ctx.stopped();
+      const records = mod.prebuiltAppConfig && mod.prebuiltAppConfig.model_list;
+      const record = Array.isArray(records) && records.find(m => m.model_id === selected);
+      if (!record) { lastErr = new Error('The bundled runtime does not include the configured model.'); continue; }
+      ctx.worker = new Worker('/static/archiver-worker.js', { type: 'module' });
+      let candidate = null;
+      try {
+        candidate = await mod.CreateWebWorkerMLCEngine(ctx.worker, selected, {
+          appConfig: { model_list: [record], useIndexedDBCache: false },
+          initProgressCallback: r => {
+            if (!ctx.controller.signal.aborted && ctx.generation === loadGeneration) {
+              const pct = r && typeof r.progress === 'number' ? Math.round(r.progress * 100) : 0;
+              emitProgress(r.text || (cachedBefore ? 'Archiver 5.2 · loading from browser cache…' : 'Preparing Archiver 5.2…'), pct || (cachedBefore ? 50 : 0));
+            }
+          }
+        });
+      } catch (err) {
+        try { ctx.worker.terminate(); } catch (_) {}
+        ctx.worker = null;
+        lastErr = err;
+        traceStep('WebGPU load failed for ' + pretty(selected) + ': ' + ((err && err.message) || err) + (candidatesGPU.length > 1 && selected === primary ? ' — trying fallback.' : ''));
+        continue;
+      }
+      ctx.stopped();
+      engine = candidate;
+      modelWorker = ctx.worker;
+      try {
+        if (engine && engine._device && engine._device.lost) {
+          engine._device.lost.then(info => {
+            traceStep('GPU device lost: ' + (info && info.message ? info.message : 'unknown'));
+            releaseBackend();
+          }).catch(() => {});
+        }
+      } catch (_) {}
+      return selected;
+    }
+    throw lastErr || new Error('WebGPU load failed and no fallback succeeded.');
   }
 
   /* ---- WASM backend ------------------------------------------------------- */

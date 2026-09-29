@@ -684,7 +684,10 @@ SE_CHAIN: list[tuple[str, Callable[..., Awaitable[list[dict[str, Any]]]]]] = [
 # blocks, rate limits) or timed out is skipped for PROVIDER_COOLDOWN seconds, so
 # every following query does not pay for the same refusal again. In-memory and
 # per-process: a free-tier spin-down forgets it, which is the right default.
-PROVIDER_COOLDOWN = float(os.environ.get("ARCHIVER_PROVIDER_COOLDOWN", "600"))
+# 5.3: 120s not 600s — 4.3's handling never held a cold-start 503 against the
+# next ten minutes of searches; a short cooldown still avoids hammering a
+# genuinely blocked provider while letting a waking instance recover on retry.
+PROVIDER_COOLDOWN = float(os.environ.get("ARCHIVER_PROVIDER_COOLDOWN", "120"))
 # Each provider gets its own ceiling inside the overall TIMEOUT, so one slow
 # upstream cannot eat the whole budget of a chain.
 PROVIDER_TIMEOUT = float(os.environ.get("ARCHIVER_PROVIDER_TIMEOUT", "12"))
@@ -1012,7 +1015,10 @@ async def search(query: str, limit: int = 5) -> dict[str, Any]:
 
         # 4.3: the primary legs can return hits that all fail the gate while
         # the secondary legs were never asked. Ask them before falling back.
-        if level == "none":
+        # 5.3: also rescue \"single\" (one weak MAYBE_AT hit) — a lone weak
+        # stub is not a reliable answer; the secondary legs often have the
+        # real page and elevate the result to \"high\".
+        if level in ("none", "single") and len(kept) < MAX_RESULTS:
             seen = {(r.get("url") or "").strip().lower() for r in pool if r.get("url")}
             extra = await _gather_secondary(q_to_search, client, log, seen)
             if extra:
