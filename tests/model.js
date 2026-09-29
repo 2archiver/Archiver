@@ -21,7 +21,7 @@ async function fixture(options = {}) {
   };
   const chunks = options.chunks || ['A generated ', 'answer.'];
   /* A queue of chunk sets: each inference call takes the next one, so a test can
-     make the first pass blank and the retry succeed (5.1's recovery path). */
+     make the first pass blank and the retry succeed (5.2's recovery path). */
   const nextChunks = () => {
     if (options.chunkQueue && options.chunkQueue.length) {
       return options.chunkQueue.length > 1 ? options.chunkQueue.shift() : options.chunkQueue[0];
@@ -125,8 +125,8 @@ const GENERATIVE = 'write a poem about rain';
 (async () => {
   /* ---------------- WebGPU backend (unchanged fast path) ---------------- */
   const { A, stats, storage } = await fixture();
-  assert.equal(A.version, '5.1');
-  assert.equal(A.name, 'Archiver 5.1');
+  assert.equal(A.version, '5.2');
+  assert.equal(A.name, 'Archiver 5.2');
   assert.equal(Array.from(A.status().backendCandidates).join(','), 'webgpu,wasm', 'both runtimes are available here');
   for (const q of ['hello', '2+2', 'compare Python and JavaScript', 'summarize: One. Two.']) await A.chat(q, []);
   assert.equal(stats.imports.length, 0, 'instant tasks do not download a model');
@@ -321,7 +321,7 @@ const GENERATIVE = 'write a poem about rain';
     assert.equal(w.stats.wasm.pathConfig.default, WASM_BINARY, 'the WASM binary is same-origin');
     assert.equal(w.stats.wasm.params.n_gpu_layers, 0, 'CPU-only: no WebGPU shim on the fallback path');
     assert.ok(w.stats.wasm.params.n_ctx === 2048);
-    assert.equal(w.stats.wasm.params.n_batch, 256, 'Safari WASM batch size tuned for faster prefill');
+    assert.ok([512, 1024].includes(w.stats.wasm.params.n_batch), 'Safari WASM batch size tuned for faster prefill (5.2: 512 desktop / 1024 mobile)');
     assert.ok(w.stats.wasm.params.n_threads >= 1 && w.stats.wasm.params.n_threads <= 4);
     assert.equal(w.stats.wasm.urls[0], w.A.WASM_SOURCES[0], 'weights come from the publisher, automatically');
     assert.match(w.A.WASM_SOURCES[0], /Qwen3-0\.6B-Q4_0\.gguf/, 'Q4_0 prioritized first for fast Safari CPU SIMD decoding');
@@ -430,38 +430,49 @@ const GENERATIVE = 'write a poem about rain';
   assert.match(fallback, /timed out/); assert.equal(timeout.A.status().loading, false);
   assert.ok(timeout.stats.terminated > 0);
 
-  /* Safari navigation: neither cold nor cached tabs prewarm. On-demand works. */
+  /* 5.2 Safari: first-visit defers, cached warms on load. On-demand works in both. */
   for (const ua of [
     'Mozilla/5.0 (Macintosh) Version/18.0 Safari/605.1.15',
     'Mozilla/5.0 (iPhone) AppleWebKit/605.1.15 CriOS/130 Mobile Safari/604.1',
     'Mozilla/5.0 (iPad) AppleWebKit/605.1.15 FxiOS/130 Mobile Safari/605.1.15'
   ]) {
-    for (const cached of [false, true]) {
-      const safari = await fixture({ ua, cached, noGPU: true });
-      assert.equal(await safari.A.warm(), false);
-      assert.equal(safari.stats.imports.length, 0, 'opening Safari must not load blob workers/weights');
-      await safari.A.chat(GENERATIVE, []);
-      assert.equal(safari.A.mode(), 'neural', 'on-demand generation remains enabled');
-      safari.stats.events.pagehide();
-      assert.equal(safari.A.mode(), 'grounded', 'do not restore detached runtimes from bfcache');
-      assert.ok(safari.stats.wasm.exited > 0);
-      await safari.A.chat(GENERATIVE, []);
-      assert.equal(safari.A.mode(), 'neural', 'restored page can initialize fresh workers');
-    }
+    // First visit: no warm
+    const safariCold = await fixture({ ua, cached: false, noGPU: true });
+    assert.equal(await safariCold.A.warm(), false, 'first-visit Safari must not warm during navigation');
+    assert.equal(safariCold.stats.imports.length, 0, 'opening Safari cold must not load blob workers/weights');
+    await safariCold.A.chat(GENERATIVE, []);
+    assert.equal(safariCold.A.mode(), 'neural', 'on-demand generation remains enabled');
+    safariCold.stats.events.pagehide();
+    assert.equal(safariCold.A.mode(), 'grounded', 'do not restore detached runtimes from bfcache');
+    assert.ok(safariCold.stats.wasm.exited > 0);
+    await safariCold.A.chat(GENERATIVE, []);
+    assert.equal(safariCold.A.mode(), 'neural', 'restored page can initialize fresh workers');
+
+    // Cached visit: 5.2 warms on load
+    const safariCached = await fixture({ ua, cached: true, noGPU: true });
+    assert.equal(await safariCached.A.warm(), true, 'cached Safari should warm on page load in 5.2');
+    assert.ok(safariCached.stats.imports.length > 0, 'cached Safari loads from cache');
+    safariCached.stats.events.pagehide();
+    assert.equal(safariCached.A.mode(), 'grounded', 'do not restore detached runtimes from bfcache');
+    assert.ok(safariCached.stats.wasm.exited > 0);
+    await safariCached.A.chat(GENERATIVE, []);
+    assert.equal(safariCached.A.mode(), 'neural', 'restored page can initialize fresh workers');
   }
-  /* 5.1 — iPhone warms on intent, not on page load. */
+  /* 5.2 — iPhone warms on intent and also on load when cached. */
   const IPHONE_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 '
     + '(KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1';
   const iphone = await fixture({ ua: IPHONE_UA, cached: true, noGPU: true });
-  assert.equal(await iphone.A.warm(), false, 'a Safari tab still does not warm during navigation');
-  assert.equal(iphone.stats.imports.length, 0, 'and fetches nothing yet');
-  assert.equal(await iphone.A.prepare('2+2'), false, 'a calculation needs no model');
-  assert.equal(await iphone.A.prepare('hi'), false, 'a greeting needs no model');
-  assert.equal(iphone.stats.imports.length, 0, 'still nothing fetched');
-  assert.equal(await iphone.A.prepare('Compare the causes of the first world war in detail'), true,
+  assert.equal(await iphone.A.warm(), true, 'cached Safari tab warms on load in 5.2');
+  assert.ok(iphone.stats.imports.length > 0, 'and fetches from cache');
+
+  const iphonePrepare = await fixture({ ua: IPHONE_UA, cached: true, noGPU: true });
+  assert.equal(await iphonePrepare.A.prepare('2+2'), false, 'a calculation needs no model');
+  assert.equal(await iphonePrepare.A.prepare('hi'), false, 'a greeting needs no model');
+  assert.equal(iphonePrepare.stats.imports.length, 0, 'still nothing fetched for instant tasks');
+  assert.equal(await iphonePrepare.A.prepare('Compare the causes of the first world war in detail'), true,
     'an open-ended question starts the already-cached load');
-  assert.ok(iphone.stats.imports.length > 0, 'the runtime comes from our own origin');
-  assert.equal(iphone.A.mode(), 'neural', 'and the model ends up serving');
+  assert.ok(iphonePrepare.stats.imports.length > 0, 'the runtime comes from our own origin');
+  assert.equal(iphonePrepare.A.mode(), 'neural', 'and the model ends up serving');
   /* A first visit on the same device still waits: no surprise download. */
   const firstVisit = await fixture({ ua: IPHONE_UA, noGPU: true });
   assert.equal(await firstVisit.A.prepare('Compare the causes of the first world war in detail'), false,
@@ -552,7 +563,7 @@ const GENERATIVE = 'write a poem about rain';
   const fabricatedOffline = await fixture({ chunks: ['A study confirms this [1].'] });
   await fabricatedOffline.A.load();
   assert.match(await fabricatedOffline.A.chat('Explain the object', []), /withheld/);
-  /* 5.1 — an empty model reply is recovered, never rendered as a blank bubble. */
+  /* 5.2 — an empty model reply is recovered, never rendered as a blank bubble. */
   for (const chunks of [['   '], ['\n\n\n'], ['…'], []]) {
     const blank = await fixture({ chunks });
     await blank.A.load();
@@ -573,7 +584,7 @@ const GENERATIVE = 'write a poem about rain';
   assert.match(recovers.A.trace().steps.join(' '), /Retrying once with a compact direct-answer prompt/,
     'and the trail says the first pass was empty and a retry ran');
 
-  /* 5.1 — the answer cache serves a repeat without running the model again. */
+  /* 5.2 — the answer cache serves a repeat without running the model again. */
   const cache = await fixture({ chunks: ['Rain falls softly on the window and the day holds still for a moment.'] });
   await cache.A.load();
   const first = await cache.A.chat('write a short line about rain', [], { onDelta: () => {} });
@@ -603,7 +614,7 @@ const GENERATIVE = 'write a poem about rain';
   assert.equal(cache.A.clearAnswerCache(), true);
   assert.equal(cache.A.status().cachedAnswers, 0, 'clearing empties the cache');
 
-  /* 5.1 — answers that could go stale are never cached or replayed. */
+  /* 5.2 — answers that could go stale are never cached or replayed. */
   const live = await fixture({ chunks: ['The answer is live.'] });
   await live.A.load();
   live.stats.fetch = async () => ({ ok: true, json: async () => ({ results: [source] }) });

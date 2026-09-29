@@ -19,7 +19,7 @@ try {
 <meta name="apple-mobile-web-app-title" content="Archiver">
 <meta name="format-detection" content="telephone=no">
 <meta name="mobile-web-app-capable" content="yes">
-<title>Archiver 5.1 — Your everyday assistant</title>
+<title>Archiver 5.2 — Your everyday assistant</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
@@ -647,7 +647,7 @@ a:hover { text-decoration-color: var(--ink); }
 /* 4.3: classes the scripts emit that previously had no styles. Without these
    the engine dot was invisible, the typing indicator was an empty bubble, and
    the memory cards, changelog and session rows rendered unstyled. (The bubble
-   spinner itself is gone in 5.1 — one status line replaces both.) */
+   spinner itself is gone in 5.2 — one status line replaces both.) */
 .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-faint); flex: 0 0 7px; }
 .dot.on { background: var(--good); box-shadow: 0 0 0 3px rgba(46,125,91,.18); }
 .dot.warn { background: var(--warn); box-shadow: 0 0 0 3px rgba(138,109,27,.18); }
@@ -1201,7 +1201,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
           </svg>
         </span>
       </span>
-      <span class="side-label">Archiver <span class="version-tag">5.1</span></span>
+      <span class="side-label">Archiver <span class="version-tag">5.2</span></span>
       <button class="side-x" id="sideClose" aria-label="Close menu" title="Close">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
@@ -1265,7 +1265,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
               <path d="M32 18 C35 27 37 29 46 32 C37 35 35 37 32 46 C29 37 27 35 18 32 C27 29 29 27 32 18 Z" fill="#FFFFFF"/>
             </svg>
           </span>
-          <span class="model-name" id="modelLabel">Archiver <span class="version-tag">5.1</span></span>
+          <span class="model-name" id="modelLabel">Archiver <span class="version-tag">5.2</span></span>
           <div class="status-pill" id="topStatusPill" style="display:none !important;"><span class="dot"></span><span id="modelText">ready</span></div>
         </div>
       </div>
@@ -1289,15 +1289,15 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
         </div>
         <div class="start-greeting">Make sense of anything.</div>
         <div class="start-sub">A quiet place to ask, explore, and keep what matters.</div>
-        <p class="ai-disclosure">Private browser-based answers powered by <b>Archiver 5.1</b> — our own on-device model. Zero third-party cloud AI providers. Live web search is optional; chats may sync to this app’s server. Runs on WebGPU or a Safari-optimised CPU runtime.</p>
+        <p class="ai-disclosure">Private browser-based answers powered by <b>Archiver 5.2</b> — our own on-device model. Zero third-party cloud AI providers. Live web search is optional; chats may sync to this app’s server. Runs on WebGPU or a Safari-optimised CPU runtime.</p>
         <div class="start-features">
           <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> No model-provider key</span>
-          <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="12 2 21 7 21 17 12 22 3 17 3 7"/></svg> Archiver 5.1 — our own model</span>
+          <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="12 2 21 7 21 17 12 22 3 17 3 7"/></svg> Archiver 5.2 — our own model</span>
           <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Live web when you want it</span>
           <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg> Optimised for Safari</span>
         </div>
         <div class="ob-chips" id="chips"></div>
-        <div style="margin-top:18px; font-size:11px; color:var(--ink-3);">Archiver 5.1 — our own on-device model · Chats can sync to this app’s server</div>
+        <div style="margin-top:18px; font-size:11px; color:var(--ink-3);">Archiver 5.2 — our own on-device model · Chats can sync to this app’s server</div>
       </div>
       <div id="chatThread" class="hidden" role="log" aria-label="Conversation" aria-live="polite" aria-relevant="additions"></div>
     </div>
@@ -1374,22 +1374,22 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     </header>
     <div class="settings-body">
       <fieldset>
-        <legend>Archiver 5.1 — our own model</legend>
+        <legend>Archiver 5.2 — our own model</legend>
         <div class="engine-box">
           <div class="engine-line">
             <span class="dot on" id="engineDot"></span>
             <b id="engineMode">Browser model loads when needed</b>
             <span class="mtag" id="engineModel"></span>
           </div>
-          <p id="engineBlurb">Archiver 5.1 — our own compact on-device model (0.6B architecture), running privately in your browser with zero external AI providers.</p>
+          <p id="engineBlurb">Archiver 5.2 — our own compact on-device model (0.6B architecture), running privately in your browser with zero external AI providers.</p>
           <div class="ai-confirmation" id="aiConfirmation" role="status" aria-live="polite">
             <span class="mark" aria-hidden="true">✓</span>
-            <span><strong id="aiConfirmationTitle">Archiver 5.1 is always enabled</strong><small id="aiConfirmationDetail">It prepares in the background the moment you open this page.</small></span>
+            <span><strong id="aiConfirmationTitle">Archiver 5.2 is always enabled</strong><small id="aiConfirmationDetail">It prepares in the background the moment you open this page.</small></span>
           </div>
           <p class="desc">Downloads once, then loads from cache automatically. Uses WebGPU, or our Safari-optimised WebAssembly engine.</p>
           <div class="engine-actions">
             <button class="btn" id="warmModelBtn" type="button" hidden>Load model now</button>
-            <button class="btn" id="retryModel" type="button" hidden>Retry Archiver 5.1</button>
+            <button class="btn" id="retryModel" type="button" hidden>Retry Archiver 5.2</button>
           </div>
           <div class="engine-bar" id="engineBar" style="display:none"><span id="engineBarFill"></span></div>
           <div class="engine-progress" id="engineProgress" style="display:none"></div>
@@ -1515,8 +1515,8 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
         <legend>Updates</legend>
         <div class="update-row">
           <div class="update-meta">
-            <b>5.1</b><span>2026-09-29 · latest</span>
-            <p>Archiver 5.1 — no more blank answers, live streaming, cached replies, ten Sopranos cards, iPhone tuning.</p>
+            <b>5.2</b><span>2026-09-29 · latest</span>
+            <p>Archiver 5.2 — no more blank answers, live streaming, cached replies, ten Sopranos cards, iPhone tuning.</p>
           </div>
           <button class="btn sm" id="openChangelog" style="white-space:nowrap; flex-shrink:0;">View changelog →</button>
         </div>
@@ -1579,286 +1579,111 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     </div>
     <div class="changelog-body">
       <div class="changelog-timeline">
-        <div class="cl-entry">
-          <div class="cl-head"><span class="cl-ver">4.3</span><span class="cl-date">2026-09-28</span></div>
-          <div class="cl-title">4.3 — resilient search, Grok-like persona, OLED theme, more topics</div>
+        <div class="cl-entry" style="border-color:var(--accent);">
+          <div class="cl-head"><span class="cl-ver">5.2</span><span class="cl-date">2026-09-29</span></div>
+          <div class="cl-title">5.2 — 3 questions, simpler changelog, reliable online & GPU, Safari-optimised</div>
           <div class="cl-body">
             <ul>
-              <li><b>Search that survives blocks.</b> Two new legs (DuckDuckGo HTML, Wikipedia OpenSearch), a second-chance round when the first results all fail the confidence bar, and a browser-UA retry when Bing refuses the first request. The app now says <i>why</i> a search came back empty instead of just looking dead.</li>
-              <li><b>Open-minded persona.</b> The model character and default instructions now commit to takes, engage edgy questions directly, and decline briefly only for genuine real-world harm — no lectures, no sermons.</li>
-              <li><b>69 new knowledge cards (1,515 total).</b> Strongmen and dictators (Gaddafi, Saddam, Assad, Castro, Pinochet, Franco, Mugabe, Kim Jong Un, Mussolini, Mao, Lenin, Stalin), the ancient world, the Middle East, science, Australia (ANZAC, bushrangers, box jellyfish, magpies, UV), tech and culture.</li>
-              <li><b>OLED true-black theme.</b> New <i>OLED — true black</i> option with pure #000 surfaces for self-emissive screens; browser chrome follows the theme and the saved theme applies before first paint (no white flash).</li>
-              <li><b>Faster.</b> Precomputed phrase norms, question-sized similarity math, one scored list per query shared across passes, gzip on the server, and non-blocking script loading.</li>
-              <li><b>Bug fixes.</b> Diagnostics panel follows the theme; memory cards, changelog, session rows, typing indicator, engine dot and toasts all render styled; retry keeps the full history; &quot;funnel web&quot; no longer opens the WEB explainer.</li>
+              <li><b>Home: 3 questions.</b> Start page now shows 3 example prompts instead of 6 — clearer first-run experience, 3-col desktop / 1-col mobile grid.</li>
+              <li><b>Changelog simplified.</b> Release notes in-app and in CHANGELOG.md rewritten to short, readable bullets.</li>
+              <li><b>Online chat fixed.</b> Search wake hint, 75s timeout handling, retry on failure, provider cooldown, empty-report handling now synthesises a reading from sources, sources shown even without model, unverified flag works.</li>
+              <li><b>GPU chat fixed.</b> WebGPU adapter probe hardened, f16 fallback, device-lost recovery, interrupt/cancel works on both runtimes, streaming coalescer fixed, progress shown when cached.</li>
+              <li><b>Safari optimised.</b> Cached model now warms on page load even on iOS (was deferred), prepare() triggers earlier while typing, WASM threads 3 on iPhone (was 4), batch 1024 on Apple mobile / 512 elsewhere (was 512/256), parallelDownloads 4, compact CPU persona, OPFS cache recovery, viewport manager with interactive-widget=resizes-content, 16px inputs to prevent zoom.</li>
+              <li><b>Bug fixes.</b> api() timeout now respects custom signals, blank-answer recovery, citation validation, answer cache guards, storage quota handling, memory sync, and more.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="cl-entry">
+          <div class="cl-head"><span class="cl-ver">5.1</span><span class="cl-date">2026-09-29</span></div>
+          <div class="cl-title">5.1 — blank-answer recovery, streaming, answer cache, Sopranos, iPhone tuning</div>
+          <div class="cl-body">
+            <ul>
+              <li>Blank-answer detection and retry so empty bubbles never show.</li>
+              <li>Live streaming with safe display and thinking gate for &lt;think&gt; blocks.</li>
+              <li>Per-browser answer cache (40 entries, 7-day TTL).</li>
+              <li>Ten Sopranos cards, total 1,526 cards.</li>
+              <li>iPhone WASM tuning: Q4_0 first, q8 KV cache, 2048 context.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="cl-entry">
+          <div class="cl-head"><span class="cl-ver">5.0</span><span class="cl-date">2026-09-29</span></div>
+          <div class="cl-title">5.0 — our own model Qwen3-0.6B, WebGPU + WASM, 1,526 cards</div>
+          <div class="cl-body">
+            <ul>
+              <li>Branded Archiver 5.0 — Qwen3-0.6B q4f16/q4f32 on WebGPU, Q4_0/Q4_K_M/Q8_0 GGUF on WASM.</li>
+              <li>1,526 offline cards, persona: sharp, curious, funny, open-minded.</li>
+              <li>Composer prepare while typing, no third-party cloud AI.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="cl-entry">
+          <div class="cl-head"><span class="cl-ver">4.3</span><span class="cl-date">2026-09-28</span></div>
+          <div class="cl-title">4.3 — resilient search, persona, OLED theme</div>
+          <div class="cl-body">
+            <ul>
+              <li>Search: DuckDuckGo HTML, Wikipedia OpenSearch, second-chance, browser-UA retry.</li>
+              <li>Open-minded persona, OLED true-black theme, faster scoring.</li>
             </ul>
           </div>
         </div>
         <div class="cl-entry">
           <div class="cl-head"><span class="cl-ver">4.2</span><span class="cl-date">2026-09-27</span></div>
-          <div class="cl-title">4.2 — browser capability checks, diagnostics, free-tier hardening</div>
+          <div class="cl-title">4.2 — capability checks, diagnostics, hardening</div>
           <div class="cl-body">
             <ul>
-              <li><b>Real WebGPU check.</b> Software adapters, tiny buffer limits (common on Edge/D3D12 and phones), low reported memory and a failed 64 MiB test allocation all route to the WebAssembly runtime with a one-line reason.</li>
-              <li><b>Diagnostics panel.</b> Settings → Diagnostics (or <code>#diag</code>) prints browser, GPU, WebAssembly SIMD/threads, isolation status, storage and cached models, and can clear cached weights.</li>
-              <li><b>Server storage reset notice.</b> Free hosting has no persistent disk; when the server database is recreated you are told your browser copy is intact.</li>
-              <li><b>Hardening.</b> COOP/COEP isolation, security headers, per-IP rate limits, request size and concurrency caps, WAL flush on shutdown, search provider cooldowns, memory de-duplication and contradiction handling.</li>
+              <li>WebGPU probe: fallback adapter, buffer limits, memory, canary allocation.</li>
+              <li>Diagnostics panel, server reset notice, COOP/COEP, rate limits.</li>
             </ul>
           </div>
         </div>
         <div class="cl-entry">
           <div class="cl-head"><span class="cl-ver">4.1</span><span class="cl-date">2026-09-27</span></div>
-          <div class="cl-title">4.1 — broader search, smarter answers, fewer hard refusals</div>
+          <div class="cl-title">4.1 — Bing, concurrent search, 75s wake, unverified</div>
           <div class="cl-body">
             <ul>
-              <li><b>Bing web results, keyless.</b> Ordinary Bing web search now runs alongside Wikipedia and Stack Exchange, with all three providers kicked off <i>concurrently</i> so you wait for the slowest, not the sum. Wikipedia is great for encyclopaedic facts and Stack Overflow for programming questions, but most everyday queries land on neither.</li>
-              <li><b>Search waits for a sleeping server.</b> The browser-side search timeout is raised to 75 seconds (from 12) so a free-tier instance that has spun down has time to wake and answer before the client gives up. The “Waking the server…” hint still appears after a few seconds.</li>
-              <li><b>Relaxed relevance.</b> The bar for surfacing a result is lowered so ordinary web hits (which tend to score lower on keyword overlap than Wikipedia pages) still reach you when they’re the best answer available.</li>
-              <li><b>Best-effort, labelled.</b> If a search finds no citable sources, Archiver no longer refuses outright for ordinary questions — it gives a best-effort answer from general knowledge and labels it <i>_unverified_</i>. No invented citations, no fake URLs, and fresh/live questions still fail closed.</li>
-              <li><b>No forced “Thinking:” preamble.</b> The one-line plan still shows in the Thought process panel, but the visible answer no longer has to open with a visible “Thinking: …” line. Response style is more flexible, while safeguards for serious real-world harm remain.</li>
-              <li><b>Model weights are unchanged</b> (Qwen 2.5 0.5B). This release makes search, prompting and fallbacks smarter without swapping the base model or adding a paid API.</li>
+              <li>Bing keyless, concurrent providers, 75s timeout, relaxed thresholds.</li>
+              <li>Unverified label for best-effort answers, no forced Thinking preamble.</li>
             </ul>
           </div>
-          <div class="cl-foot"><span>4.1 · search + prompting refresh</span><span>Bing, concurrency, 75 s wake, unverified label</span></div>
         </div>
-
         <div class="cl-entry">
           <div class="cl-head"><span class="cl-ver">4.0</span><span class="cl-date">2026-09-27</span></div>
-          <div class="cl-title">4.0 — built to live on the free tier: honest cold starts, bounded web fetches, cheaper model bytes</div>
+          <div class="cl-title">4.0 — free-tier budget: wake hint, bounded fetches, 304</div>
           <div class="cl-body">
             <ul>
-              <li><b>Waking, named.</b> The first search that runs past a few seconds reports “Waking the server…” instead of an anonymous spinner: the free instance sleeps after ~15 minutes idle and can take up to a minute to answer. Deliberately no keep-alive pinger — spin-down is the free tier’s cost control, and self-pinging burns the same metered bandwidth as real traffic.</li>
-              <li><b>Web fetches, bounded.</b> Server-side search retrieval now streams under a 2 MB ceiling, refuses non-text before downloading a body, asks for gzip and keeps decompressed bytes only, caches answers in memory for five minutes, and caps concurrent fetches — so one query cannot eat the monthly bandwidth allowance.</li>
-              <li><b>Model bytes on a budget.</b> The vendored runtimes answer conditional requests with <code>304</code> now, so a warm browser revalidates with an ETag instead of re-downloading the largest files we ship.</li>
-              <li><b>The decisions are written down.</b> <code>docs/architecture-decisions.md</code> records why there are no WebSockets here (client-side inference, spin-down economics, reconnect storms) and what the fallback would be — SSE, one-directional, closed on completion.</li>
+              <li>Waking the server hint, 2 MiB fetch ceiling, ETag 304, no WebSockets.</li>
             </ul>
           </div>
-          <div class="cl-foot"><span>4.0 · the free-tier budget release</span><span>First search after idle says “Waking the server”</span></div>
         </div>
-
         <div class="cl-entry">
-          <div class="cl-head"><span class="cl-ver">3.5</span><span class="cl-date">2026-09-27</span></div>
-          <div class="cl-title">3.5 — the model persists across refreshes, 117 new cards, Safari polish</div>
+          <div class="cl-head"><span class="cl-ver">3.x</span><span class="cl-date">2026-09-26</span></div>
+          <div class="cl-title">3.x — Safari WASM, thinking on every prompt, pre-warm</div>
           <div class="cl-body">
             <ul>
-              <li><b>No more re-probing on refresh.</b> The chosen backend (WebGPU or WebAssembly) and model are remembered in this browser for 7 days, so a reload skips the expensive device probe and starts loading from the browser cache immediately — and the status line says so.</li>
-              <li><b>117 new knowledge cards (1400+ total).</b> Food and drink, sports, brands, geography, science, technology, psychology, economy, practical life, culture and philosophy — from espresso and cricket to CRISPR and the trolley problem.</li>
-              <li><b>Better model output.</b> The persona and the per-request approaches were rewritten for a 0.5B model: lead with the answer, no filler openers or sign-offs, sharper code and comparison behavior.</li>
-              <li><b>Safari improvements.</b> Momentum scrolling, overscroll containment, sticky headers, tap-highlight removal and text-size locking across the chat, sidebar, memory and settings surfaces.</li>
+              <li>3.2: WASM fallback for Safari, iOS keyboard rewrite, thinking panel.</li>
+              <li>3.3: grounded read from sources, plan on every prompt.</li>
+              <li>3.4: pre-warm on page open, own model branding.</li>
+              <li>3.5: backend persisted, 1400+ cards.</li>
             </ul>
           </div>
-          <div class="cl-foot"><span>3.5 · fast refresh + 1400 topics</span><span>Reload the page and watch it load from cache</span></div>
         </div>
-
-        
         <div class="cl-entry">
-          <div class="cl-head"><span class="cl-ver">3.4</span><span class="cl-date">2026-09-27</span></div>
-          <div class="cl-title">Archiver 3.4 — our own model, ready before you ask</div>
+          <div class="cl-head"><span class="cl-ver">2.x</span><span class="cl-date">2026-09-24</span></div>
+          <div class="cl-title">2.x — 60 → 1000 topics, private chats, Render deploy</div>
           <div class="cl-body">
             <ul>
-              <li><b>Instant access for first-time visitors.</b> The model now starts preparing the moment the page opens — in the background, under the same offline and Data Saver guards as before — so a first question meets a model that is ready (or nearly) instead of a cold, minutes-long download. No download button, no settings detour, no second visit needed.</li>
-              <li><b>Our own model, clearly named.</b> Generation is branded <b>Archiver 3.4</b> everywhere — top bar, status line, Settings — with the open Qwen 2.5 0.5B base named honestly in Settings. It still runs entirely in your browser; nothing runs on Render.</li>
-              <li><b>Discord, tidied.</b> The Community section is one small card: a bright banner, one line of copy, the invite. The floating-button and auto-show toggles are gone — the button was already off everywhere.</li>
-              <li><b>Everything else stays as 3.3</b> — grounded web reads, a plan line on every prompt, the Safari WebAssembly runtime, private per-browser archives.</li>
+              <li>Offline knowledge growth, private per-browser archive, instant local tools.</li>
             </ul>
           </div>
-          <div class="cl-foot"><span>3.4 · pre-warm + identity</span><span>Open the page and watch the status line</span></div>
         </div>
-
         <div class="cl-entry">
-          <div class="cl-head"><span class="cl-ver">3.3</span><span class="cl-date">2026-09-26</span></div>
-          <div class="cl-title">A read of the sources, not a stock paragraph — and a plan on every prompt</div>
+          <div class="cl-head"><span class="cl-ver">1.x–2.0</span><span class="cl-date">2026-09-23</span></div>
+          <div class="cl-title">Early releases — chat that saves memory</div>
           <div class="cl-body">
-            <p style="margin:0 0 6px; font-size:12.5px; line-height:1.55; color:var(--ink-2);">3.2 ended every web answer with “Additional Thoughts &amp; Lateral Angles”: a paragraph picked by keyword bucket, identical across every topic in the bucket, and a fallback (“ask who pays, what must stay on, and what the default is”) that made no sense for Benito Mussolini. That is gone.</p>
-            <ul>
-              <li><b>The read is built from the retrieved text.</b> What kind of thing the subject is comes from the lead sentence (“an Italian politician, journalist, and dictator”), the span of years and the turning-point sentence come from the extracts, agreement and disagreement come from comparing the sources, and a “why” asked of sources that only narrate is called out as unanswered rather than filled with a generic angle. Two subjects cannot produce the same paragraph.</li>
-              <li><b>No heading, no emoji, no hedging.</b> The read is the closing paragraph of the answer, the way any mainline assistant ends a grounded answer. It commits: contested claims a source states as fact are repeated as fact, claims it frames as allegations are repeated as allegations, and a yes-or-no whose key word never appears in the sources is answered with that absence.</li>
-              <li><b>Thinking on literally every prompt.</b> Every route now states a one-line plan — arithmetic, commands, pasted text, conversation, a matched card and its strength, a web read (“3 sources describe Mussolini as a person… lead with the strongest line, then what they agree on, then my own read”) — and the panel opens on every answer. A generated answer whose model skipped its planning line shows the pipeline’s plan instead of nothing.</li>
-              <li><b>With the on-device model,</b> a web-grounded answer receives the facts and the draft read separately and is asked to finish with its own specific, committed assessment — sharpening or contradicting the draft, never pasting it.</li>
-              <li><b>“What do you think?”</b> after a search answers with the read built for that subject, not a rotating stock line.</li>
-              <li><b>Yes-or-no questions</b> (“was mussolini a socialist”) are recognised as such and restated honestly.</li>
-            </ul>
+            <p style="margin:0; font-size:12.5px; line-height:1.55; color:var(--ink-2);">First code, memory extraction, SQLite, local-first storage. From first commit to on-device model.</p>
           </div>
-          <div class="cl-foot"><span>3.3 · grounded read</span><span>Try “Benito Mussolini” with WEB on</span></div>
         </div>
-
-        <div class="cl-entry">
-          <div class="cl-head"><span class="cl-ver">3.2</span><span class="cl-date">2026-09-26</span></div>
-          <div class="cl-title">Safari gets a real runtime, and every answer shows its thinking</div>
-          <div class="cl-body">
-            <p style="margin:0 0 6px; font-size:12.5px; line-height:1.55; color:var(--ink-2);">Two fixes people actually hit: the iPhone keyboard, and Safari having no way to generate at all.</p>
-            <ul>
-              <li><b>Generation on Safari without WebGPU.</b> A second vendored runtime — llama.cpp compiled to WebAssembly — is chosen automatically when the browser has no usable GPU. No flag to enable, nothing to install, no download button. Same model family, CPU instead of GPU, slower and labelled as such.</li>
-              <li><b>iOS keyboard rewritten.</b> The shell is now sized from the layout viewport, not the visual one. The thread no longer collapses while typing and the blank gutter under the composer after the keyboard closes is gone. Pinch-zoom and toolbar collapse are no longer mistaken for a keyboard.</li>
-              <li><b>Thinking on every prompt.</b> Generated answers start with one planning line; it is lifted out of the reply and shown in the Thought process panel. Instant answers get a panel too, built from what actually ran — matched card and its score, the arithmetic, the query searched, the backend chosen and why, tokens and seconds.</li>
-              <li><b>Better small-model output.</b> Task-specific approaches for eight request types, a presence penalty against repetition, and streaming cleanup of filler openers, blank-line padding, sign-offs and unclosed code fences.</li>
-              <li><b>Data Saver is now actually honored</b>, as 3.1 claimed. Offline, Data Saver, or a browser with neither runtime leaves instant tools working and says why.</li>
-              <li><b>Fields are 16px on touch devices</b>, so iOS stops zooming the page on focus and leaving it zoomed.</li>
-            </ul>
-          </div>
-          <div class="cl-foot"><span>3.2 · GPU + WASM</span><span>Superseded by 3.3</span></div>
-        </div>
-
-        <div class="cl-entry">
-          <div class="cl-head"><span class="cl-ver">3.1.2</span><span class="cl-date">2026-09-26</span></div>
-          <div class="cl-title">Mobile Settings, always-on generation, longer first load</div>
-          <div class="cl-body"><ul><li>Settings dialog scrolls and its tap targets work on touch; opening it refreshes runtime status.</li><li>Browser generation is always enabled — the optional toggle is gone and legacy instant-only preferences migrate back.</li><li>Mobile Safari adapter selection retries without power hints; the first-load ceiling went from 90 seconds to eight minutes.</li><li>Task-specific response guidance added while hidden chain-of-thought stayed private.</li></ul></div>
-          <div class="cl-foot"><span>3.1.2</span><span>Superseded by 3.2 on Safari</span></div>
-        </div>
-
-        <div class="cl-entry">
-          <div class="cl-head"><span class="cl-ver">3.1.1</span><span class="cl-date">2026-09-26</span></div>
-          <div class="cl-title">Reliable controls, transparency &amp; Safari polish</div>
-          <div class="cl-body"><ul><li>Local replies no longer wait for the server. Working Stop, Retry and smoother streaming.</li><li>Browser generation for open-ended writing, explanations, coding and plans. A compact 0.5B model runs in a browser worker; no manual download or API key.</li><li>Restore defaults confirms before replacing custom settings; chats and memories stay.</li><li>Accessible answer paths show the tools, sources, saved context and runtime used, without exposing private chain-of-thought.</li><li>Browser-cached model assets, Data Saver/offline/WebGPU guards, bounded initialization, Retry during failed loading, safe areas and keyboard-aware mobile layout.</li></ul></div>
-        </div>
-
-        <div class="cl-entry">
-          <div class="cl-head"><span class="cl-ver">3.1</span><span class="cl-date">2026-09-26</span></div>
-          <div class="cl-title">Built-in AI, designed for Render Free</div>
-          <div class="cl-body"><ul><li>Pinned WebLLM 0.2.80 runtime and license shipped with the website; no inference-library CDN call and no deployment-time npm step.</li><li>Qwen2.5 0.5B initializes automatically for requests that need generation — no Settings detour, no manual install.</li><li>f16/f32 variant chosen from GPU capabilities; weights, tokenizer and GPU library fetched straight into the browser cache.</li><li>Server preparation moved off the response path; deterministic comparisons, formatting, extractive summaries, action items and a corrected calculator.</li><li>Render Blueprint pinned to <code>plan: free</code>, with SQLite’s ephemerality documented rather than papered over.</li></ul></div>
-          <div class="cl-foot"><span>3.1</span><span>Initialization ceiling was 90s, raised in 3.1.2</span></div>
-        </div>
-
-<div class="cl-entry">
-          <div class="cl-head"><span class="cl-ver">2.6</span><span class="cl-date">2026-09-25</span></div>
-          <div class="cl-title">Identity solid + real thinking</div>
-          <div class="cl-body"><p style="margin:0;">“Who is archiver” no longer returns Hegel. Bare “archiver”, “what is archiver” and “who is the archiver” all answer correctly. Self-detection expanded, dedicated identity card, stronger thinking prompt (precision over completeness). Version tags and knowledge base at 2.6.</p></div>
-          <div class="cl-foot"><span>96aa3c8</span><span>Identity</span></div>
-        </div>
-
-        <div class="cl-entry" style="border-color:var(--accent);">
-          <div class="cl-head"><span class="cl-ver">2.5</span><span class="cl-date">2026-09-24</span></div>
-          <div class="cl-title">1400 topics — Napoleon, Saint-Simonism & Europe deep dive</div>
-          <div class="cl-body">
-            <p style="margin:0; font-size:12.5px; line-height:1.55; color:var(--ink-2);">Deeper, more philosophical: <b>Napoleon & Napoleon III, Saint-Simonism, and the ideas that built modern Europe</b> — plus cleaner top bar and smarter prompts.</p>
-            <ul>
-              <li><b>+300 topics</b> — Napoleon (First Empire), Napoleon III (Second Empire), Saint-Simonism, Hegelian & French philosophy, Congress of Vienna to EU → <b>1300 total</b></li>
-              <li><b>Cleaner top</b> — MEM & ready hidden, room for <b>Download transcript</b></li>
-              <li><b>3 smarter prompts</b> — not 6 — curated for depth, not clutter</li>
-            </ul>
-          </div>
-          <div class="cl-foot"><span>2.5 · 1400 topics</span><span>Try “what was Saint-Simonism?”</span></div>
-        </div>
-
-        
-        <div class="cl-entry">
-          <div class="cl-head"><span class="cl-ver">2.4</span><span class="cl-date">2026-09-24</span></div>
-          <div class="cl-title">1000 topics, Render-aware & intuitive</div>
-          <div class="cl-body">
-            <p style="margin:0; font-size:12.5px; line-height:1.55; color:var(--ink-2);">Now knows <b>Render.com inside-out</b>, answers “who are you?” with personality, and is a lot more intuitive — not just web summaries.</p>
-            <ul>
-              <li><b>+500 topics</b> — Render (40) + health, tech, philosophy, nature, culture, practical → <b>1000 total</b></li>
-              <li><b>Intuitive & personable</b> — warm, self-aware, right to talk, gut + logic together</li>
-              <li><b>Safari iPhone 14</b> — Add to Home Screen, standalone, safe-area, no floating Discord (settings only)</li>
-            </ul>
-          </div>
-          <div class="cl-foot"><span>2.4 · 1000 cards</span><span>Try “what is Render?”</span></div>
-        </div>
-
-        <div class="cl-entry">
-          <div class="cl-head"><span class="cl-ver">2.3</span><span class="cl-date">2026-09-24</span></div>
-          <div class="cl-title">500 topics & knows itself</div>
-          <div class="cl-body"><p style="margin:0;">Fixed “hi who are you” — now answers as Archiver, plus 200 more topics.</p></div>
-          <div class="cl-foot"><span>74f6388</span><span>500 topics</span></div>
-        </div>
-
-        <div class="cl-entry">
-          <div class="cl-head"><span class="cl-ver">2.2.2</span><span class="cl-date">2026-09-24</span></div>
-          <div class="cl-title">Discord — quieter</div>
-          <div class="cl-body"><p style="margin:0;">Button now sits above the chat box, never covering messages. Auto-pop is off — tap to open.</p></div>
-          <div class="cl-foot"><span>dca64c5</span><span>Above composer</span></div>
-        </div>
-
-        <div class="cl-entry">
-          <div class="cl-head"><span class="cl-ver">2.2.1</span><span class="cl-date">2026-09-24</span></div>
-          <div class="cl-title">Discord — first invite</div>
-          <div class="cl-body"><p style="margin:0;">Added floating Discord invite (discord.gg/n9nBWJWu2a).</p></div>
-          <div class="cl-foot"><span>c0cce63</span><span>Pulse card</span></div>
-        </div>
-
-        <div class="cl-entry">
-          <div class="cl-head"><span class="cl-ver">2.2</span><span class="cl-tag">Privacy</span><span class="cl-date">2026-09-24</span></div>
-          <div class="cl-title">Private chats</div>
-          <div class="cl-body"><p style="margin:0;">Each browser gets its own private archive. Your chats aren’t shared.</p></div>
-          <div class="cl-foot"><span>02586a2</span><span>Isolated</span></div>
-        </div>
-
-        <div class="cl-entry">
-          <div class="cl-head"><span class="cl-ver">2.2</span><span class="cl-date">2026-09-24</span></div>
-          <div class="cl-title">From 60 → 300 topics</div>
-          <div class="cl-body"><p style="margin:0;">Expanded offline knowledge so everyday questions work without web.</p></div>
-          <div class="cl-foot"><span>9f4dc3c</span><span>300 topics</span></div>
-        </div>
-
-        <div class="cl-entry">
-          <div class="cl-head"><span class="cl-ver">2.2</span><span class="cl-date">2026-09-24</span></div>
-          <div class="cl-title">No download needed</div>
-          <div class="cl-body"><p style="margin:0;">Works instantly — no 5 GB model to fetch.</p></div>
-          <div class="cl-foot"><span>91c1cec</span><span>Instant</span></div>
-        </div>
-
-        <div class="cl-entry">
-          <div class="cl-head"><span class="cl-ver muted">Polish</span><span class="cl-date">2026-09-24</span></div>
-          <div class="cl-title">Look & voice</div>
-          <div class="cl-body"><p style="margin:0;">True-black OLED, paper-and-ink design, more opinionated voice. Removed OSINT clutter.</p></div>
-          <div class="cl-foot"><span>a8447bd · cecca38 · d4bb8f0 · 564c7e7</span><span>Design</span></div>
-        </div>
-
-        <div class="cl-entry">
-          <div class="cl-head"><span class="cl-ver muted">2.1</span><span class="cl-date">2026-09-23</span></div>
-          <div class="cl-title">Memory & deploy</div>
-          <div class="cl-body"><p style="margin:0;">Unlimited memory recall, one-click delete, Render deploy.</p></div>
-          <div class="cl-foot"><span>377095b</span><span>Memory</span></div>
-        </div>
-
-        <div class="cl-entry">
-          <div class="cl-head"><span class="cl-ver muted">Search</span><span class="cl-date">2026-09-23</span></div>
-          <div class="cl-title">Better search</div>
-          <div class="cl-body"><p style="margin:0;">Smarter ranking, auto web-search, compact sources, Wikipedia 403 fix.</p></div>
-          <div class="cl-foot"><span>938a348 · 9c88bf5</span><span>Grounding</span></div>
-        </div>
-
-        <div class="cl-entry">
-          <div class="cl-head"><span class="cl-ver muted">Mobile</span><span class="cl-date">2026-09-23</span></div>
-          <div class="cl-title">Phones & flow</div>
-          <div class="cl-body"><p style="margin:0;">Safari keyboard fix, smoother start, chats persist. “Why?” continues topic.</p></div>
-          <div class="cl-foot"><span>bb29c7f</span><span>Mobile</span></div>
-        </div>
-
-        <div class="cl-entry">
-          <div class="cl-head"><span class="cl-ver muted">2.6-era</span><span class="cl-date">2026-09-23</span></div>
-          <div class="cl-title">Calmer reading</div>
-          <div class="cl-body"><p style="margin:0;">Shorter answers, interpretation first, closeable sidebar.</p></div>
-          <div class="cl-foot"><span>2db51f4</span><span>Readable</span></div>
-        </div>
-
-        <div class="cl-entry">
-          <div class="cl-head"><span class="cl-ver muted">2.2-era</span><span class="cl-date">2026-09-23</span></div>
-          <div class="cl-title">Search foundations</div>
-          <div class="cl-body"><p style="margin:0;">Working search, no dead ends, multi-provider.</p></div>
-          <div class="cl-foot"><span>8178c08</span><span>Search</span></div>
-        </div>
-
-        <div class="cl-entry">
-          <div class="cl-head"><span class="cl-ver muted">2.0</span><span class="cl-date">2026-09-23</span></div>
-          <div class="cl-title">On-device by default</div>
-          <div class="cl-body"><p style="margin:0;">Local model, no API keys, UI hardened.</p></div>
-          <div class="cl-foot"><span>ee0b8ef</span><span>No keys</span></div>
-        </div>
-
-        <div class="cl-entry">
-          <div class="cl-head"><span class="cl-ver muted">Origin</span><span class="cl-date">2026-09-23</span></div>
-          <div class="cl-title">Archiver begins</div>
-          <div class="cl-body"><p style="margin:0;">Chat app that saves memory — first code.</p></div>
-          <div class="cl-foot"><span>8644dc0</span><span>Day zero</span></div>
-        </div>
-
-        <details style="margin-top:6px; padding:10px; background:var(--surface-2); border:1px solid var(--line); border-radius:10px;">
-          <summary style="cursor:pointer; font-size:12px; font-weight:700; color:var(--ink);">Early commit list — technical snapshot, newest first above</summary>
-          <div style="margin-top:10px; font-family:var(--mono); font-size:11px; line-height:1.7; color:var(--ink-2); word-break:break-all;">
-            1f01a26 Initial · 89c6081 Grok test · 8644dc0 Saves memory · 0bff1db Remaining · 8d3891f Scripts · cb48a3d Render fix · c81c0d1 Main · 59f4aff Memory · c23cddb Serve UI · ee0b8ef 2.0 local · 7d654c2 I-am · d466642 Obsidian · 9c88bf5 Wiki 403 · 358c6f3 Multi-provider · 8178c08 Search · 7710e30 Docs · 0bb2020 No padding · 6cf983d Names · 2db51f4 Interpret first · 41a595a Calmer · 97867e2 Scrim · 3cffe3e Merge · ce7758b Human tone · ae78775 Smart trigger · bb29c7f Safari · 624955a Style · 938a348 Ranking · 18d4eb3 Greetings · fa540c3 No leakage · 377095b Memory · 1152144 Render · 581af70 OSINT · 564c7e7 Clean · cecca38 Archive · a8447bd OLED · d4bb8f0 Grok voice · 91c1cec Stand-alone · 9f4dc3c 300 · 02586a2 Private · c0cce63 Discord · dca64c5 Quieter · bdad073 Changelog btn · 74f6388 2.3 500 · 7899ac9 fix · <b>now → 2.4 · 1000</b>
-          </div>
-        </details>
-
       </div>
       <div style="margin-top:14px; padding:12px; background:var(--surface-2); border:1px solid var(--line); border-radius:10px; font-size:12px; line-height:1.6; color:var(--ink-2);">
         Full commit history: <a href="https://github.com/2archiver/Archiver/commits/main" target="_blank" rel="noopener" style="color:var(--accent); font-weight:600;">github.com/2archiver/Archiver/commits/main</a><br>
@@ -1867,6 +1692,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     </div>
   </div>
 </div>
+
 
 
 <div id="toasts"></div>
@@ -1993,12 +1819,30 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     opts = opts || {};
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), opts.timeout || 15000);
+    // 5.2: combine timeout signal with caller signal so timeout always works
+    let signal = controller.signal;
+    if (opts.signal) {
+      try {
+        if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.any === 'function') {
+          signal = AbortSignal.any([controller.signal, opts.signal]);
+        } else {
+          const combined = new AbortController();
+          const onAbort = () => combined.abort();
+          controller.signal.addEventListener('abort', onAbort, { once: true });
+          opts.signal.addEventListener('abort', onAbort, { once: true });
+          if (controller.signal.aborted || opts.signal.aborted) combined.abort();
+          signal = combined.signal;
+        }
+      } catch (_) {
+        signal = opts.signal;
+      }
+    }
     try {
       const res = await fetch(path, {
         method: opts.method || 'GET',
         headers: opts.body ? {'Content-Type':'application/json'} : {},
         body: opts.body,
-        signal: opts.signal || controller.signal,
+        signal: signal,
         credentials: 'same-origin'
       });
       clearTimeout(timeout);
@@ -3241,23 +3085,16 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     initKeyboard();
     grow();
 
-    /* The start page has to answer "what is this thing?" in one glance, so each
-       card is a question that exercises a different part of the pipeline and
-       lands a good answer offline: retrieval, live web, comparison, generation,
-       pasted text, arithmetic. */
+    /* The start page answers "what is this thing?" in one glance — 3 cards,
+       each exercising a different part of the pipeline and landing a good
+       answer offline. 3 columns on desktop, 1 on mobile. */
     const PROMPTS = [
       ['KNOWLEDGE', 'Did Tony Soprano die in the finale?',
         'The cut to black, the song, and what David Chase has and has not said.'],
       ['LIVE WEB', 'Search the web for the history of the Silk Road',
         'WEB switches itself on for this one. Sources are cited underneath.'],
-      ['COMPARE', 'Compare Napoleon and Alexander the Great as commanders',
-        'Two stored cards, weighed against each other on the same points.'],
       ['GENERATE', 'Write a Python decorator that rate-limits a function',
-        'Real on-device generation — no model-provider key, no server.'],
-      ['MY NOTES', 'Summarize: Our release is Friday. We need to finish testing by Thursday. Alex will write the release notes. The team meets tomorrow.',
-        'Pulls the key sentences out of text you paste, adding nothing.'],
-      ['INSTANT', 'What is 18% of 250?',
-        'Percentages, parentheses and powers, answered before you finish typing.']
+        'Real on-device generation — no model-provider key, no server.']
     ];
     $('#chips').innerHTML = PROMPTS.map(([lbl, q, desc]) =>
       '<button class="prompt-card" data-say="' + esc(q) + '"><span class="pc-top"><span class="pc-lbl">' + lbl + '</span><span class="pc-arrow">↗</span></span><span class="pc-q">' + esc(q) + '</span><span class="pc-desc">' + esc(desc) + '</span></button>'

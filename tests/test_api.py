@@ -15,7 +15,7 @@ def client(tmp_path, monkeypatch):
 
 
 def test_release_assets(client):
-    assert client.get("/api/health").json()["version"] == "5.1"
+    assert client.get("/api/health").json()["version"] == "5.2"
     for asset in ("archiver-comprehension.js", "archiver-engine.js", "archiver-worker.js",
                   "archiver-viewport.js", "archiver-download.js"):
         assert client.get("/static/" + asset).status_code == 200
@@ -23,7 +23,7 @@ def test_release_assets(client):
     assert 'maximum-scale=1' not in page
     assert 'id="autoAI"' not in page
     assert 'id="retryModel"' in page
-    assert 'Archiver 5.1 is always enabled' in page
+    assert 'Archiver 5.2 is always enabled' in page
     # 5.1: settings apply as they change, so there is nothing to press.
     assert 'id="saveSettings"' not in page
     assert 'Apply settings' not in page
@@ -109,7 +109,7 @@ def test_default_migration_preserves_custom_persona(client):
     store.set_setting("model", "Archiver 2.5 (in-browser)", uid)
     store.set_setting("persona", "My custom persona", uid)
     main.apply_defaults(store, uid)
-    assert store.get_setting("model", user_id=uid) == "Archiver 5.1 (in-browser)"
+    assert store.get_setting("model", user_id=uid) == "Archiver 5.2 (in-browser)"
     assert store.get_setting("persona", user_id=uid) == "My custom persona"
     # 4.0 retired persona upgrades to 5.
     store.set_setting("persona", main.RETIRED_PERSONAS[0], uid)
@@ -128,7 +128,7 @@ def test_restore_defaults_replaces_custom_settings(client):
     assert body["has_api_key"] is False
     assert "api_key" not in main.app.state.store.settings(secret=True, user_id=client.cookies.get(main.COOKIE_NAME))
     # Default model in settings is now 5.
-    assert body["model"] == "Archiver 5.1 (in-browser)"
+    assert body["model"] == "Archiver 5.2 (in-browser)"
 
 
 def test_retry_removes_trailing_turn_for_replacement(client):
@@ -211,7 +211,7 @@ def test_health_performs_no_outbound_fetch(client, monkeypatch):
     response = client.get("/api/health")
     assert response.status_code == 200
     assert response.json()["ok"] is True
-    assert response.json()["version"] == "5.1"
+    assert response.json()["version"] == "5.2"
     assert calls == []
 
 
@@ -320,8 +320,8 @@ def test_persona_mentions_concurrent_search_and_unverified_fallback():
 def test_settings_default_mentions_local_provider_41(client):
     """Settings endpoint returns the Archiver 5 default model label and excludes anthropic."""
     body = client.get("/api/settings").json()
-    assert body["model"] == "Archiver 5.1 (in-browser)"
-    assert body["providers"]["local"]["default_model"] == "Archiver 5.1 (in-browser)"
+    assert body["model"] == "Archiver 5.2 (in-browser)"
+    assert body["providers"]["local"]["default_model"] == "Archiver 5.2 (in-browser)"
     assert "anthropic" not in body["providers"]
 
 
@@ -334,7 +334,7 @@ def test_docs_match_the_release():
     readme = (here / "README.md").read_text(encoding="utf-8")
     upgrade = (here / "docs" / "MODEL-UPGRADE.md").read_text(encoding="utf-8")
 
-    assert "version: '5.1'" in kb
+    assert "version: '5.2'" in kb
     # The 5.1 cards, checked by id so a dropped card fails here rather than
     # silently shrinking the corpus. The total itself is asserted in
     # tests/smoke.js, which loads the corpus rather than grepping it.
@@ -343,9 +343,9 @@ def test_docs_match_the_release():
         assert f"id: '{card_id}'" in kb, card_id
     assert "...SOPRANOS]" in kb, 'the new cards are in the shipped corpus'
 
-    assert changelog.startswith("## 5.1 — 2026-09-29"), changelog[:40]
+    assert changelog.startswith("## 5.2 — 2026-09-29"), changelog[:40]
     assert "1,526" in changelog
-    assert readme.startswith("# Archiver 5.1")
-    assert "Archiver 5.1 — our own model" in readme
+    assert readme.startswith("# Archiver 5.2")
+    assert "Archiver 5.2 — our own model" in readme
     assert "1,526 cards" in readme
-    assert "Archiver 5.1" in upgrade
+    assert "Archiver 5.2" in upgrade
