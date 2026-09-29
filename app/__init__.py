@@ -1,3 +1,3 @@
-"""Archiver package — an LLM chat app with a persistent memory bank."""
+"""Archiver package — a private chat app with no memory between chats."""
 
-__version__ = "5.2"
+__version__ = "5.3"

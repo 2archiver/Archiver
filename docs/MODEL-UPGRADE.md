@@ -1,6 +1,28 @@
 # Archiver 5 Model Architecture & Safari Optimisation (September 2026)
 
-Current production baseline: **Archiver 5.2** — Archiver's own compact on-device model built on the `Qwen3-0.6B` architecture, running WebLLM 0.2.80 (`Qwen3-0.6B-q4f16_1-MLC` / `Qwen3-0.6B-q4f32_1-MLC`) on WebGPU and `Qwen3-0.6B` GGUF (`Qwen3-0.6B-Q4_0.gguf` / `Qwen3-0.6B-Q4_K_M.gguf` / `Qwen3-0.6B-Q8_0.gguf`) on wllama 3.6.1 (`libllama b10663` with native `qwen3` architecture support) for Safari/CPU. Zero third-party cloud AI providers are used for in-browser generation.
+Current production baseline: **Archiver 5.3** — Archiver's own compact on-device model built on the `Qwen3-0.6B` architecture, running WebLLM 0.2.80 (`Qwen3-0.6B-q4f16_1-MLC` / `Qwen3-0.6B-q4f32_1-MLC`) on WebGPU and `Qwen3-0.6B` GGUF (`Qwen3-0.6B-Q4_0.gguf` / `Qwen3-0.6B-Q4_K_M.gguf` / `Qwen3-0.6B-Q8_0.gguf`) on wllama 3.6.1 (`libllama b10663` with native `qwen3` architecture support) for Safari/CPU. Zero third-party cloud AI providers are used for in-browser generation.
+
+## 5.3 — Qwen3 with a legacy fallback, refresh-free tab, no memories (September 2026)
+
+5.3 keeps the `Qwen3-0.6B` weights and adds resilience around them:
+
+- **Automatic legacy fallback.** Both runtimes try the Qwen3-0.6B artifacts first and fall back to the proven `Qwen2.5-0.5B-Instruct` family when a Qwen3 artifact is missing or CORS-blocked, so Safari and weaker GPUs still generate.
+- **Refresh-free tab lifecycle.** The model worker is kept warm through tab backgrounding, screen lock and WebGPU device loss instead of being torn down and reloaded.
+- **Faster search recovery.** Provider cooldown cut from 600s to 120s; single-result queries trigger a second-chance search.
+- **Earlier GPU warm-up.** Preparation triggers after 5 characters (was 8).
+- **No memories.** The durable memory store, its API and its UI were removed; conversations stay in this browser and may sync to the app server.
+- **Redesigned interface** and an expanded knowledge base (1,556 cards).
+
+## 5.3 — Qwen3 with a legacy fallback, refresh-free tab, no memories (September 2026)
+
+5.3 keeps the `Qwen3-0.6B` weights and adds resilience around them:
+
+- **Automatic legacy fallback.** Both runtimes try the Qwen3-0.6B artifacts first and fall back to the proven `Qwen2.5-0.5B-Instruct` family when a Qwen3 artifact is missing or CORS-blocked, so Safari and weaker GPUs still generate.
+- **Refresh-free tab lifecycle.** The model worker is kept warm through tab backgrounding, screen lock and WebGPU device loss instead of being torn down and reloaded.
+- **Faster search recovery.** Provider cooldown cut from 600s to 120s; single-result queries trigger a second-chance search.
+- **Earlier GPU warm-up.** Preparation triggers after 5 characters (was 8).
+- **No memories.** The durable memory store, its API and its UI were removed; conversations stay in this browser and may sync to the app server.
+- **Redesigned interface** and an expanded knowledge base (1,556 cards).
 
 ## 5.2 — same model, more reliable, Safari-ready (September 2026)
 
