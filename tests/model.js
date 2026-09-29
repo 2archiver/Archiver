@@ -156,6 +156,8 @@ const GENERATIVE = 'write a poem about rain';
   assert.match(stats.payload.messages[0].content, /Answer directly with no preamble/);
   assert.equal(stats.payload.top_p, 0.9);
   assert.ok(stats.payload.presence_penalty > 0, 'repetition is discouraged for a small model');
+  assert.equal(stats.payload.extra_body && stats.payload.extra_body.enable_thinking, false,
+    '5.2 fix: the GPU path disables Qwen 3\'s hidden thinking pass so it cannot eat the whole budget and return a blank answer');
   assert.match(await A.chat('write ' + '界'.repeat(4000), []), /too long/);
   await A.chat('write another poem', []);
   assert.equal(stats.attempts, 1, 'already-loaded engine reused');
@@ -181,6 +183,8 @@ const GENERATIVE = 'write a poem about rain';
   assert.match(thought.A.trace().steps.join(' | '), /planned in one line before answering/);
   assert.match(thought.stats.payload.messages[0].content, /Begin your reply with exactly one line of the form: Thinking:/,
     'thinking:true re-enables the planning-line instruction');
+  assert.equal(thought.stats.payload.extra_body && thought.stats.payload.extra_body.enable_thinking, true,
+    'thinking:true also reaches the GPU runtime as extra_body.enable_thinking');
 
   /* 3.3: a model that skips its planning line does not leave the panel empty —
      the pipeline's own plan (approach, evidence held, backend) stands in. */

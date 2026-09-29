@@ -1898,7 +1898,18 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       })();
     if (activeBackend === 'webgpu') {
       try {
-        const stream = await engine.chat.completions.create({ messages, ...sampling, stream: true });
+        /* Qwen 3's chat template opens a hidden thinking pass by default. On a
+           short WebGPU budget that pass can eat every generated token — the
+           stream ends with only thinking markup or whitespace, the shaper
+           strips it, and the reader gets a blank answer. WebLLM 0.2.80 exposes
+           the same switch the WASM path already uses: seed an empty thinking
+           block and answer directly, unless thinking was explicitly requested. */
+        const stream = await engine.chat.completions.create({
+          messages,
+          ...sampling,
+          stream: true,
+          extra_body: { enable_thinking: params.thinking === true }
+        });
         for await (const chunk of stream) {
           params.checkStopped();
           emit(pieceOf(chunk));
@@ -2548,6 +2559,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     && !/^I could not validate the citations/.test(text)
     && !/^I do not have live sources/.test(text)
     && !/^I could not retrieve usable live sources/.test(text)
+    && !/^Archiver 5\.2 ran and returned no text/.test(text)
     && !/^That message is too long/.test(text)
     && !/^The question and retrieved evidence do not fit/.test(text);
 
@@ -2925,13 +2937,16 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     // Checking after streaming would expose fabricated citations before removal,
     // so the display stream holds back any line that could still turn out to be
     // a citation or a URL and releases it only once the answer is validated.
-    const shaper = makeShaper(() => {});
-    let rawOut = '';
-    const record = piece => { rawOut += piece; shaper.push(piece); };
     /* Everything else streams as it is produced: an answer that takes 40
        seconds on an iPhone CPU should show its first sentences the moment they
        exist, not hold a blank bubble until the very end. */
     const display = makeSafeDisplayStream(piece => onDelta(piece));
+    /* A blank pass must never reach the reader: blank-looking pieces are held
+       back from the display stream so a retry (or the honest notice) replaces
+       them wholesale instead of stacking on top of stray punctuation. */
+    const shaper = makeShaper(piece => { if (!isBlankAnswer(piece)) display.push(piece); });
+    let rawOut = '';
+    const record = piece => { rawOut += piece; shaper.push(piece); };
     const gate = wantsThinking
       ? makeThinkingGate(record, thought => {
         audit.thinking = thought;
