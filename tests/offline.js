@@ -4,14 +4,16 @@ const A = require('./ui_check');
 let checks = 0;
 function check(ok, message) { assert.ok(ok, message); checks++; }
 (async () => {
-  check(A.version === '4.3' && A.status().version === '4.3' && A.name === 'Archiver 4.3', 'runtime version');
-  check(A.__ctx.ARCHIVER_KB.version === '4.3', 'corpus version');
+  check(A.version === '5' && A.status().version === '5' && A.name === 'Archiver 5', 'runtime version');
+  check(A.__ctx.ARCHIVER_KB.version === '5', 'corpus version');
   for (const [query, expected] of [
     ['2 + 3 * 4', '14'], ['(2 + 3) * 4', '20'], ['2^3^2', '512'],
     ['-2^2', '-4'], ['(-2)^2', '4'], ['3 * -2', '-6'], ['2^-2', '0.25'],
     ['calculate 18% of 250', '45'], ['50% * 80', '40'], ['1,000 / 4', '250'],
     ['.5 + .25', '0.75'], ['2 × (3 + 4)', '14'], ['what is 8 ÷ 2?', '4'],
   ]) check(A.reply(query).text === `That's ${expected}.`, query);
+  check(A.reply('100 c to f').text === '100 °C is **212 °F**.', 'temperature conversion');
+  check(A.reply('convert 10 km to miles').text === '10 km is **6.2137 mi**.', 'distance conversion');
   check(/undefined/.test(A.reply('1 / 0').text), 'undefined arithmetic');
   check(A.reply('what is time complexity').kind !== 'tool', 'not a clock query');
   check(A.reply('what date was d-day').kind !== 'tool', 'not today');

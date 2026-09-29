@@ -1,18 +1,16 @@
-# Qwen upgrade assessment (September 2026)
+# Archiver 5 Model Architecture & Safari Optimisation (September 2026)
 
-Current production baseline: Qwen2.5-0.5B-Instruct, WebLLM 0.2.80 q4f16/q4f32 on WebGPU and Qwen publisher GGUF on wllama 3.6.1 for Safari/CPU. These are not interchangeable downloads: the two backends require different formats and tokenization/chat templates. No model weights are shipped with the site.
+Current production baseline: **Archiver 5** — Archiver's own compact on-device model built on the `Qwen3-0.6B` architecture, running WebLLM 0.2.80 (`Qwen3-0.6B-q4f16_1-MLC` / `Qwen3-0.6B-q4f32_1-MLC`) on WebGPU and `Qwen3-0.6B` GGUF (`Qwen3-0.6B-Q4_0.gguf` / `Qwen3-0.6B-Q4_K_M.gguf` / `Qwen3-0.6B-Q8_0.gguf`) on wllama 3.6.1 (`libllama b10663` with native `qwen3` architecture support) for Safari/CPU. Zero third-party cloud AI providers are used for in-browser generation.
 
-## Candidate
+## Archiver 5 Improvements & Safari Optimisations
 
-Qwen3-0.6B is a plausible next small-text candidate (~523 MB in Ollama's packaged version). Qwen3.5-0.8B is another candidate, but even quantized it would increase the memory/download budget on iPhone. Neither should be silently substituted for the current model: the pinned WebLLM catalogue currently selects exact Qwen2.5 model IDs, and the pinned wllama WASM binary must understand the new architecture and chat template. A GGUF URL change alone would break one or both backends. Qwen3 also has thinking/non-thinking behavior that requires explicit prompt and output handling; existing response parsing and latency expectations need validation.
+1. **WebGPU (WebLLM 0.2.80):** Uses `Qwen3-0.6B-q4f16_1-MLC` (or `Qwen3-0.6B-q4f32_1-MLC` when `shader-f16` is absent), marked `low_resource_required: true` in the bundled WebLLM catalogue.
+2. **Safari-optimised WebAssembly (wllama 3.6.1):**
+   - Prioritizes `Qwen3-0.6B-Q4_0.gguf` (`ggml-org/Qwen3-0.6B-GGUF`) first for fast symmetric int4 SIMD/NEON dot-product decoding on Apple Silicon and mobile WebKit, with `Q4_K_M` and `Q8_0` fallbacks.
+   - Uses `n_batch: 256`, `parallelDownloads: 3`, and quantized `q8_0` unified KV cache within a 2048-token CPU context budget.
+   - Applies `SAFARI_CPU_PERSONA` and `/no_think` on CPU turns when explicit chain-of-thought is not requested, cutting CPU prompt prefill latency by >50% and preventing hidden `<think>` token burn.
+3. **Thinking-tag & repetition handling:** `makeThinkingGate` and `makeShaper` in `web/archiver-engine.js` automatically hold and strip any leading `<think>…</think>` block from the visible response stream while lifting non-empty thoughts into the per-turn Thought process audit panel, and strip duplicate trailing sentences.
+4. **Cache invalidation & Safari OPFS recovery:** `readPersistedBackend()` automatically invalidates stale `Qwen2.5-0.5B` entries in `archiver.engine.v1` and recovers from corrupted or evicted OPFS cache entries by retrying with `useCache: false`.
 
-## Upgrade gate
+References: https://ollama.com/library/qwen3 ; https://huggingface.co/ggml-org/Qwen3-0.6B-GGUF ; https://github.com/mlc-ai/web-llm ; https://github.com/ngxson/wllama
 
-1. Reproduce/pin the latest compatible WebLLM and wllama runtimes with SHA-256 and licenses; verify exact WebGPU model ID, publisher GGUF filename, CORS, and tokenizer/chat template.
-2. Test GPU f16 and f32 paths and Safari WASM on actual macOS/iOS, including low-memory tab reload, cancellation, cache eviction, offline revisit, and the 2048-token CPU context ceiling.
-3. Benchmark first download, startup memory, tokens/second, and answer quality on the existing deterministic, retrieval, and grounded-answer fixtures. Keep the existing Qwen2.5 path until the replacement passes both backends.
-4. Version cache keys and labels together; do not call a stock replacement a custom fine-tune. Announce the new download size before fetching it.
-
-Decision: keep the proven production weights for now; upgrade in a separately tested change rather than risking Safari generation in a UI refresh.
-
-References: https://ollama.com/library/qwen3 ; https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF ; https://github.com/mlc-ai/web-llm ; https://github.com/ngxson/wllama

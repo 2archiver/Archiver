@@ -1,4 +1,4 @@
-/* Archiver 4.3 — client diagnostics and storage-reset notice.
+/* Archiver 5 — client diagnostics and storage-reset notice.
 
    Opens with #diag in the URL, Ctrl/Cmd+Shift+D, or the "Diagnostics" button
    in Settings. Prints what a bug report needs: browser, WebGPU adapter info and
@@ -140,7 +140,7 @@
     try { persisted = JSON.parse(localStorage.getItem('archiver.engine.v1') || 'null'); } catch (_) {}
     const lines = [];
     const push = (k, v) => lines.push(k + ': ' + (typeof v === 'object' ? JSON.stringify(v) : v));
-    push('Archiver', (window.Archiver && window.Archiver.version) || '4.3');
+    push('Archiver', (window.Archiver && window.Archiver.version) || '5');
     push('Browser', b.name + (b.ios ? ' (iOS/iPadOS WebKit)' : ''));
     push('User agent', b.ua);
     push('Secure context', window.isSecureContext);

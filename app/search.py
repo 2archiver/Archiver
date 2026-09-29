@@ -42,7 +42,7 @@ TIMEOUT = httpx.Timeout(70.0, connect=15.0)
 
 # Wikimedia's policy requires "<client>/<version> (<contact>)"; a bare product
 # name is rejected outright.
-UA = "Archiver/4.3 (https://github.com/2archiver/Archiver; personal assistant) httpx/0.27"
+UA = "Archiver/5.0 (https://github.com/2archiver/Archiver; personal assistant) httpx/0.27"
 # 4.3: when the plain UA is refused (403/429), Bing gets one retry behind a
 # full browser UA. Some Bing edges fingerprint the client rather than the IP,
 # so a browser-shaped request can pass where the bot-shaped one is refused.
