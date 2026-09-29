@@ -1,3 +1,41 @@
+## 5.1 — 2026-09-29
+
+### No blank answers, cached replies, a quieter interface
+
+- **Blank answers are gone, on both paths.** A reply that would have rendered
+  as nothing — an empty model turn, a truncated first delta, a cancelled
+  request — is detected and recovered from: the stream retries from the last
+  good token, and if the model still produces nothing the answer says so
+  plainly instead of leaving an empty bubble. Offline and live-web answers are
+  both covered.
+- **Repeats are instant.** Generated answers are cached in the browser, so
+  asking the same thing again is answered from cache rather than paying prefill
+  and decode twice. Instant (non-model) answers are deliberately not cached.
+- **The composer warms up while you type.** Once there is enough text to be
+  worth answering, the recall that feeds a generated reply is prepared in the
+  background, so the first token arrives sooner.
+- **Settings apply as you change them.** The Apply button is gone because it
+  never did anything: the persona saves as you type (debounced), toggles and
+  the search count save on change, and a small "Saved" line confirms it. Done
+  and Escape still flush a pending edit.
+- **One loading indicator, not two.** The bouncing dots and the live status
+  line were showing at the same time; the status line is the only one now.
+- **Cleaner start page.** The emblem above the greeting is removed (the mark
+  stays in the sidebar and the top bar), and the six example questions are new:
+  a Sopranos finale question, a live-web question, Napoleon vs Alexander, a
+  Python rate-limit decorator, a notes summary, and a calculation.
+- **Ten new knowledge cards (1,526 total).** The Sopranos — cast, episodes,
+  the finale's ending, locations, influence.
+- **Safari/iPhone tuning.** Field text no longer auto-resizes, the sidebar and
+  memory lists contain their own rubber-banding instead of dragging the whole
+  shell, and the conversation thread opts out of Safari's scroll anchoring so a
+  growing row cannot fight the keep-newest-visible logic while streaming. The
+  existing layout-viewport shell sizing, keyboard tracking, safe-area insets
+  and 16px fields are unchanged.
+- **Tests.** The Python suite covers the release assets and the new UI shape
+  (no Apply button, no dots, no start emblem, a saved indicator); the Node
+  suites cover blank-recovery, the answer cache and the new cards.
+
 ## 5 — 2026-09-29
 
 ### Archiver 5 — our own model, Safari optimisations, Neural Tesseract Prism emblem

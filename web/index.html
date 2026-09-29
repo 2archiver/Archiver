@@ -19,7 +19,7 @@ try {
 <meta name="apple-mobile-web-app-title" content="Archiver">
 <meta name="format-detection" content="telephone=no">
 <meta name="mobile-web-app-capable" content="yes">
-<title>Archiver 5 — Your everyday assistant</title>
+<title>Archiver 5.1 — Your everyday assistant</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
@@ -646,18 +646,14 @@ a:hover { text-decoration-color: var(--ink); }
 
 /* 4.3: classes the scripts emit that previously had no styles. Without these
    the engine dot was invisible, the typing indicator was an empty bubble, and
-   the memory cards, changelog and session rows rendered unstyled. */
+   the memory cards, changelog and session rows rendered unstyled. (The bubble
+   spinner itself is gone in 5.1 — one status line replaces both.) */
 .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-faint); flex: 0 0 7px; }
 .dot.on { background: var(--good); box-shadow: 0 0 0 3px rgba(46,125,91,.18); }
 .dot.warn { background: var(--warn); box-shadow: 0 0 0 3px rgba(138,109,27,.18); }
-.typing-dots { display: inline-flex; gap: 5px; align-items: center; padding: 6px 2px; }
-.typing-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--ink-3); animation: dotBounce 1.2s var(--ease) infinite; }
-.typing-dots i:nth-child(2) { animation-delay: .15s; }
-.typing-dots i:nth-child(3) { animation-delay: .3s; }
-@keyframes dotBounce { 0%, 60%, 100% { opacity: .3; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-3px); } }
 .cursor-blink { display: inline-block; width: 8px; height: 1em; margin-left: 2px; vertical-align: text-bottom; background: var(--accent); animation: cursorBlink 1s steps(2, start) infinite; }
 @keyframes cursorBlink { to { visibility: hidden; } }
-@media (prefers-reduced-motion: reduce) { .typing-dots i, .cursor-blink { animation: none; } .typing-dots i { opacity: .7; } }
+@media (prefers-reduced-motion: reduce) { .cursor-blink { animation: none; } }
 
 .side-empty { padding: 14px 12px; font-size: 12.5px; color: var(--ink-3); text-align: center; }
 .side-item .title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; }
@@ -910,6 +906,8 @@ a:hover { text-decoration-color: var(--ink); }
   .settings-modal > footer .btn{ min-height:42px; }
   .settings-modal > footer > span{ display:none; }
   .settings-modal > footer #restoreDefaults{ margin-right:auto; }
+  .settings-modal > footer .set-saved{ display:none; font-size:11.5px; color:var(--good); font-family:var(--mono); letter-spacing:.04em; }
+  .settings-modal > footer .set-saved.on{ display:inline-block; }
   .update-row{ flex-direction:column; align-items:stretch; }
 }
 
@@ -1009,6 +1007,19 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
 @supports (-webkit-touch-callout: none) {
   .app-shell { height: var(--viewport-height, -webkit-fill-available); min-height: -webkit-fill-available; }
   .settings-overlay, .changelog-overlay { min-height: -webkit-fill-available; }
+
+  /* Three things WebKit still does that other engines stopped doing years ago.
+     All three are silent, all three only affect touch builds. */
+  /* 1. WebKit auto-sizes text in fields, which reflows the composer mid-word
+        and then makes the next viewport measurement wrong. */
+  input, textarea, select { -webkit-text-size-adjust: 100%; }
+  /* 2. Without this, scrolling a sidebar or memory list to its end drags the
+        whole shell with it — the rubber band that swallows a tap. */
+  .side-list, .mem-list { overscroll-behavior: contain; }
+  /* 3. Safari's scroll anchoring adjusts the thread by a few pixels whenever a
+        row grows, which fights the "keep the newest line in view" logic during
+        a streamed reply. The thread is pinned, not free-scrolled. */
+  #chatThread { overflow-anchor: none; }
 }
 
 /* ---------- 3.2 — keyboard-aware layout ----------
@@ -1119,7 +1130,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
   border-color: rgba(138, 244, 196, 0.65);
   box-shadow: 0 4px 14px rgba(38, 88, 71, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
-.brand-mark svg, .topbar-mark svg, .start-emblem svg { display: block; }
+.brand-mark svg, .topbar-mark svg { display: block; }
 .logo-svg.logo-singularity { display: none; }
 :root[data-logo="singularity"] .logo-svg.logo-tesseract { display: none; }
 :root[data-logo="singularity"] .logo-svg.logo-singularity { display: block; }
@@ -1130,13 +1141,6 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
 }
 .start-hero-row {
   display: flex; align-items: center; gap: 12px; align-self: flex-start;
-}
-.start-emblem {
-  width: 44px; height: 44px; border-radius: 13px; display: inline-grid; place-items: center;
-  background: linear-gradient(135deg, #0B1712 0%, #1B382C 100%);
-  border: 1px solid rgba(110, 218, 168, 0.42); color: #9AF4CB;
-  box-shadow: 0 6px 20px rgba(24, 58, 45, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.14);
-  flex-shrink: 0;
 }
 .logo-picker {
   display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px;
@@ -1197,7 +1201,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
           </svg>
         </span>
       </span>
-      <span class="side-label">Archiver <span class="version-tag">5</span></span>
+      <span class="side-label">Archiver <span class="version-tag">5.1</span></span>
       <button class="side-x" id="sideClose" aria-label="Close menu" title="Close">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
@@ -1261,7 +1265,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
               <path d="M32 18 C35 27 37 29 46 32 C37 35 35 37 32 46 C29 37 27 35 18 32 C27 29 29 27 32 18 Z" fill="#FFFFFF"/>
             </svg>
           </span>
-          <span class="model-name" id="modelLabel">Archiver <span class="version-tag">5</span></span>
+          <span class="model-name" id="modelLabel">Archiver <span class="version-tag">5.1</span></span>
           <div class="status-pill" id="topStatusPill" style="display:none !important;"><span class="dot"></span><span id="modelText">ready</span></div>
         </div>
       </div>
@@ -1281,43 +1285,19 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     <div class="chat-container grid-bg" id="chatContainer">
       <div id="startState" class="start-page">
         <div class="start-hero-row">
-          <span class="start-emblem" aria-hidden="true">
-            <svg class="logo-svg logo-tesseract" viewBox="0 0 64 64" width="28" height="28" fill="none">
-              <polygon points="32,8 52,19.5 52,44.5 32,56 12,44.5 12,19.5" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"/>
-              <g stroke="currentColor" stroke-width="1.8" stroke-linecap="round" opacity="0.7">
-                <line x1="32" y1="8" x2="32" y2="19"/>
-                <line x1="52" y1="19.5" x2="42" y2="25.5"/>
-                <line x1="52" y1="44.5" x2="42" y2="38.5"/>
-                <line x1="32" y1="56" x2="32" y2="45"/>
-                <line x1="12" y1="44.5" x2="22" y2="38.5"/>
-                <line x1="12" y1="19.5" x2="22" y2="25.5"/>
-              </g>
-              <polygon points="32,19 42,25.5 42,38.5 32,45 22,38.5 22,25.5" fill="currentColor" fill-opacity="0.2" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/>
-              <polygon points="32,19 42,32 32,45 22,32" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" opacity="0.9"/>
-              <circle cx="32" cy="32" r="3.4" fill="#FFFFFF"/>
-            </svg>
-            <svg class="logo-svg logo-singularity" viewBox="0 0 64 64" width="28" height="28" fill="none">
-              <ellipse cx="32" cy="32" rx="24" ry="9.5" transform="rotate(-30 32 32)" stroke="currentColor" stroke-width="2.5"/>
-              <ellipse cx="32" cy="32" rx="24" ry="9.5" transform="rotate(30 32 32)" stroke="currentColor" stroke-width="2.5" opacity="0.8"/>
-              <circle cx="32" cy="32" r="14" stroke="currentColor" stroke-width="1.6" stroke-dasharray="4 4" opacity="0.65"/>
-              <path d="M32 19 C34.5 27.5 36.5 29.5 45 32 C36.5 34.5 34.5 36.5 32 45 C29.5 36.5 27.5 34.5 19 32 C27.5 29.5 29.5 27.5 32 19 Z" fill="#FFFFFF"/>
-              <circle cx="50" cy="21.5" r="2.8" fill="currentColor"/>
-              <circle cx="14" cy="42.5" r="2.3" fill="currentColor"/>
-            </svg>
-          </span>
           <div class="start-badge">OUR OWN MODEL. IN YOUR BROWSER.</div>
         </div>
         <div class="start-greeting">Make sense of anything.</div>
         <div class="start-sub">A quiet place to ask, explore, and keep what matters.</div>
-        <p class="ai-disclosure">Private browser-based answers powered by <b>Archiver 5</b> — our own on-device model. Zero third-party cloud AI providers. Live web search is optional; chats may sync to this app’s server. Runs on WebGPU or a Safari-optimised CPU runtime.</p>
+        <p class="ai-disclosure">Private browser-based answers powered by <b>Archiver 5.1</b> — our own on-device model. Zero third-party cloud AI providers. Live web search is optional; chats may sync to this app’s server. Runs on WebGPU or a Safari-optimised CPU runtime.</p>
         <div class="start-features">
           <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> No model-provider key</span>
-          <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="12 2 21 7 21 17 12 22 3 17 3 7"/></svg> Archiver 5 — our own model</span>
+          <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="12 2 21 7 21 17 12 22 3 17 3 7"/></svg> Archiver 5.1 — our own model</span>
           <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Live web when you want it</span>
           <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg> Optimised for Safari</span>
         </div>
         <div class="ob-chips" id="chips"></div>
-        <div style="margin-top:18px; font-size:11px; color:var(--ink-3);">Archiver 5 — our own on-device model · Chats can sync to this app’s server</div>
+        <div style="margin-top:18px; font-size:11px; color:var(--ink-3);">Archiver 5.1 — our own on-device model · Chats can sync to this app’s server</div>
       </div>
       <div id="chatThread" class="hidden" role="log" aria-label="Conversation" aria-live="polite" aria-relevant="additions"></div>
     </div>
@@ -1394,22 +1374,22 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     </header>
     <div class="settings-body">
       <fieldset>
-        <legend>Archiver 5 — our own model</legend>
+        <legend>Archiver 5.1 — our own model</legend>
         <div class="engine-box">
           <div class="engine-line">
             <span class="dot on" id="engineDot"></span>
             <b id="engineMode">Browser model loads when needed</b>
             <span class="mtag" id="engineModel"></span>
           </div>
-          <p id="engineBlurb">Archiver 5 — our own compact on-device model (0.6B architecture), running privately in your browser with zero external AI providers.</p>
+          <p id="engineBlurb">Archiver 5.1 — our own compact on-device model (0.6B architecture), running privately in your browser with zero external AI providers.</p>
           <div class="ai-confirmation" id="aiConfirmation" role="status" aria-live="polite">
             <span class="mark" aria-hidden="true">✓</span>
-            <span><strong id="aiConfirmationTitle">Archiver 5 is always enabled</strong><small id="aiConfirmationDetail">It prepares in the background the moment you open this page.</small></span>
+            <span><strong id="aiConfirmationTitle">Archiver 5.1 is always enabled</strong><small id="aiConfirmationDetail">It prepares in the background the moment you open this page.</small></span>
           </div>
           <p class="desc">Downloads once, then loads from cache automatically. Uses WebGPU, or our Safari-optimised WebAssembly engine.</p>
           <div class="engine-actions">
             <button class="btn" id="warmModelBtn" type="button" hidden>Load model now</button>
-            <button class="btn" id="retryModel" type="button" hidden>Retry Archiver 5</button>
+            <button class="btn" id="retryModel" type="button" hidden>Retry Archiver 5.1</button>
           </div>
           <div class="engine-bar" id="engineBar" style="display:none"><span id="engineBarFill"></span></div>
           <div class="engine-progress" id="engineProgress" style="display:none"></div>
@@ -1535,8 +1515,8 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
         <legend>Updates</legend>
         <div class="update-row">
           <div class="update-meta">
-            <b>5</b><span>2026-09-29 · latest</span>
-            <p>Archiver 5 — our own model, Safari CPU &amp; cache optimisations, Neural Tesseract Prism emblem.</p>
+            <b>5.1</b><span>2026-09-29 · latest</span>
+            <p>Archiver 5.1 — no more blank answers, live streaming, cached replies, ten Sopranos cards, iPhone tuning.</p>
           </div>
           <button class="btn sm" id="openChangelog" style="white-space:nowrap; flex-shrink:0;">View changelog →</button>
         </div>
@@ -1546,8 +1526,8 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     <footer>
       <button class="btn" id="restoreDefaults" type="button">Restore defaults</button>
       <span style="flex:1"></span>
-      <button class="btn" id="cancelSettings" type="button">Cancel</button>
-      <button class="btn primary" id="saveSettings" type="button">Apply settings</button>
+      <span class="set-saved" id="setSaved" role="status" aria-live="polite"></span>
+      <button class="btn primary" id="cancelSettings" type="button">Done</button>
     </footer>
   </div>
 </div>
@@ -1599,18 +1579,6 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     </div>
     <div class="changelog-body">
       <div class="changelog-timeline">
-        <div class="cl-entry" style="border-color:var(--accent)">
-          <div class="cl-head"><span class="cl-ver">5</span><span class="cl-tag">Latest</span><span class="cl-date">2026-09-29</span></div>
-          <div class="cl-title">Archiver 5 — our own model, Safari optimisations &amp; Neural Tesseract emblem</div>
-          <div class="cl-body">
-            <ul>
-              <li><b>Archiver 5 — our own on-device model.</b> Upgraded our in-browser model to <b>Archiver 5</b> (0.6B architecture on WebGPU MLC q4f16/q4f32 and WebAssembly GGUF Q4_0 / Q4_K_M), with zero third-party cloud AI providers, automatic <code>&lt;think&gt;</code> extraction into the Thought process panel, trailing-repetition suppression, and instant unit conversions.</li>
-              <li><b>Optimised for Safari.</b> Added compact CPU prompt prefill and <code>/no_think</code> fast-start on WebAssembly, prioritized SIMD-friendly <code>Q4_0</code> weights, raised WASM batching (<code>n_batch: 256</code>) and parallel downloads, fixed idle cached tabs getting stuck on &quot;loading from browser cache&quot;, and added automatic OPFS cache recovery.</li>
-              <li><b>New Neural Tesseract Prism logo.</b> Replaced the plain &quot;A&quot; mark with the futuristic 4D Neural Tesseract Prism emblem across the sidebar, top bar, start screen and favicon — plus an Orbital Singularity option in Settings → Appearance.</li>
-              <li><b>UI &amp; composer refinements.</b> Added a live character/token counter in the composer and a one-tap &quot;Load model now&quot; action in Settings.</li>
-            </ul>
-          </div>
-        </div>
         <div class="cl-entry">
           <div class="cl-head"><span class="cl-ver">4.3</span><span class="cl-date">2026-09-28</span></div>
           <div class="cl-title">4.3 — resilient search, Grok-like persona, OLED theme, more topics</div>
@@ -2434,11 +2402,12 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
 
     const aEl = appendMessage({ role: 'archiver', content: '', created_at: Date.now()/1000 });
     const body = $('.msg-body', aEl);
-    body.innerHTML = '<span class="typing-dots"><i></i><i></i><i></i></span>';
 
-    /* Thinking is visible on every prompt, not just the ones that reach a model:
-       this line names the step the pipeline is on while it works, and is
-       replaced by the permanent Thought process disclosure when it finishes. */
+    /* One loading indicator, not two. This used to be accompanied by three
+       bouncing dots inside the bubble, so a slow answer showed the reader two
+       animations saying the same thing. The line below names the step actually
+       running — searching, reading, writing — and is replaced by the permanent
+       Thought process disclosure when the turn finishes. */
     const thinkEl = document.createElement('div');
     thinkEl.className = 'think-live';
     thinkEl.setAttribute('aria-live', 'polite');
@@ -2843,9 +2812,24 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     }
   }
 
-  async function saveSettings() {
+  /* Settings apply as they are changed. There used to be an explicit save
+     button at the foot of this panel that did the same work, later: a reader
+     who edited the persona and then closed the panel with Escape lost the edit,
+     which is exactly what "it doesn't make a difference" feels like. So every
+     control now saves itself, and the panel says when it has. */
+  let setSaveTimer = null;
+  function flashSaved(text) {
+    const el = $('#setSaved');
+    if (!el) return;
+    el.textContent = text || 'Saved';
+    el.classList.add('on');
+    clearTimeout(setSaveTimer);
+    setSaveTimer = setTimeout(() => { el.classList.remove('on'); el.textContent = ''; }, 1800);
+  }
+
+  function collectSettings() {
     const s = state.settings || {};
-    const body = {
+    return {
       max_memories: '500',
       min_relevance: String(s.min_relevance ?? 0.06),
       half_life_days: String(s.half_life_days ?? 90),
@@ -2857,13 +2841,42 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
       diversify: String(s.diversify ?? '1'),
       persona: $('#setPersona') ? $('#setPersona').value : (s.persona || '')
     };
-    try {
-      await api('/api/settings', { method: 'PUT', body: JSON.stringify(body) });
-      state.settings = { ...s, ...body };
-      if ($('#setSearchCount')) storageSet('archiver.searchCount', $('#setSearchCount').value);
-      $('#settingsOverlay').classList.remove('on');
-      toast('Settings applied', 'ok');
-    } catch (e) { toast('Could not save: ' + e.message, 'err'); }
+  }
+
+  /* One save in flight at a time; the newest values always win. */
+  let setSaveChain = Promise.resolve();
+  function saveSettingsNow(quiet) {
+    const body = collectSettings();
+    if ($('#setSearchCount')) storageSet('archiver.searchCount', $('#setSearchCount').value);
+    setSaveChain = setSaveChain.then(async () => {
+      try {
+        await api('/api/settings', { method: 'PUT', body: JSON.stringify(body) });
+        state.settings = { ...(state.settings || {}), ...body };
+        if (!quiet) flashSaved('Saved');
+      } catch (e) {
+        toast('Could not save settings: ' + e.message, 'err');
+      }
+    }).catch(() => {});
+    return setSaveChain;
+  }
+
+  /* Text areas are debounced — one save per pause, not one per keystroke. */
+  function bindLiveSettings() {
+    const debounced = (fn, ms) => {
+      let t = null;
+      const wrapped = (...args) => { clearTimeout(t); t = setTimeout(() => { t = null; fn(...args); }, ms); };
+      wrapped.cancel = () => clearTimeout(t);
+      return wrapped;
+    };
+    const save = saveSettingsNow.bind(null, false);
+    const personaSave = debounced(save, 450);
+    if ($('#setPersona')) $('#setPersona').addEventListener('input', personaSave);
+    if ($('#setSearchCount')) $('#setSearchCount').addEventListener('change', save);
+    if ($('#setAutoExtract')) $('#setAutoExtract').addEventListener('change', save);
+    if ($('#setAutoDistill')) $('#setAutoDistill').addEventListener('change', save);
+    /* The pending persona save is cancelled by the caller, which then saves
+       the field's current value itself — the edit is never dropped. */
+    return () => personaSave.cancel();
   }
 
   /* ---------- mobile: touch & keyboard fixes (Safari keyboard glitch fix) ---------- */
@@ -2986,7 +2999,18 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
       else send();
     };
     $('#cbStop').onclick = () => { if (state.abort) state.abort.abort(); };
-    $('#chatInput').addEventListener('input', grow);
+    $('#chatInput').addEventListener('input', e => {
+      grow();
+      /* iPhone: the page-load warm-up is deferred there on purpose, so the
+         first open-ended question would otherwise pay the whole load while the
+         reader waits. Start it now, from what is being typed, and only when the
+         weights are already cached in this browser — nothing new is
+         downloaded, and by the time Send is pressed the model is usually up. */
+      const A = window.Archiver;
+      if (A && typeof A.prepare === 'function' && !state.streaming) {
+        try { A.prepare(e.target.value); } catch (_) {}
+      }
+    });
     $('#chatInput').addEventListener('keydown', e => {
       if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
         e.preventDefault();
@@ -3148,7 +3172,15 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     settingsOverlay.addEventListener('click', e => {
       if (e.target === settingsOverlay) closeSettings();
     });
-    $('#saveSettings').onclick = saveSettings;
+    /* Live apply: every control saves itself. Closing the panel flushes a
+       debounced edit rather than discarding it. */
+    const flushSettings = bindLiveSettings();
+    const closeAndFlush = () => { flushSettings(); saveSettingsNow(true); closeSettings(); };
+    $('#closeSettings').onclick = closeAndFlush;
+    $('#cancelSettings').onclick = closeAndFlush;
+    settingsOverlay.addEventListener('click', e => {
+      if (e.target === settingsOverlay) closeAndFlush();
+    });
     $('#restoreDefaults').onclick = restoreDefaults;
 
     async function clearAllHistory() {
@@ -3209,11 +3241,25 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     initKeyboard();
     grow();
 
-    $('#chips').innerHTML = [
-      ['UNDERSTAND', 'Compare Python and JavaScript', 'Two ideas, side by side. No web needed.'],
-      ['QUICK MATH', 'What is 18% of 250?', 'Percentages, parentheses, and powers.'],
-      ['READ MY NOTES', 'Summarize: Our release is Friday. We need to finish testing by Thursday. Alex will write the release notes. The team meets tomorrow.', 'Pull the key sentences out of your text.']
-    ].map(([lbl, q, desc]) =>
+    /* The start page has to answer "what is this thing?" in one glance, so each
+       card is a question that exercises a different part of the pipeline and
+       lands a good answer offline: retrieval, live web, comparison, generation,
+       pasted text, arithmetic. */
+    const PROMPTS = [
+      ['KNOWLEDGE', 'Did Tony Soprano die in the finale?',
+        'The cut to black, the song, and what David Chase has and has not said.'],
+      ['LIVE WEB', 'Search the web for the history of the Silk Road',
+        'WEB switches itself on for this one. Sources are cited underneath.'],
+      ['COMPARE', 'Compare Napoleon and Alexander the Great as commanders',
+        'Two stored cards, weighed against each other on the same points.'],
+      ['GENERATE', 'Write a Python decorator that rate-limits a function',
+        'Real on-device generation — no model-provider key, no server.'],
+      ['MY NOTES', 'Summarize: Our release is Friday. We need to finish testing by Thursday. Alex will write the release notes. The team meets tomorrow.',
+        'Pulls the key sentences out of text you paste, adding nothing.'],
+      ['INSTANT', 'What is 18% of 250?',
+        'Percentages, parentheses and powers, answered before you finish typing.']
+    ];
+    $('#chips').innerHTML = PROMPTS.map(([lbl, q, desc]) =>
       '<button class="prompt-card" data-say="' + esc(q) + '"><span class="pc-top"><span class="pc-lbl">' + lbl + '</span><span class="pc-arrow">↗</span></span><span class="pc-q">' + esc(q) + '</span><span class="pc-desc">' + esc(desc) + '</span></button>'
     ).join('');
 

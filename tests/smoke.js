@@ -82,6 +82,7 @@ for (const q of ['cards', 'card', 'memory', 'web', 'sources', 'teach', 'what are
 }
 say(A.reply('cards').text.includes(String(A.count())), '"cards" says how many there are');
 say(/MEM/.test(A.reply('memory').text), '"memory" points at MEM');
+say(A.count() === 1526, 'the corpus is 1,526 cards, as the README says', String(A.count()));
 
 console.log('\n-- a miss always leaves a door open --');
 {
@@ -93,6 +94,28 @@ console.log('\n-- a miss always leaves a door open --');
   }
   say(doors === 4, 'every miss says what it does know', doors + '/4');
 }
+
+console.log('\n-- The Sopranos (5.1) --');
+/* The finale question is the one that trips up every model: it either invents
+   an ending or refuses to answer. The corpus cards have the facts, so the
+   instant path has to find them and stay on them. */
+for (const [q, want] of [
+  ['who is tony soprano', /tony|soprano/i],
+  ['did tony soprano die in the finale', /finale|final episode/i],
+  ['what happened in the sopranos finale', /finale|final episode/i],
+  ['who is carmela soprano', /carmela|soprano/i],
+  ['when did the sopranos air', /2007|1999|aired/i],
+]) {
+  const r = A.reply(q);
+  const t = (r.text || '').replace(/\s+/g, ' ');
+  say(!!t && t.length > 4, q, `${r.kind} ${(r.score || 0).toFixed(2)}`);
+  say(want.test(t), q + ' stays on the subject', t.slice(0, 60));
+  say(!/\[1\]|\[2\]/.test(t), q + ' invents no citations');
+  say(!/https?:\/\//.test(t), q + ' invents no urls');
+}
+/* A card match must not be turned into a claim about consciousness or the
+   model's own life. */
+say(!/I have watched|my favourite/i.test(A.reply('who is tony soprano').text), 'no invented personal experience');
 
 console.log('\n-- one model, nothing to choose --');
 const st = A.status();
