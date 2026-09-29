@@ -1,6 +1,7 @@
 """4.2 free-tier hardening: headers, rate limits, body caps, boot stamps,
-memory dedup/contradiction/cap, SQLite shutdown, search provider cooldown.
-No network: search providers are replaced with in-process fakes."""
+memory-store cap/eviction (in-process — the API routes are gone in 5.3),
+SQLite shutdown, search provider cooldown. No network: search providers are
+replaced with in-process fakes."""
 import asyncio
 
 import httpx
@@ -112,10 +113,10 @@ def test_request_body_cap(client):
         node = node.app
     node.max_body = 1000
     node.limiter = hardening.RateLimiter({})
-    r = client.post("/api/memories", json={"content": "x" * 5000})
+    r = client.post("/api/chat/prepare", json={"message": "x" * 5000})
     assert r.status_code == 413
-    ok = client.post("/api/memories", json={"content": "I like tea"})
-    assert ok.status_code == 201
+    ok = client.post("/api/chat/prepare", json={"message": "I like tea"})
+    assert ok.status_code == 200
 
 
 def test_concurrency_cap_returns_503_but_health_still_answers():
@@ -141,28 +142,12 @@ def test_concurrency_cap_returns_503_but_health_still_answers():
 
 def test_health_reports_boot_and_db_stamps_and_ping(client):
     body = client.get("/api/health").json()
-    assert body["version"] == "5.2"
+    assert body["version"] == "5.3"
     assert body["boot_id"] and body["db_created_at"] > 0 and body["ephemeral_disk"] is True
     # Stable across calls within one process.
     assert client.get("/api/health").json()["db_created_at"] == body["db_created_at"]
     r = client.get("/api/ping")
     assert r.status_code == 200 and r.text == "ok"
-
-
-def test_memory_write_time_dedup(client):
-    a = client.post("/api/memories", json={"content": "My cat is called Miso."}).json()
-    b = client.post("/api/memories", json={"content": "my cat is called miso"}).json()
-    assert b["deduplicated"] is True
-    assert b["memory"]["id"] == a["memory"]["id"]
-    assert len(client.get("/api/memories").json()) == 1
-
-
-def test_memory_contradiction_supersedes(client):
-    old = client.post("/api/memories", json={"content": "I prefer Python for backend services."}).json()
-    new = client.post("/api/memories", json={"content": "I prefer Go for backend services now."}).json()
-    assert new["superseded"] == old["memory"]["id"]
-    current = [m["id"] for m in client.get("/api/memories").json()]
-    assert old["memory"]["id"] not in current and new["memory"]["id"] in current
 
 
 def test_memory_cap_evicts_unpinned_low_value(tmp_path):

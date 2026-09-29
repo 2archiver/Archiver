@@ -19,7 +19,7 @@ try {
 <meta name="apple-mobile-web-app-title" content="Archiver">
 <meta name="format-detection" content="telephone=no">
 <meta name="mobile-web-app-capable" content="yes">
-<title>Archiver 5.2 — Your everyday assistant</title>
+<title>Archiver 5.3 — Your everyday assistant</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
@@ -538,12 +538,6 @@ a:hover { text-decoration-color: var(--ink); }
   font-family: var(--mono); font-size: 10.5px; background: var(--surface); border: var(--border); border-bottom-width: 2px; padding: 1px 5px; border-radius: 4px; color: var(--ink-2);
 }
 
-/* ---------- Memory drawer — card index ---------- */
-.mem-drawer {
-  width: 340px; flex-shrink: 0; background: var(--surface); border-left: var(--border);
-  display: flex; flex-direction: column; overflow: hidden; transition: width var(--motion) var(--ease), opacity var(--motion-fast);
-}
-.app-shell.mem-closed .mem-drawer { width: 0; border-left-color: transparent; opacity: 0; pointer-events: none; }
 .mem-head { height: 56px; flex-shrink: 0; display: flex; align-items: center; gap: 10px; padding: 0 14px; border-bottom: var(--border); background: var(--surface-2); }
 .mem-head h3 { font-family: var(--serif); font-size: 13.5px; font-weight: 700; letter-spacing: -.01em; margin: 0; flex: 1; color: var(--ink); }
 .mem-head .count {
@@ -705,9 +699,7 @@ a:hover { text-decoration-color: var(--ink); }
   .sidebar .side-label { opacity: 1 !important; }
   .app-shell.side-open .sidebar { transform: translateX(0); box-shadow: var(--shadow-2); }
   .side-x { display: flex; }
-  .mem-drawer { position: fixed; top: 0; bottom: 0; right: 0; width: 340px !important; max-width: 92vw; transform: translateX(100%); transition: transform var(--motion) var(--ease); z-index: 50; }
-  .app-shell.mem-open .mem-drawer { transform: translateX(0); opacity: 1; pointer-events: auto; width: 340px !important; }
-  .app-shell.side-open .scrim, .app-shell.mem-open .scrim { display: block; }
+  .app-shell.side-open .scrim { display: block; }
   .grid2 { grid-template-columns: 1fr; }
 }
 @media (max-width: 560px) {
@@ -1040,7 +1032,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
 .kb-open .changelog-modal {
   max-height: calc(var(--viewport-height, 100dvh) - var(--kb-height, 0px) - 20px);
 }
-.kb-open .mem-drawer, .kb-open .sidebar { height: var(--viewport-height, 100dvh); }
+.kb-open .sidebar { height: var(--viewport-height, 100dvh); }
 
 /* With the keyboard up on a phone there is very little left. Spend it on the
    conversation: the runtime line and the shortcut hint lose first. */
@@ -1058,7 +1050,6 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
 @media (pointer: coarse) {
   input, textarea, select { font-size: 16px; }
   .side-searchrow input { font-size: 16px; }
-  #memSearch, #newMem { font-size: 16px; }
   .settings-modal input[type="text"], .settings-modal input[type="number"],
   .settings-modal textarea, .settings-modal select { font-size: 16px; }
   /* A 44px target is the documented minimum; the send button is round, so it
@@ -1147,7 +1138,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
 <body>
 
 
-<div class="app-shell mem-closed" id="shell">
+<div class="app-shell" id="shell">
 
   <!-- ============ SIDEBAR ============ -->
   <aside class="sidebar" id="sidebar">
@@ -1170,7 +1161,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
           </svg>
         </span>
       </span>
-      <span class="side-label">Archiver <span class="version-tag">5.2</span></span>
+      <span class="side-label">Archiver <span class="version-tag">5.3</span></span>
       <button class="side-x" id="sideClose" aria-label="Close menu" title="Close">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
@@ -1206,8 +1197,6 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
         <span class="side-label" id="healthText">ready</span>
       </div>
       <div class="side-meter">
-        <div class="meter-row"><span>MEMORIES</span><span id="memMeter">0</span></div>
-        <div class="meter-bar"><span class="meter-fill" id="memFill"></span></div>
         <div class="meter-row"><span>INDEX</span><span id="idxMeter">71</span></div>
         <div class="meter-bar"><span class="meter-fill" id="idxFill" style="width:100%"></span></div>
       </div>
@@ -1229,16 +1218,13 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
               <circle cx="32" cy="32" r="4" fill="#FFFFFF"/>
             </svg>
           </span>
-          <span class="model-name" id="modelLabel">Archiver <span class="version-tag">5.2</span></span>
+          <span class="model-name" id="modelLabel">Archiver <span class="version-tag">5.3</span></span>
           <div class="status-pill" id="topStatusPill" style="display:none !important;"><span class="dot"></span><span id="modelText">ready</span></div>
         </div>
       </div>
       <div class="tb-right">
         <button class="tool-btn" id="toggleSearch" aria-pressed="false" title="Ground answers with live web search">
           <span class="led"></span>WEB
-        </button>
-        <button class="tool-btn on" id="toggleMem" title="Show the memory bank" style="display:none !important;">
-          <span class="led"></span>MEM
         </button>
         <button class="art-icon-btn" id="exportBtn" aria-label="Download this conversation" title="Download this session">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
@@ -1253,15 +1239,15 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
         </div>
         <div class="start-greeting">Make sense of anything.</div>
         <div class="start-sub">A quiet place to ask, explore, and keep what matters.</div>
-        <p class="ai-disclosure">Private browser-based answers powered by <b>Archiver 5.2</b> — our own on-device model. Zero third-party cloud AI providers. Live web search is optional; chats may sync to this app’s server. Runs on WebGPU or a Safari-optimised CPU runtime.</p>
+        <p class="ai-disclosure">Private browser-based answers powered by <b>Archiver 5.3</b> — our own on-device model. Zero third-party cloud AI providers. Live web search is optional; chats may sync to this app’s server. Runs on WebGPU or a Safari-optimised CPU runtime.</p>
         <div class="start-features">
           <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> No model-provider key</span>
-          <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="12 2 21 7 21 17 12 22 3 17 3 7"/></svg> Archiver 5.2 — our own model</span>
+          <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="12 2 21 7 21 17 12 22 3 17 3 7"/></svg> Archiver 5.3 — our own model</span>
           <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Live web when you want it</span>
           <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg> Optimised for Safari</span>
         </div>
         <div class="ob-chips" id="chips"></div>
-        <div style="margin-top:18px; font-size:11px; color:var(--ink-3);">Archiver 5.2 — our own on-device model · Chats can sync to this app’s server</div>
+        <div style="margin-top:18px; font-size:11px; color:var(--ink-3);">Archiver 5.3 — our own on-device model · Chats can sync to this app’s server</div>
       </div>
       <div id="chatThread" class="hidden" role="log" aria-label="Conversation" aria-live="polite" aria-relevant="additions"></div>
     </div>
@@ -1274,7 +1260,6 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
           <div class="composer-tools">
             <div class="left">
               <button class="ghost-btn" id="cbSearch" aria-pressed="false"><span class="led"></span>SEARCH</button>
-              <button class="ghost-btn" id="cbMemory">MEMORY</button>
               <button class="ghost-btn" id="cbStop" style="display:none">STOP</button>
             </div>
             <span id="composerCount" class="composer-count" aria-hidden="true"></span>
@@ -1292,37 +1277,6 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     </div>
   </main>
 
-  <!-- ============ MEMORY DRAWER ============ -->
-  <aside class="mem-drawer" id="memDrawer">
-    <div class="mem-head">
-      <h3>Memory bank</h3>
-      <span class="count" id="memCount">0</span>
-      <button class="art-icon-btn" id="memRefresh" title="Reload" style="width:28px;height:28px">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
-      </button>
-      <button class="art-icon-btn" id="memClose" title="Close" style="width:28px;height:28px">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
-      </button>
-    </div>
-    <div class="mem-add">
-      <textarea id="newMem" placeholder="Add a memory by hand…"></textarea>
-      <div class="mem-add-row">
-        <select class="sel" id="newKind" aria-label="Kind">
-          <option value="fact">fact</option><option value="preference">preference</option>
-          <option value="decision">decision</option><option value="episode">episode</option>
-          <option value="summary">summary</option>
-        </select>
-        <select class="sel" id="newImportance" aria-label="Importance">
-          <option value="normal">normal</option><option value="high">high</option><option value="low">low</option>
-        </select>
-        <button class="btn sm primary inline-plus" id="addMem">Remember</button>
-      </div>
-    </div>
-    <div class="mem-search">
-      <input id="memSearch" type="search" placeholder="Search memories…" aria-label="Search memories">
-    </div>
-    <div class="mem-list" id="memList"></div>
-  </aside>
 
   <div class="scrim" id="scrim"></div>
 </div>
@@ -1338,22 +1292,22 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     </header>
     <div class="settings-body">
       <fieldset>
-        <legend>Archiver 5.2 — our own model</legend>
+        <legend>Archiver 5.3 — our own model</legend>
         <div class="engine-box">
           <div class="engine-line">
             <span class="dot on" id="engineDot"></span>
             <b id="engineMode">Browser model loads when needed</b>
             <span class="mtag" id="engineModel"></span>
           </div>
-          <p id="engineBlurb">Archiver 5.2 — our own compact on-device model (0.6B architecture), running privately in your browser with zero external AI providers.</p>
+          <p id="engineBlurb">Archiver 5.3 — our own compact on-device model (0.6B architecture), running privately in your browser with zero external AI providers.</p>
           <div class="ai-confirmation" id="aiConfirmation" role="status" aria-live="polite">
             <span class="mark" aria-hidden="true">✓</span>
-            <span><strong id="aiConfirmationTitle">Archiver 5.2 is always enabled</strong><small id="aiConfirmationDetail">It prepares in the background the moment you open this page.</small></span>
+            <span><strong id="aiConfirmationTitle">Archiver 5.3 is always enabled</strong><small id="aiConfirmationDetail">It prepares in the background the moment you open this page.</small></span>
           </div>
           <p class="desc">Downloads once, then loads from cache automatically. Uses WebGPU, or our Safari-optimised WebAssembly engine.</p>
           <div class="engine-actions">
             <button class="btn" id="warmModelBtn" type="button" hidden>Load model now</button>
-            <button class="btn" id="retryModel" type="button" hidden>Retry Archiver 5.2</button>
+            <button class="btn" id="retryModel" type="button" hidden>Retry Archiver 5.3</button>
           </div>
           <div class="engine-bar" id="engineBar" style="display:none"><span id="engineBarFill"></span></div>
           <div class="engine-progress" id="engineProgress" style="display:none"></div>
@@ -1370,9 +1324,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
       </fieldset>
 
       <fieldset>
-        <legend>Memory Bank</legend>
-        <p style="margin-top:0;margin-bottom:10px;font-size:12px;color:var(--ink-3)">Saved on the server and used when relevant.</p>
-        <label class="toggle"><input type="checkbox" id="setAutoExtract"> Learn new memories automatically from chat</label>
+        <legend>Long chats</legend>
         <label class="toggle"><input type="checkbox" id="setAutoDistill"> Auto-distill and consolidate long chats</label>
       </fieldset>
 
@@ -1399,13 +1351,10 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
       </fieldset>
 
       <fieldset>
-        <legend>Advanced retrieval</legend>
+        <legend>Generation</legend>
         <details>
-          <summary style="cursor:pointer; font-size:12.5px; color:var(--ink-2);">Show thresholds &amp; memory tuning</summary>
+          <summary style="cursor:pointer; font-size:12.5px; color:var(--ink-2);">Show tuning</summary>
           <div style="margin-top:12px; display:grid; gap:12px;">
-            <div class="field"><label for="setMinRelevance">Minimum relevance (0–1)</label><input id="setMinRelevance" type="number" step="0.01" min="0" max="1" placeholder="0.06"><div class="desc">Lower recalls more, higher is stricter.</div></div>
-            <div class="field"><label for="setTopK">Memories per query</label><input id="setTopK" type="number" min="1" max="500" placeholder="500"></div>
-            <div class="field"><label for="setHalfLife">Memory half-life (days)</label><input id="setHalfLife" type="number" min="1" max="365" placeholder="90"></div>
             <div class="field"><label for="setContextTokens">Context token budget</label><input id="setContextTokens" type="number" min="500" max="16000" placeholder="6000"></div>
           </div>
         </details>
@@ -1448,8 +1397,8 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
         <legend>Updates</legend>
         <div class="update-row">
           <div class="update-meta">
-            <b>5.2</b><span>2026-09-29 · latest</span>
-            <p>Archiver 5.2 — no more blank answers, live streaming, cached replies, ten Sopranos cards, iPhone tuning.</p>
+            <b>5.3</b><span>2026-09-29 · latest</span>
+            <p>Archiver 5.3 — Qwen3-0.6B model with automatic fallback, a bigger knowledge base, no persistent memory, a refresh-free tab lifecycle, and a redesigned interface.</p>
           </div>
           <button class="btn sm" id="openChangelog" style="white-space:nowrap; flex-shrink:0;">View changelog →</button>
         </div>
@@ -1513,6 +1462,21 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     <div class="changelog-body">
       <div class="changelog-timeline">
         <div class="cl-entry" style="border-color:var(--accent);">
+          <div class="cl-head"><span class="cl-ver">5.3</span><span class="cl-date">2026-09-29</span></div>
+          <div class="cl-title">5.3 — Qwen3 model, no persistent memory, refresh-free tab, redesigned interface</div>
+          <div class="cl-body">
+            <ul>
+              <li><b>Model upgraded to Qwen3-0.6B.</b> Both runtimes now prefer our own Qwen3-0.6B and fall back automatically to the proven Qwen2.5-0.5B if a Qwen3 artifact is missing or CORS-blocked, so Safari and weaker GPUs still generate.</li>
+              <li><b>Memories removed.</b> Archiver no longer remembers anything about you between chats. Conversations still live in this browser and may sync to this app's server, but there is no durable memory store.</li>
+              <li><b>No more random refresh.</b> The model worker is kept warm through tab backgrounding, screen lock and WebGPU device loss instead of being torn down and reloaded, so the page no longer appears to reset while you use it.</li>
+              <li><b>Knowledge base expanded.</b> New cards across science, technology, culture and current events.</li>
+              <li><b>Search recovers faster.</b> Provider cooldown cut from 600s to 120s so a waking server is retried sooner; single-result queries now trigger a second-chance search.</li>
+              <li><b>Model warms sooner.</b> GPU preparation now triggers after 5 characters (was 8).</li>
+              <li><b>Redesigned interface.</b> Refreshed design system, clearer layout, better contrast and spacing.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="cl-entry">
           <div class="cl-head"><span class="cl-ver">5.2</span><span class="cl-date">2026-09-29</span></div>
           <div class="cl-title">5.2 — 3 questions, simpler changelog, reliable online & GPU, Safari-optimised</div>
           <div class="cl-body">
@@ -1739,7 +1703,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
   };
 
   const state = {
-    sessionId: null, sessions: [], memories: [], settings: null,
+    sessionId: null, sessions: [], settings: null,
     streaming: false, abort: null, search: false,
   };
 
@@ -2061,9 +2025,9 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
 
   /* The engine records what it actually did for this prompt — every prompt, not
      only the ones that reached a model. This only shapes that record for
-     display and adds the two things the engine cannot see: whether the reader
-     had asked for WEB, and how many saved memories the page chose to pass. */
-  function makeAnswerPath({ trace, searchRequested, memories, usedModel }) {
+     display and adds the one thing the engine cannot see: whether the reader
+     had asked for WEB. */
+  function makeAnswerPath({ trace, searchRequested, usedModel }) {
     if (!trace || !Array.isArray(trace.steps)) {
       /* No engine record (an old cached turn, or an error before the pipeline
          started). Say so rather than inventing a plausible-looking trail. */
@@ -2078,7 +2042,6 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
       steps.push('WEB was requested for this turn; the trail above says whether a source came back.');
     }
     const ev = Object.assign({}, trace.evidence || {});
-    if (!ev.memories && memories) ev.memories = memories;
     return {
       runtime: trace.runtime || (usedModel ? 'on-device gpu' : 'instant local'),
       route: trace.route || '',
@@ -2132,12 +2095,11 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
 
   /* ---------- chat execution ---------- */
   const syncQueues = new Map();
-  function syncTurn(sid, message, answer, context, process) {
+  function syncTurn(sid, message, answer, process) {
     const next = (syncQueues.get(sid) || Promise.resolve()).catch(() => {}).then(async () => {
       if (!LocalStore.getSessions().some(s => s.id === sid)) return;
       await api('/api/chat/prepare', { method: 'POST', body: JSON.stringify({ session_id: sid, message }) });
-      await api('/api/chat/commit', { method: 'POST', body: JSON.stringify({ session_id: sid, message, answer, memory_ids: context.map(m => m.id), process }) });
-      loadMemories(); loadStats();
+      await api('/api/chat/commit', { method: 'POST', body: JSON.stringify({ session_id: sid, message, answer, process }) });
     }).catch(() => { toast('Saved in this browser. Server sync is unavailable.'); }).finally(() => {
       if (syncQueues.get(sid) === next) syncQueues.delete(sid);
     });
@@ -2199,7 +2161,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     $('#composerStatus').textContent = state.search ? 'Searching…' : 'Working locally…';
     setThinking(state.search ? 'Searching the web and reading the request…' : 'Reading the request…');
     const A = window.Archiver;
-    let acc = '', ctx = [], frame = null, usedModel = false, answerPath = null;
+    let acc = '', frame = null, usedModel = false, answerPath = null;
     const onDelta = piece => {
       if (signal.aborted) return;
       acc += piece;
@@ -2219,9 +2181,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
          nothing was added — slicing would eat the previous user turn. */
       const stored = LocalStore.getMessages(sid);
       const history = retrying ? stored : stored.slice(0, -1);
-      const keys = new Set((text.toLowerCase().match(/\b[a-z]{4,}\b/g) || []));
-      ctx = (state.memories || []).filter(m => !m.superseded_by && (m.pinned || [...keys].some(k => String(m.content).toLowerCase().includes(k)))).slice(0, 6);
-      const prep = { message: text, history, system: [state.settings && state.settings.persona || '', ...ctx.map(m => 'Memory: ' + m.content)].join('\n') };
+      const prep = { message: text, history, system: state.settings && state.settings.persona || '' };
       // Yield once so the browser paints the outgoing bubble and Stop control.
       await new Promise(resolve => requestAnimationFrame(resolve));
       if (signal.aborted) throw new DOMException('Stopped', 'AbortError');
@@ -2254,8 +2214,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
       answerPath = makeAnswerPath({
         trace: typeof A.trace === 'function' ? A.trace() : null,
         usedModel,
-        searchRequested: state.search || /^(?:search|lookup|look up|google|find out about|find me|browse)\b/i.test(text),
-        memories: usedModel ? ctx.length : 0
+        searchRequested: state.search || /^(?:search|lookup|look up|google|find out about|find me|browse)\b/i.test(text)
       });
 
       let cleanAnswer = answer;
@@ -2280,12 +2239,6 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
         const d = document.createElement('div'); d.innerHTML = answerPathBox(answerPath);
         if (d.firstChild) aEl.appendChild(d.firstChild);
       }
-      if (!usedModel) ctx = [];
-      if (ctx.length) {
-        const rb = recallBox(ctx, false);
-        const d = document.createElement('div'); d.innerHTML = rb;
-        aEl.appendChild(d.firstChild);
-      }
       if (sources.length) {
         const sb = sourcesBox(sources);
         if (sb) {
@@ -2299,13 +2252,12 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
         role: 'archiver',
         content: answer,
         created_at: Date.now() / 1000,
-        context: ctx,
         process: answerPath
       };
       LocalStore.addMessage(sid, aiMsg);
 
       // Serialize server writes per session without delaying local responses.
-      syncTurn(sid, text, answer, ctx, answerPath);
+      syncTurn(sid, text, answer, answerPath);
 
     } catch (err) {
       dropThinking();
@@ -2392,99 +2344,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     updateSend();
   }
 
-  /* ---------- memory bank ---------- */
-  async function loadMemories(q) {
-    try {
-      const path = q ? '/api/memories?q=' + encodeURIComponent(q) + '&limit=60' : '/api/memories?limit=200';
-      state.memories = await api(path);
-      renderMemories(!!q);
-      if (!q) {
-        $('#memMeter').textContent = state.memories.length;
-        $('#memFill').style.width = Math.min(100, state.memories.length) + '%';
-      }
-    } catch (_) {}
-  }
-
-  function renderMemories(isSearch) {
-    const box = $('#memList');
-    const list = state.memories;
-    $('#memCount').textContent = list.length + (isSearch ? ' found' : '');
-    if (!list.length) {
-      box.innerHTML = '<div class="side-empty" style="padding-left:0">'
-        + (isSearch ? 'Nothing matched.' : 'Empty. Archiver remembers what you say — or add one above.') + '</div>';
-      return;
-    }
-    box.innerHTML = list.map(m => {
-      const cls = m.superseded_by ? ' sup' : '';
-      const imp = m.importance && m.importance !== 'normal'
-        ? '<span class="badge ' + (m.importance === 'high' ? 'hi' : '') + '">' + esc(m.importance) + '</span>' : '';
-      const pin = m.pinned ? '<span class="badge pin">pinned</span>' : '';
-      const sup = m.superseded_by ? '<span class="badge">superseded</span>' : '';
-      const tags = (m.tags || []).slice(0, 3).map(t => '<span class="badge tag">' + esc(t) + '</span>').join('');
-      return '<div class="mem-card' + cls + '" data-mid="' + esc(m.id) + '">'
-        + '<div class="top"><span class="badge">' + esc(m.kind || 'fact') + '</span>' + imp + pin + sup + tags + '</div>'
-        + '<div class="txt">' + esc(m.content) + '</div>'
-        + '<div class="meta">' + (m.score != null ? '<span>match ' + Number(m.score).toFixed(2) + '</span>' : '')
-        + (m.hits ? '<span>' + m.hits + '× recalled</span>' : '') + '<span>' + relTime(m.created_at) + '</span></div>'
-        + '<div class="row">'
-        + '<button class="btn sm" data-act="pin" data-mid="' + esc(m.id) + '">' + (m.pinned ? 'Unpin' : 'Pin') + '</button>'
-        + '<button class="btn sm" data-act="edit" data-mid="' + esc(m.id) + '">Edit</button>'
-        + (m.superseded_by ? '<button class="btn sm" data-act="restore" data-mid="' + esc(m.id) + '">Restore</button>' : '')
-        + '<button class="btn sm" data-act="del" data-mid="' + esc(m.id) + '" style="margin-left:auto">Forget</button>'
-        + '</div></div>';
-    }).join('');
-  }
-
-  async function addMemory() {
-    const ta = $('#newMem');
-    const content = ta.value.trim();
-    if (!content) { toast('Write something first', 'err'); return; }
-    try {
-      const r = await api('/api/memories', { method: 'POST', body: JSON.stringify({
-        content, kind: $('#newKind').value, importance: $('#newImportance').value }) });
-      ta.value = '';
-      toast(r.duplicate_of ? 'Saved (similar to an existing one)' : 'Remembered', 'mem');
-      loadMemories(); loadStats();
-    } catch (e) { toast('Could not save: ' + e.message, 'err'); }
-  }
-
-  async function memAction(mid, act, el) {
-    const card = el.closest('.mem-card');
-    const q = $('#memSearch').value.trim();
-    try {
-      if (act === 'del') { await api('/api/memories/' + encodeURIComponent(mid), {method:'DELETE'}); toast('Forgotten'); loadMemories(q); loadStats(); }
-      else if (act === 'pin') { await api('/api/memories/' + encodeURIComponent(mid) + '/pin', {method:'POST'}); loadMemories(q); }
-      else if (act === 'restore') { await api('/api/memories/' + encodeURIComponent(mid) + '/restore', {method:'POST'}); toast('Restored'); loadMemories(q); }
-      else if (act === 'edit') {
-        const txt = $('.txt', card);
-        const old = txt.textContent;
-        txt.innerHTML = '<textarea aria-label="Edit memory"></textarea>'
-          + '<div class="row" style="opacity:1;margin-top:6px">'
-          + '<button class="btn sm primary" data-act="save-edit">Save</button>'
-          + '<button class="btn sm" data-act="cancel-edit">Cancel</button></div>';
-        const t = $('textarea', txt);
-        t.value = old; t.focus();
-        $('[data-act="save-edit"]', txt).onclick = async () => {
-          try { await api('/api/memories/' + encodeURIComponent(mid), { method:'PATCH', body: JSON.stringify({content: t.value.trim()}) });
-            toast('Updated', 'mem'); loadMemories(q); }
-          catch (e) { toast('Could not update: ' + e.message, 'err'); }
-        };
-        $('[data-act="cancel-edit"]', txt).onclick = () => loadMemories(q);
-      }
-    } catch (e) { toast('Action failed: ' + e.message, 'err'); }
-  }
-
   /* ---------- stats / settings / engine ---------- */
-  async function loadStats() {
-    try {
-      const s = await api('/api/stats');
-      if (s && s.memories != null) {
-        $('#memMeter').textContent = s.memories;
-        $('#memFill').style.width = Math.min(100, s.memories) + '%';
-      }
-    } catch (_) {}
-  }
-
   function paintEngine() {
     const A = window.Archiver;
     if (!A) return;
@@ -2561,15 +2421,11 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
   function fillSettings(s) {
     if (!s) return;
     if ($('#setAutoDistill')) $('#setAutoDistill').checked = String(s.auto_distill) === '1';
-    if ($('#setAutoExtract')) $('#setAutoExtract').checked = String(s.auto_extract) === '1';
     if ($('#setPersona')) $('#setPersona').value = s.persona || '';
     if ($('#setSearchCount')) $('#setSearchCount').value = storageGet('archiver.searchCount', '3');
-    /* Advanced retrieval: the inputs mirror the stored settings so they are
-       never left blank — an empty field here used to look like a broken
-       pipeline, and the values below are exactly what the server runs with. */
-    if ($('#setMinRelevance')) $('#setMinRelevance').value = s.min_relevance ?? '0.06';
-    if ($('#setTopK')) $('#setTopK').value = s.max_memories ?? '500';
-    if ($('#setHalfLife')) $('#setHalfLife').value = s.half_life_days ?? '90';
+    /* Generation tuning: the input mirrors the stored setting so it is never
+       left blank — an empty field here used to look like a broken pipeline,
+       and the value below is exactly what the server runs with. */
     if ($('#setContextTokens')) $('#setContextTokens').value = s.max_context_tokens ?? '6000';
   }
 
@@ -2578,7 +2434,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
       toast('Finish the current response and sync before restoring settings');
       return;
     }
-    if (!window.confirm('Restore Archiver settings to their defaults? Your custom persona and retrieval preferences will be replaced. Chats and memories will stay.')) return;
+    if (!window.confirm('Restore Archiver settings to their defaults? Your custom persona will be replaced. Chats will stay.')) return;
     try {
       const restored = await api('/api/settings/restore', { method: 'POST' });
       state.settings = restored;
@@ -2590,7 +2446,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
       if ($('#themeSelect')) $('#themeSelect').value = 'system';
       $('#settingsOverlay').classList.remove('on');
       paintEngine();
-      toast('Defaults restored. Chats and memories were kept.', 'ok');
+      toast('Defaults restored. Chats were kept.', 'ok');
     } catch (e) {
       toast('Could not restore defaults: ' + e.message, 'err');
     }
@@ -2613,10 +2469,10 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
 
   function collectSettings() {
     const s = state.settings || {};
-    /* Numeric retrieval fields are read from the Advanced retrieval inputs when
-       they have a value (they are filled from settings on load), otherwise the
-       stored value, otherwise the server default — an empty input can never
-       write an empty setting that would break float()/int() parsing server-side. */
+    /* The context-token field is read from the Generation input when it has a
+       value (it is filled from settings on load), otherwise the stored value,
+       otherwise the server default — an empty input can never write an empty
+       setting that would break int() parsing server-side. */
     const num = (sel, key, fallback, lo, hi) => {
       const el = $(sel);
       const raw = el && el.value !== '' && el.value != null ? el.value : (s[key] ?? fallback);
@@ -2624,15 +2480,9 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
       return String(Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : fallback);
     };
     return {
-      max_memories: num('#setTopK', 'max_memories', '500', 1, 500),
-      min_relevance: num('#setMinRelevance', 'min_relevance', '0.06', 0, 1),
-      half_life_days: num('#setHalfLife', 'half_life_days', '90', 1, 365),
       max_context_tokens: num('#setContextTokens', 'max_context_tokens', '6000', 500, 16000),
       distill_after: String(s.distill_after ?? 8),
       auto_distill: $('#setAutoDistill') ? ($('#setAutoDistill').checked ? '1' : '0') : String(s.auto_distill ?? '1'),
-      auto_extract: $('#setAutoExtract') ? ($('#setAutoExtract').checked ? '1' : '0') : String(s.auto_extract ?? '1'),
-      core_context: String(s.core_context ?? '1'),
-      diversify: String(s.diversify ?? '1'),
       persona: $('#setPersona') ? $('#setPersona').value : (s.persona || '')
     };
   }
@@ -2666,12 +2516,8 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     const personaSave = debounced(save, 450);
     if ($('#setPersona')) $('#setPersona').addEventListener('input', personaSave);
     if ($('#setSearchCount')) $('#setSearchCount').addEventListener('change', save);
-    if ($('#setAutoExtract')) $('#setAutoExtract').addEventListener('change', save);
     if ($('#setAutoDistill')) $('#setAutoDistill').addEventListener('change', save);
     /* Advanced retrieval saves itself like every other control. */
-    if ($('#setMinRelevance')) $('#setMinRelevance').addEventListener('change', save);
-    if ($('#setTopK')) $('#setTopK').addEventListener('change', save);
-    if ($('#setHalfLife')) $('#setHalfLife').addEventListener('change', save);
     if ($('#setContextTokens')) $('#setContextTokens').addEventListener('change', save);
     /* The pending persona save is cancelled by the caller, which then saves
        the field's current value itself — the edit is never dropped. */
@@ -2828,25 +2674,8 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     $('#toggleSearch').onclick = toggleSearch;
     $('#cbSearch').onclick = toggleSearch;
 
-    const toggleMem = () => {
-      const closed = shell.classList.contains('mem-closed');
-      shell.classList.toggle('mem-closed', !closed);
-      $('#toggleMem').classList.toggle('on', closed);
-      $('#cbMemory').classList.toggle('on', !closed);
-      if (window.innerWidth <= 900) {
-        shell.classList.toggle('mem-open', closed);
-      }
-    };
-    $('#toggleMem').onclick = toggleMem;
-    $('#cbMemory').onclick = toggleMem;
-    $('#memClose').onclick = () => {
-      shell.classList.add('mem-closed');
-      shell.classList.remove('mem-open');
-      $('#toggleMem').classList.remove('on');
-    };
-
     const closeLeft = () => shell.classList.remove('side-open');
-    const closeAll = () => shell.classList.remove('side-open', 'mem-open');
+    const closeAll = () => shell.classList.remove('side-open');
 
     $('#logoBtn').onclick = () => {
       if (window.innerWidth > 900) $('#sidebar').classList.toggle('expanded');
@@ -2856,7 +2685,6 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     $('#sideClose').onclick = closeLeft;
     $('#scrim').onclick = closeAll;
 
-    $('#memRefresh').onclick = () => loadMemories($('#memSearch').value.trim());
 
     $('#newChatBtn').onclick = () => {
       if (state.streaming) { toast('Stop the response before starting a new chat'); return; }
@@ -2937,22 +2765,6 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
       }
     });
 
-    $('#addMem').onclick = addMemory;
-    $('#newMem').addEventListener('keydown', e => {
-      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) addMemory();
-    });
-    let st;
-    $('#memSearch').addEventListener('input', e => {
-      clearTimeout(st);
-      const q = e.target.value.trim();
-      st = setTimeout(() => loadMemories(q), 280);
-    });
-    $('#memList').addEventListener('click', e => {
-      const b = e.target.closest('[data-act]');
-      if (b && b.dataset.act !== 'save-edit' && b.dataset.act !== 'cancel-edit') {
-        memAction(b.dataset.mid, b.dataset.act, b);
-      }
-    });
 
     const settingsOverlay = $('#settingsOverlay');
     const closeSettings = () => {
@@ -3016,7 +2828,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape') {
         $('#settingsOverlay').classList.remove('on');
-        shell.classList.remove('side-open', 'mem-open');
+        shell.classList.remove('side-open');
       }
       if (!e.metaKey && !e.ctrlKey && !e.altKey) {
         const typing = document.activeElement && ['INPUT','TEXTAREA'].includes(document.activeElement.tagName);
@@ -3082,7 +2894,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
       openSession(lastActive);
     }
 
-    await Promise.all([loadSessions(), loadStats(), loadMemories()]);
+    await loadSessions();
     try {
       state.settings = await api('/api/settings');
       fillSettings(state.settings);
@@ -3285,6 +3097,13 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     });
     // expose for console
     window.__archiverChangelog = { open: openCl, close: closeCl };
+  }catch(e){}
+})();
+</script>
+
+</body>
+</html>
+rchiverChangelog = { open: openCl, close: closeCl };
   }catch(e){}
 })();
 </script>

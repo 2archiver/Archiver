@@ -3243,10 +3243,226 @@ const MORE34 = [
     }
   ];
 
+  /* 5.3 — knowledge base expansion: AI/LLMs, space, climate, tech, health,
+     economics, fundamental science, and history/culture. Grounded, hedged
+     where a claim is contested, and attributed where a living person is named. */
+  const MORE53 = [
+    {
+      id: 'ai-llm',
+      q: ['what is a large language model', 'what is an llm', 'what are llms', 'how do ai chatbots work',
+          'what is a language model', 'explain large language models', 'how does chatgpt work'],
+      a: 'A large language model (LLM) is a neural network trained on enormous text corpora to predict the next token in a sequence. It does not "know" facts the way a database does; it generates the statistically most likely continuation. Modern chatbots wrap an LLM with a chat interface, guardrails and tools such as search.',
+      tags: ['ai', 'tech', 'llm']
+    },
+    {
+      id: 'ai-transformer',
+      q: ['what is a transformer', 'explain the transformer architecture', 'what is attention in ai',
+          'how do llms work under the hood', 'attention is all you need'],
+      a: 'The transformer is the architecture behind modern LLMs, introduced in the 2017 paper "Attention Is All You Need". Instead of processing words one at a time, it uses self-attention to weigh the relevance of every other word in a passage at once, which lets models capture long-range meaning and train efficiently on GPUs.',
+      tags: ['ai', 'tech']
+    },
+    {
+      id: 'ai-rag',
+      q: ['what is rag', 'what is retrieval augmented generation', 'rag meaning',
+          'how do ai systems use my documents', 'retrieval augmented generation explained'],
+      a: 'Retrieval-augmented generation (RAG) fetches relevant documents from a store at query time and asks the model to answer using only that evidence. It grounds the answer in sources you control and reduces fabrication, at the cost of a retrieval step. Archiver uses a small offline corpus in the same spirit — retrieve, then answer.',
+      tags: ['ai', 'tech']
+    },
+    {
+      id: 'ai-finetuning',
+      q: ['what is fine tuning', 'what is fine-tuning', 'what does fine tuning do',
+          'how are models customised', 'training vs fine tuning'],
+      a: 'Fine-tuning adapts a pre-trained model to a narrower task or style by continuing training on a smaller, specialised dataset. It is far cheaper and faster than training from scratch, and it is how a general base model becomes a helpful assistant. "Pre-training" is the original large-scale pass; fine-tuning is the lighter second one.',
+      tags: ['ai', 'tech']
+    },
+    {
+      id: 'ai-quantization',
+      q: ['what is quantization in ai', 'what does q4 mean in models', 'what is a quantized model',
+          'why are llm weights quantized', 'q4 q8 model meaning'],
+      a: 'Quantization shrinks a model\'s numerical weights from 16-bit to lower precision such as 4-bit (Q4) or 8-bit (Q8). It cuts memory and speeds up inference so a model fits on a phone or laptop, with a small, usually acceptable, loss of accuracy. Archiver runs 4-bit and 8-bit models in the browser for exactly this reason.',
+      tags: ['ai', 'tech']
+    },
+    {
+      id: 'ai-embedding',
+      q: ['what is an embedding', 'what are vector embeddings', 'how does semantic search work',
+          'what is a vector in ai', 'word embeddings explained'],
+      a: 'An embedding is a list of numbers that represents the meaning of a word, sentence or image in a high-dimensional space, so that similar things sit close together. Search and retrieval compare embeddings by distance rather than by exact keywords, which is how a system finds "car" near "automobile" without matching the letters.',
+      tags: ['ai', 'tech']
+    },
+    {
+      id: 'ai-webgpu',
+      q: ['what is webgpu', 'webgpu vs webgl', 'can browsers run ai', 'what is gpu inference in browser',
+          'how does on device ai work'],
+      a: 'WebGPU is a browser API that exposes modern GPUs for general computation, not just graphics. It lets a web page run neural-network inference on the device\'s own graphics chip — which is how an in-browser assistant like Archiver can generate answers without sending your text to a server.',
+      tags: ['ai', 'tech', 'browser']
+    },
+    {
+      id: 'ai-wasm',
+      q: ['what is webassembly', 'what is wasm', 'why run code in the browser', 'what is a wasm runtime',
+          'webassembly vs javascript'],
+      a: 'WebAssembly (Wasm) is a compact binary instruction format that runs near-native code inside the browser, sandboxed and portable. Where WebGPU is unavailable — most Safari installs, for example — AI runtimes fall back to Wasm on the CPU, which is slower but works everywhere.',
+      tags: ['ai', 'tech', 'browser']
+    },
+    {
+      id: 'ai-inference',
+      q: ['what is inference in ai', 'what does it mean to run a model', 'what is model inference',
+          'training vs inference', 'what happens when i ask an ai'],
+      a: 'Inference is the act of running a trained model on new input to get an output — the prediction, the answer, the image. Training builds the model; inference uses it. Every time you ask a chatbot something, the model is performing inference, dozens of times per word it generates.',
+      tags: ['ai', 'tech']
+    },
+    {
+      id: 'ai-hallucination',
+      q: ['why do ai models make things up', 'what is a hallucination in ai', 'do llms lie',
+          'why are chatbots confidently wrong', 'what is ai confabulation'],
+      a: 'A model "hallucinates" when it generates a fluent, specific claim that is false — a citation, a date, a quotation that does not exist. It is not lying deliberately; it is predicting plausible text without a fact-checking step. Mitigations include retrieval (RAG), citation checks and grounding the answer in supplied sources.',
+      tags: ['ai', 'tech']
+    },
+    {
+      id: 'space-blackhole',
+      q: ['what is a black hole', 'what happens inside a black hole', 'what is the event horizon',
+          'can light escape a black hole', 'black holes explained'],
+      a: 'A black hole is a region where gravity is so strong that nothing, not even light, can escape past a boundary called the event horizon. At the centre lies a singularity where current physics breaks down. We "see" black holes through the matter heated around them and by the gravitational waves they emit when they collide.',
+      tags: ['space', 'science']
+    },
+    {
+      id: 'space-jwst',
+      q: ['what is the james webb space telescope', 'what is jwst', 'what does the webb telescope do',
+          'james webb telescope explained', 'webb vs hubble'],
+      a: 'The James Webb Space Telescope, launched in 2021, is the largest space telescope ever flown. It observes in infrared from a point 1.5 million km from Earth, letting it see through dust and look back toward the first galaxies that formed after the Big Bang — farther and earlier than Hubble could.',
+      tags: ['space', 'science']
+    },
+    {
+      id: 'space-supernova',
+      q: ['what is a supernova', 'what causes a supernova', 'what happens when a star explodes',
+          'supernova explained', 'how do stars die'],
+      a: 'A supernova is the explosion of a star at the end of its life, briefly outshining an entire galaxy. Massive stars collapse when their core can no longer resist gravity; white dwarfs can also detonate after pulling in too much matter. The blast forges most of the heavy elements — including the iron in your blood.',
+      tags: ['space', 'science']
+    },
+    {
+      id: 'space-darkmatter',
+      q: ['what is dark matter', 'what is dark energy', 'what is most of the universe made of',
+          'why is dark matter mysterious', 'dark matter explained'],
+      a: 'Ordinary matter — stars, planets, you — is only about 5% of the universe. Roughly 27% is dark matter, detected only by its gravity, and about 68% is dark energy, the name we give to whatever is accelerating cosmic expansion. Neither has been directly observed; we infer them from how galaxies and space behave.',
+      tags: ['space', 'science']
+    },
+    {
+      id: 'space-mars-rover',
+      q: ['what is the perseverance rover', 'what is curiosity rover', 'what have we found on mars',
+          'did we find life on mars', 'mars rover explained'],
+      a: 'NASA has sent several rovers to Mars; Perseverance (2021) and Curiosity (2012) are the active car-sized ones. They study geology and hunt for past conditions that could have supported life, and Perseverance is caching rock samples for a future return to Earth. No confirmed life has been found, but Mars clearly had liquid water long ago.',
+      tags: ['space', 'science']
+    },
+    {
+      id: 'climate-change',
+      q: ['what causes climate change', 'is climate change real', 'what is global warming',
+          'why is the earth warming', 'greenhouse effect explained'],
+      a: 'The planet is warming mainly because burning coal, oil and gas releases carbon dioxide that traps heat in the atmosphere — the greenhouse effect amplified by human activity since the Industrial Revolution. The physics is long established; the remaining debate is about speed, impacts and policy, not whether it is happening.',
+      tags: ['climate', 'science', 'earth']
+    },
+    {
+      id: 'climate-el-nino',
+      q: ['what is el nino', 'what is la nina', 'el nino explained', 'why do weather patterns shift',
+          'what is enso'],
+      a: 'El Niño and La Niña are opposite phases of a natural Pacific Ocean cycle (ENSO) that shifts where warm water pools and, with it, global rainfall and storm tracks. El Niño tends to bring drought to some regions and floods to others and nudges global average temperatures upward during its year or two.',
+      tags: ['climate', 'science', 'earth']
+    },
+    {
+      id: 'climate-ozone',
+      q: ['what is the ozone hole', 'is the ozone layer recovering', 'what caused the ozone hole',
+          'ozone layer explained', 'montreal protocol'],
+      a: 'The ozone layer, ~15–35 km up, shields life from ultraviolet radiation. In the 1980s chemists found a thinning "hole" over Antarctica caused mainly by man-made CFCs, leading to the 1987 Montreal Protocol. It is a rare environmental success: ratified worldwide, and the ozone layer is slowly recovering.',
+      tags: ['climate', 'science', 'earth']
+    },
+    {
+      id: 'tech-opensource',
+      q: ['what is open source', 'what does open source mean', 'why is open source important',
+          'open source explained', 'free software'],
+      a: 'Open source means the source code is published so anyone can read, modify and share it. It powers most of the internet — Linux, the web, Android, Python — and rests on licences that keep those freedoms intact. The model trades the secrecy of closed software for transparency, auditability and collaboration.',
+      tags: ['tech']
+    },
+    {
+      id: 'tech-gpu',
+      q: ['what is a gpu', 'what is a graphics processing unit', 'why are gpus used for ai',
+          'cpu vs gpu', 'gpu explained'],
+      a: 'A GPU (graphics processing unit) is a chip built to do thousands of simple calculations at once — ideal for rendering images and, it turns out, for the matrix maths that neural networks rely on. That parallel design is why AI training and inference run far faster on GPUs than on ordinary CPUs.',
+      tags: ['tech']
+    },
+    {
+      id: 'tech-vectordb',
+      q: ['what is a vector database', 'what is a vector store', 'how does semantic search scale',
+          'vector database explained', 'what stores embeddings'],
+      a: 'A vector database stores embeddings — the numeric meaning-vectors from text or images — and finds the nearest neighbours fast. That is what lets retrieval and RAG return "conceptually similar" results rather than exact keyword matches, even across millions of documents.',
+      tags: ['tech', 'ai']
+    },
+    {
+      id: 'health-mrna',
+      q: ['what is an mrna vaccine', 'how do mrna vaccines work', 'are mrna vaccines safe',
+          'mrna vaccine explained', 'what is in an mrna vaccine'],
+      a: 'An mRNA vaccine teaches your cells to make a harmless fragment of a virus — usually a spike protein — so the immune system learns to recognise the real thing. The mRNA is consumed within days and cannot alter your DNA. COVID-19 mRNA vaccines were developed fast because the underlying research had been underway for years.',
+      tags: ['health', 'science']
+    },
+    {
+      id: 'econ-inflation',
+      q: ['what is inflation', 'why do prices rise', 'what causes inflation', 'inflation explained',
+          'what does the inflation rate mean'],
+      a: 'Inflation is the rate at which prices across the economy rise, which means each unit of currency buys less. It is usually caused by too much demand chasing too little supply, or by rising costs feeding through to prices. Central banks target a low, stable rate (often ~2%) rather than zero, because a little inflation keeps the economy flexible.',
+      tags: ['economics']
+    },
+    {
+      id: 'econ-compound',
+      q: ['what is compound interest', 'how does compounding work', 'why is compound interest powerful',
+          'compound interest explained', 'what is the snowball effect in money'],
+      a: 'Compound interest is interest earned on your previous interest, not just your original sum — so wealth grows faster over time, like a snowball. Starting early matters more than the amount: a few decades of compounding can outweigh decades of larger, later contributions.',
+      tags: ['economics', 'math']
+    },
+    {
+      id: 'sci-speedoflight',
+      q: ['what is the speed of light', 'how fast is light', 'why is light speed the limit',
+          'speed of light explained', 'can anything go faster than light'],
+      a: 'Light in a vacuum travels about 299,792 km per second — the fastest anything can move, and the universe\'s speed limit according to relativity. Distances in space are so vast that we see distant objects as they were long ago; the Sun\'s light takes about eight minutes to reach us.',
+      tags: ['science', 'physics']
+    },
+    {
+      id: 'hist-magnacarta',
+      q: ['what is the magna carta', 'why is magna carta important', 'magna carta explained',
+          'what did magna carta do', 'did magna carta invent rights'],
+      a: 'The Magna Carta (1215) was a charter forced on England\'s King John by his barons, limiting royal power and asserting that even the king is subject to law. Its specific clauses mostly concerned medieval privileges, but it became an enduring symbol of the rule of law and of rights against arbitrary authority.',
+      tags: ['history']
+    },
+    {
+      id: 'hist-renaissance',
+      q: ['what was the renaissance', 'when was the renaissance', 'renaissance explained',
+          'why was the renaissance important', 'what started the renaissance'],
+      a: 'The Renaissance was a cultural rebirth in Europe, roughly from the 14th to the 17th century, that revived interest in classical learning and produced breakthroughs in art, science and thought — Leonardo, Michelangelo, Galileo. It began in Italian city-states whose trade wealth patronised artists and scholars.',
+      tags: ['history', 'culture']
+    },
+    {
+      id: 'hist-industrial',
+      q: ['what was the industrial revolution', 'when was the industrial revolution',
+          'industrial revolution explained', 'why did industry take off', 'what caused industrialisation'],
+      a: 'The Industrial Revolution, beginning in Britain in the late 1700s, shifted production from hand tools to steam-powered machines and factories. It raised output and living standards for many, while also driving urban crowding, child labour and new forms of inequality — the template for the modern economy.',
+      tags: ['history', 'economics']
+    },
+    {
+      id: 'hist-internet',
+      q: ['what is the internet', 'how was the internet invented', 'who created the internet',
+          'internet explained', 'what is the world wide web'],
+      a: 'The internet is a global network of networks that routes data in small packets between computers. Its roots are US military and academic research in the 1960s–80s; the World Wide Web (Tim Berners-Lee, 1989) is the layer of linked pages on top of it. The two are often confused but are not the same thing.',
+      tags: ['tech', 'history']
+    },
+    {
+      id: 'hist-turing',
+      q: ['who was alan turing', 'what did alan turing do', 'what is the turing test',
+          'turing explained', 'father of computer science'],
+      a: 'Alan Turing was a British mathematician who formalised the idea of a general-purpose computer and broke Nazi Germany\'s Enigma cipher in World War II, shortening the war. His "imitation game" framed the question of machine intelligence, and he was persecuted for being gay — pardoned and honoured only decades after his death.',
+      tags: ['history', 'tech', 'science']
+    }
+  ];
+
   window.ARCHIVER_KB = {
-    version: '5.2',
+    version: '5.3',
     generated: '2026-09-29',
-    cards: [...WW2, ...FIGURES, ...TECH, ...GENERAL, ...WORDS, ...SCIENCE, ...WORLD, ...LANGUAGE, ...EVERYDAY, ...MORE, ...MORE24, ...HIST25, ...LIGHT, ...OFFLINE31, ...MORE34, ...MORE43, ...SOPRANOS],
+    cards: [...WW2, ...FIGURES, ...TECH, ...GENERAL, ...WORDS, ...SCIENCE, ...WORLD, ...LANGUAGE, ...EVERYDAY, ...MORE, ...MORE24, ...HIST25, ...LIGHT, ...OFFLINE31, ...MORE34, ...MORE43, ...SOPRANOS, ...MORE53],
     note: 'Grounded offline corpus. Charges are not convictions; contested history is not a "side".'
   };
 })();

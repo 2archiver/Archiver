@@ -1,6 +1,6 @@
-/* Archiver 5.2: our own model in your browser, plus instant retrieval and text
+/* Archiver 5.3: our own model in your browser, plus instant retrieval and text
    tools — running on WebGPU where it exists and on a Safari-optimised
-   WebAssembly runtime where it does not. Archiver 5.2 keeps the earlier fixes
+   WebAssembly runtime where it does not. Archiver 5.3 keeps the earlier fixes
    (blank-answer recovery, streaming, answer cache, iPhone tuning) and adds
    Safari warm-on-load even when cached, faster WASM prefill, and more reliable
    online search and GPU startup. */
@@ -9,7 +9,7 @@
 
   /* One definition of the version, so the label in the sidebar, the persona, the
      self-description, the API and the tests cannot disagree with each other. */
-  const VERSION = '5.2';
+  const VERSION = '5.3';
   const NAME = 'Archiver ' + VERSION;
 
   /* ======================================================================== */
@@ -352,7 +352,7 @@
   /* ---- commands ---------------------------------------------------------- */
 
 const HELP = [
-    "I'm **" + NAME + "** — your private research desk: instant local knowledge, plus Archiver 5.2, our own model, for open-ended work. Chats can sync to the app server.",
+    "I'm **" + NAME + "** — your private research desk: instant local knowledge, plus Archiver 5.3, our own model, for open-ended work. Chats can sync to the app server.",
     '',
     '**Ask me anything.** History, science, health, tech, philosophy, nature, culture, practical life — plus **Render.com** (I know the host inside-out) and **intuition**. With **WEB** on I read live sources and give you a short read first, with 1–3 compact sources.',
     '',
@@ -879,7 +879,7 @@ const HELP = [
     const live = generationReady();
     return `I'm **${NAME}** — Archiver’s own on-device model and assistant. ${live ? 'A language model is running in this browser — ' + runtimeLabel() + '.' : 'I am in instant mode: stored knowledge and text tools, not a running language model.'}
 
-I can search ${index.length} local cards, compare topics, calculate, convert units, extract key sentences from pasted text, and follow this conversation. ${live ? 'I can also generate writing, code, and explanations on-device with zero third-party cloud AI providers, and every answer carries a Thought process panel listing the tools, evidence and runtime it actually used.' : 'For open-ended writing and reasoning, the website automatically prepares Archiver 5.2 — our own compact on-device model — on WebGPU where the browser has it, and on the Safari-optimised WebAssembly runtime where it does not, so Safari is not left out. ' + (aiReason() || 'The first use fetches a few hundred MB, then the browser caches the assets. There is no manual download step.')}
+I can search ${index.length} local cards, compare topics, calculate, convert units, extract key sentences from pasted text, and follow this conversation. ${live ? 'I can also generate writing, code, and explanations on-device with zero third-party cloud AI providers, and every answer carries a Thought process panel listing the tools, evidence and runtime it actually used.' : 'For open-ended writing and reasoning, the website automatically prepares Archiver 5.3 — our own compact on-device model — on WebGPU where the browser has it, and on the Safari-optimised WebAssembly runtime where it does not, so Safari is not left out. ' + (aiReason() || 'The first use fetches a few hundred MB, then the browser caches the assets. There is no manual download step.')}
 
 I can describe my capabilities and limitations; that is not consciousness or feelings. I do not browse unless WEB is on or you explicitly ask to search. Chats and memories can sync to this app’s server; taught cards are stored in this browser. No model-provider API key is needed.`;
   }
@@ -911,7 +911,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       if (matches.every(m => m.entry && m.score >= ANSWER_AT) && matches[0].entry !== matches[1].entry) {
         return { text: matches.map((m, i) => '**' + understood.compare[i] + '**\n\n' + comprehension.excerpt(m.entry.a, 3, false)).join('\n\n') + '\n\n_Compared from local knowledge cards; this is not an exhaustive comparison._', kind: 'comparison', score: Math.min(...matches.map(m => m.score)) };
       }
-      return { text: 'I need a reliable local match for both sides of that comparison. Try more specific names or use WEB. Archiver 5.2 starts for open-ended requests when this device supports it.', kind: 'clarify', score: 0 };
+      return { text: 'I need a reliable local match for both sides of that comparison. Try more specific names or use WEB. Archiver 5.3 starts for open-ended requests when this device supports it.', kind: 'clarify', score: 0 };
     }
     const tl = tool(t);
     if (tl) return { text: tl, kind: 'tool', score: 1 };
@@ -924,7 +924,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     if (LIVE_RE.test(t) && !/^(?:what is|define|explain|difference between|compare)\b/i.test(t)) return { text: "Live data — weather, news, prices, scores — needs web search. Turn on **WEB** and I will fetch it rather than guess.", kind: 'live', score: 0 };
 
     if (/^(?:write|draft|rewrite|rephrase|translate|compose|brainstorm|create|debug)\b/i.test(understood.query || t)) {
-      return { text: 'That needs Archiver 5.2 rather than a stored answer. ' + (aiReason() || 'Archiver 5.2 starts automatically for this request in chat; the one-time download is a few hundred MB.') + ' I can still extract key sentences (`summarize: …`), compare known topics, or calculate in instant mode.', kind: 'capability', score: 1 };
+      return { text: 'That needs Archiver 5.3 rather than a stored answer. ' + (aiReason() || 'Archiver 5.3 starts automatically for this request in chat; the one-time download is a few hundred MB.') + ' I can still extract key sentences (`summarize: …`), compare known topics, or calculate in instant mode.', kind: 'capability', score: 1 };
     }
     const r = resolve(understood.query || t);
     const best = search(r.text, 5);
@@ -975,10 +975,10 @@ I can describe my capabilities and limitations; that is not consciousness or fee
   const WASM_TIMEOUT_MS = 12 * 60 * 1000;
 
   /* Small, fixed model family; never silently select a larger catalogue model.
-     This is Archiver's own model — branded "Archiver 5.2" in every label —
+     This is Archiver's own model — branded "Archiver 5.3" in every label —
      built on the open Qwen 3 0.6B architecture and tuned for WebGPU and
      Safari WebAssembly. Settings names the base honestly; the product surface
-     says Archiver 5.2. */
+     says Archiver 5.3. */
   const PREFERRED = ['Qwen3-0.6B-q4f16_1-MLC', 'Qwen3-0.6B-q4f32_1-MLC'];
   const LEGACY_PREFERRED = ['Qwen2.5-0.5B-Instruct-q4f16_1-MLC', 'Qwen2.5-0.5B-Instruct-q4f32_1-MLC'];
 
@@ -1006,18 +1006,18 @@ I can describe my capabilities and limitations; that is not consciousness or fee
   const WASM_CONTEXT = 2048;
 
   /* Human-readable model labels. The 0.6B family is Archiver's own model,
-     branded Archiver 5.2; the other entries are guards so an unexpected model
+     branded Archiver 5.3; the other entries are guards so an unexpected model
      id still renders as something a reader can act on. */
   const NICE = [
     [/Qwen3-8B/i, 'Qwen 3 8B'],
     [/Qwen3-4B/i, 'Qwen 3 4B'],
     [/Qwen3-1\.7B/i, 'Qwen 3 1.7B'],
-    [/Qwen3-0\.6B/i, 'Archiver 5.2'],
+    [/Qwen3-0\.6B/i, 'Archiver 5.3'],
     [/Qwen2\.5-7B/i, 'Qwen 2.5 7B'],
     [/Qwen2\.5-3B/i, 'Qwen 2.5 3B'],
     [/Qwen2\.5-1\.5B/i, 'Qwen 2.5 1.5B'],
-    [/Qwen2\.5-0\.5B/i, 'Archiver 5.2'],
-    [/qwen2\.5-0\.5b/i, 'Archiver 5.2'],
+    [/Qwen2\.5-0\.5B/i, 'Archiver 5.3'],
+    [/qwen2\.5-0\.5b/i, 'Archiver 5.3'],
     [/Hermes-3/i, 'Hermes 3 8B'],
     [/Phi-3\.5/i, 'Phi 3.5 mini'],
     [/gemma-2-2b/i, 'Gemma 2 2B']
@@ -1068,7 +1068,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
 
   /* Safari / WebAssembly CPU-optimised persona. On CPU, every system-prompt
      token costs prefill latency before the first output token appears. This
-     compact persona preserves Archiver 5.2's character, honesty rules, and
+     compact persona preserves Archiver 5.3's character, honesty rules, and
      anti-filler discipline in under half the tokens. */
   const SAFARI_CPU_PERSONA = [
     'You are ' + NAME + ' — sharp, direct, on-device. Archiver\u2019s own model.',
@@ -1354,11 +1354,11 @@ I can describe my capabilities and limitations; that is not consciousness or fee
   function blockReason() {
     if (generationReady()) return '';
     if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-      return 'You are offline; connect to the internet to prepare Archiver 5.2.';
+      return 'You are offline; connect to the internet to prepare Archiver 5.3.';
     }
     try {
       const c = navigator.connection;
-      if (c && c.saveData) return 'Data Saver is on, so Archiver 5.2 is paused. Turn it off to prepare the model.';
+      if (c && c.saveData) return 'Data Saver is on, so Archiver 5.3 is paused. Turn it off to prepare the model.';
     } catch (_) {}
     if (!webgpu() && !wasmSupported()) {
       return 'This browser supports neither WebGPU nor WebAssembly workers; instant tools remain available.';
@@ -1406,7 +1406,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     // model that is loading/serving a response.
     try { localStorage.setItem('archiver.ai.enabled', '1'); } catch (_) {}
     loadFailure = '';
-    emitProgress('Archiver 5.2 is enabled when needed', 0);
+    emitProgress('Archiver 5.3 is enabled when needed', 0);
     return true;
   }
 
@@ -1526,8 +1526,8 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       if (!allowed || (!halfPrecision && selected.includes('f16'))) continue;
       const cachedBefore = !!readPersistedBackend();
       emitProgress(cachedBefore
-        ? 'Archiver 5.2 · loading from browser cache…'
-        : 'Fetching Archiver 5.2 into this browser’s cache — one time, in the background…', 1);
+        ? 'Archiver 5.3 · loading from browser cache…'
+        : 'Fetching Archiver 5.3 into this browser’s cache — one time, in the background…', 1);
       if (candidatesGPU.length > 1 && selected !== primary) {
         traceStep('Retrying WebGPU load with fallback ' + pretty(selected) + ' (Archiver 4.3 model).');
       } else {
@@ -1546,7 +1546,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
           initProgressCallback: r => {
             if (!ctx.controller.signal.aborted && ctx.generation === loadGeneration) {
               const pct = r && typeof r.progress === 'number' ? Math.round(r.progress * 100) : 0;
-              emitProgress(r.text || (cachedBefore ? 'Archiver 5.2 · loading from browser cache…' : 'Preparing Archiver 5.2…'), pct || (cachedBefore ? 50 : 0));
+              emitProgress(r.text || (cachedBefore ? 'Archiver 5.3 · loading from browser cache…' : 'Preparing Archiver 5.3…'), pct || (cachedBefore ? 50 : 0));
             }
           }
         });
@@ -1583,7 +1583,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
   async function loadWASM(choice, wanted, ctx) {
     const cachedBeforeW = !!readPersistedBackend();
     emitProgress(cachedBeforeW
-      ? 'Archiver 5.2 · loading WebAssembly from browser cache…'
+      ? 'Archiver 5.3 · loading WebAssembly from browser cache…'
       : 'Starting the Safari-optimised WebAssembly runtime — no GPU needed…', 1);
     traceStep('Chose the WebAssembly backend (' + choice.why + ')');
     const mod = await import(/* webpackIgnore: true */ WLLAMA_RUNTIME);
@@ -1624,7 +1624,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       progressCallback: ({ loaded, total }) => {
         if (ctx.controller.signal.aborted || ctx.generation !== loadGeneration) return;
         const pct = total > 0 ? Math.round((loaded / total) * 100) : 0;
-        emitProgress('Fetching Archiver 5.2 weights for the WebAssembly runtime… ' + pct + '%', Math.min(99, pct));
+        emitProgress('Fetching Archiver 5.3 weights for the WebAssembly runtime… ' + pct + '%', Math.min(99, pct));
       }
     };
     if (ctx.signal) params.signal = ctx.signal;
@@ -1659,7 +1659,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
           } catch (_) {}
           clearPersistedBackend();
           try {
-            emitProgress('Refreshing browser cache for Archiver 5.2…', 2);
+            emitProgress('Refreshing browser cache for Archiver 5.3…', 2);
             await instance.loadModelFromUrl(url, Object.assign({}, params, { useCache: false }));
             if (ctx.controller.signal.aborted || ctx.generation !== loadGeneration) {
               exitWasm(instance);
@@ -1724,8 +1724,8 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     const task = (async () => {
       const fromCache = !!readPersistedBackend();
       emitProgress(fromCache
-        ? 'Archiver 5.2 · loading from browser cache…'
-        : 'Checking this device for Archiver 5.2…', 0);
+        ? 'Archiver 5.3 · loading from browser cache…'
+        : 'Checking this device for Archiver 5.3…', 0);
       const choice = await chooseBackend();
       ctx.stopped();
       if (!choice) {
@@ -1736,8 +1736,8 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       timeoutMs = choice.kind === 'wasm' ? WASM_TIMEOUT_MS : LOAD_TIMEOUT_MS;
       armTimeout();
       traceStep(choice.kind === 'wasm'
-        ? 'WebGPU is unavailable here, so Archiver 5.2 falls back to the WebAssembly runtime automatically.'
-        : 'WebGPU is available, so Archiver 5.2 uses the GPU runtime.');
+        ? 'WebGPU is unavailable here, so Archiver 5.3 falls back to the WebAssembly runtime automatically.'
+        : 'WebGPU is available, so Archiver 5.3 uses the GPU runtime.');
       const selected = choice.kind === 'wasm'
         ? await loadWASM(choice, wanted, ctx)
         : await loadWebGPU(choice, wanted, ctx);
@@ -1746,8 +1746,8 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       activeBackend = choice.kind;
       persistBackend(selected, choice.kind, choice.f16);
       emitProgress(choice.kind === 'wasm'
-        ? 'Archiver 5.2 is active on this device’s CPU (WebAssembly)'
-        : 'Archiver 5.2 is active', 100);
+        ? 'Archiver 5.3 is active on this device’s CPU (WebAssembly)'
+        : 'Archiver 5.3 is active', 100);
       return { model: selected, pretty: pretty(selected), backend: choice.kind };
     })();
     let timer = null;
@@ -1783,12 +1783,12 @@ I can describe my capabilities and limitations; that is not consciousness or fee
         clearPersistedBackend();
       }
       if (timedOut) {
-        loadFailure = 'Archiver 5.2 timed out. Instant tools still work; try again on a faster connection.';
+        loadFailure = 'Archiver 5.3 timed out. Instant tools still work; try again on a faster connection.';
       } else if (err.name !== 'AbortError' || !stoppedByUser) {
         const detail = err && err.message ? ' ' + err.message : '';
-        loadFailure = 'Archiver 5.2 could not start.' + detail + ' Try again in Settings.';
+        loadFailure = 'Archiver 5.3 could not start.' + detail + ' Try again in Settings.';
       }
-      emitProgress(loadFailure || 'Archiver 5.2 stopped; instant tools are ready', 0);
+      emitProgress(loadFailure || 'Archiver 5.3 stopped; instant tools are ready', 0);
       throw err;
     } finally {
       clearTimeout(timer);
@@ -1816,7 +1816,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     loadFailure = '';
     loadAbortReason = '';
     clearPersistedBackend();
-    emitProgress('Retrying Archiver 5.2…', 0);
+    emitProgress('Retrying Archiver 5.3…', 0);
     return load(wanted);
   }
 
@@ -2508,7 +2508,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
      what happened and what still works, and it reads back any sources that were
      fetched — an empty bubble is never the outcome. */
   function emptyAnswerNotice(web, recovered) {
-    const lead = 'Archiver 5.2 ran and returned no text — the on-device model spent its budget on nothing readable'
+    const lead = 'Archiver 5.3 ran and returned no text — the on-device model spent its budget on nothing readable'
       + (recovered ? ' even after a retry with a shorter prompt' : '')
       + '. That is a model failure, not a question I cannot answer.';
     const options = [];
@@ -2751,12 +2751,12 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     if (!generationReady() && !searchEnabled && opts.autoAI !== false) {
       const local = _reply(t);
       if (['capability', 'miss', 'fuzzy', 'related', 'clarify'].includes(local.kind)) {
-        traceStep('Local tools could not answer this (' + local.kind + '), so Archiver 5.2 was prepared automatically.');
-        if (opts.onStatus) opts.onStatus('Preparing Archiver 5.2…');
+        traceStep('Local tools could not answer this (' + local.kind + '), so Archiver 5.3 was prepared automatically.');
+        if (opts.onStatus) opts.onStatus('Preparing Archiver 5.3…');
         await ensureAI(opts);
         checkStopped();
         if (!generationReady()) {
-          traceStep('Archiver 5.2 could not start: ' + (aiReason() || 'unknown reason') + ' The answer below comes from local tools and any sources already fetched.');
+          traceStep('Archiver 5.3 could not start: ' + (aiReason() || 'unknown reason') + ' The answer below comes from local tools and any sources already fetched.');
         }
       }
     }

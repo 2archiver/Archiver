@@ -1,8 +1,18 @@
-# Archiver 5.2
+# Archiver 5.3
 
-**An everyday assistant with instant local tools, open-ended answers from Archiver 5.2 — our own model — and live web search when you ask.**
+**An everyday assistant with instant local tools, open-ended answers from Archiver 5.3 — our own model — and live web search when you ask.**
 
 No account or model-provider API key. Two inference runtimes are bundled with the website — WebGPU where a browser offers it, WebAssembly where it does not — and model assets are fetched and cached automatically in the browser. No model server, deployment-time npm step, or model weights in Git.
+
+## New in 5.3 — Qwen3 model, no memories, refresh-free, redesigned
+
+- **Model upgraded to Qwen3-0.6B.** Both runtimes prefer our own Qwen3-0.6B and fall back automatically to the proven Qwen2.5-0.5B if a Qwen3 artifact is missing or CORS-blocked, so Safari and weaker GPUs still generate.
+- **Memories removed.** Archiver no longer remembers anything about you between chats — there is no durable memory store. Conversations still live in this browser and may sync to this app's server.
+- **No more random refresh.** The model worker is kept warm through tab backgrounding, screen lock and WebGPU device loss instead of being torn down and reloaded, so the page no longer appears to reset while you use it.
+- **Knowledge base expanded** with new cards across science, technology, culture and current events.
+- **Search recovers faster.** Provider cooldown cut from 600s to 120s so a waking server is retried sooner; single-result queries now trigger a second-chance search.
+- **Model warms sooner** — GPU preparation now triggers after 5 characters (was 8).
+- **Redesigned interface** — refreshed design system, clearer layout, better contrast and spacing.
 
 ## New in 5.2 — 3 questions, simpler changelog, reliable online & GPU, Safari-optimised
 
@@ -12,7 +22,7 @@ No account or model-provider API key. Two inference runtimes are bundled with th
 - **GPU chat fixed.** WebGPU adapter probe hardened (f16 fallback, canary allocation), device-lost recovery, interrupt/cancel works on both runtimes, streaming coalescer fixed, progress shown when cached.
 - **Safari optimised.** Cached model now warms on page load even on iOS (was deferred), prepare() triggers earlier while typing, WASM threads 3 on iPhone (was 4), batch 1024 on Apple mobile / 512 elsewhere, parallelDownloads 4, compact CPU persona, OPFS cache recovery, viewport with interactive-widget=resizes-content, 16px inputs to prevent zoom.
 - **Bug fixes.** api() timeout respects custom signals, blank-answer recovery, citation validation, answer cache guards, storage quota handling, memory sync.
-- **Corpus — 1,526 cards**, including ten Sopranos cards (sop-overview, sop-gandolfini, sop-finale, sop-cast, sop-melfi, sop-theme, sop-locations, sop-many-saints, sop-pine-barrens, sop-legacy) [...SOPRANOS].
+- **Corpus — 1,556 cards**, including ten Sopranos cards (sop-overview, sop-gandolfini, sop-finale, sop-cast, sop-melfi, sop-theme, sop-locations, sop-many-saints, sop-pine-barrens, sop-legacy) [...SOPRANOS] and a 5.3 expansion across AI/LLMs, space, climate, technology, health, economics, fundamental science and history.
 
 ## New in 4.3 — resilient search, open-minded persona, OLED theme
 
@@ -234,7 +244,7 @@ constraint it serves.
 | `forget: question` | Removes a taught card (not a memory-bank entry) |
 | `help` | Lists commands |
 
-The bundled corpus has 1,526 cards across history, science, language, technology, Australia and everyday topics. `cards` reports the actual count, including taught cards. Coverage and depth vary. Weak matches are labeled; open-ended requests prepare browser generation when supported, rather than substituting an unrelated card. If browser generation cannot start, the response explains the limitation.
+The bundled corpus has 1,556 cards across history, science, language, technology, Australia and everyday topics. `cards` reports the actual count, including taught cards. Coverage and depth vary. Weak matches are labeled; open-ended requests prepare browser generation when supported, rather than substituting an unrelated card. If browser generation cannot start, the response explains the limitation.
 
 **WEB** enables live search. An explicit request such as `search …` also enables search for that turn. Greetings, exact tools, and pasted-text extraction do not need a search request. Search failures fall back to local knowledge. Citations are evidence to inspect, not guarantees of truth.
 

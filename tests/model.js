@@ -125,8 +125,8 @@ const GENERATIVE = 'write a poem about rain';
 (async () => {
   /* ---------------- WebGPU backend (unchanged fast path) ---------------- */
   const { A, stats, storage } = await fixture();
-  assert.equal(A.version, '5.2');
-  assert.equal(A.name, 'Archiver 5.2');
+  assert.equal(A.version, '5.3');
+  assert.equal(A.name, 'Archiver 5.3');
   assert.equal(Array.from(A.status().backendCandidates).join(','), 'webgpu,wasm', 'both runtimes are available here');
   for (const q of ['hello', '2+2', 'compare Python and JavaScript', 'summarize: One. Two.']) await A.chat(q, []);
   assert.equal(stats.imports.length, 0, 'instant tasks do not download a model');

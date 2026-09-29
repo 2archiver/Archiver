@@ -82,7 +82,7 @@ for (const q of ['cards', 'card', 'memory', 'web', 'sources', 'teach', 'what are
 }
 say(A.reply('cards').text.includes(String(A.count())), '"cards" says how many there are');
 say(/MEM/.test(A.reply('memory').text), '"memory" points at MEM');
-say(A.count() === 1526, 'the corpus is 1,526 cards, as the README says', String(A.count()));
+say(A.count() === 1556, 'the corpus is 1,556 cards, as the README says', String(A.count()));
 
 console.log('\n-- a miss always leaves a door open --');
 {

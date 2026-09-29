@@ -1,3 +1,15 @@
+## 5.3 — 2026-09-29
+
+### Qwen3 model, no memories, refresh-free, redesigned
+
+- **Model upgraded to Qwen3-0.6B** on both runtimes, with automatic fallback to Qwen2.5-0.5B if a Qwen3 artifact is missing or CORS-blocked.
+- **Memories removed** — no durable memory store; chats still live in this browser and may sync to this app's server.
+- **No more random refresh** — the model worker is kept warm through tab backgrounding, screen lock and WebGPU device loss.
+- **Corpus — 1,556 cards**, a 5.3 expansion with new cards across science, technology, culture and current events.
+- **Search recovers faster** — provider cooldown 120s (was 600s); single-result queries trigger a second-chance search.
+- **Model warms sooner** — GPU preparation after 5 characters (was 8).
+- **Redesigned interface** — refreshed design system, clearer layout, better contrast and spacing.
+
 ## 5.2 — 2026-09-29
 
 ### Faster, more reliable, Safari-ready

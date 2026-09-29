@@ -15,7 +15,7 @@ def client(tmp_path, monkeypatch):
 
 
 def test_release_assets(client):
-    assert client.get("/api/health").json()["version"] == "5.2"
+    assert client.get("/api/health").json()["version"] == "5.3"
     for asset in ("archiver-comprehension.js", "archiver-engine.js", "archiver-worker.js",
                   "archiver-viewport.js", "archiver-download.js"):
         assert client.get("/static/" + asset).status_code == 200
@@ -23,7 +23,7 @@ def test_release_assets(client):
     assert 'maximum-scale=1' not in page
     assert 'id="autoAI"' not in page
     assert 'id="retryModel"' in page
-    assert 'Archiver 5.2 is always enabled' in page
+    assert 'Archiver 5.3 is always enabled' in page
     # 5.1: settings apply as they change, so there is nothing to press.
     assert 'id="saveSettings"' not in page
     assert 'Apply settings' not in page
@@ -70,37 +70,26 @@ def test_completed_turn_is_visible_to_its_owner(client):
     sid = prep["session_id"]
     committed = client.post("/api/chat/commit", json={"session_id": sid, "message": "I prefer Python.", "answer": "Noted."})
     assert committed.status_code == 200
-    assert committed.json()["memories_saved"]
+    # 5.3: no memory store, so a commit never reports learned memories.
+    assert "memories_saved" not in committed.json()
     messages = client.get(f"/api/sessions/{sid}").json()["messages"]
     assert [m["role"] for m in messages] == ["user", "assistant"]
-    assert client.get("/api/memories").json()
     assert client.patch(f"/api/sessions/{sid}", json={"title": "Renamed"}).status_code == 200
     assert client.get(f"/api/sessions/{sid}").json()["title"] == "Renamed"
 
 
-def test_cross_browser_history_and_memory_isolation(client):
+def test_cross_browser_history_isolation(client):
     client.post("/api/chat/prepare", json={"session_id": "s_private", "message": "I prefer Python."})
     client.post("/api/chat/commit", json={"session_id": "s_private", "message": "I prefer Python.", "answer": "Noted."})
     owner_cookie = client.cookies.get(main.COOKIE_NAME)
     client.cookies.clear()
     client.get("/api/health")
-    assert client.get("/api/memories").json() == []
     assert client.get("/api/sessions/s_private").status_code == 404
-    prep = client.post("/api/chat/prepare", json={"message": "What do I prefer about Python?"}).json()
-    assert prep["memories"] == []
     assert client.post("/api/chat/commit", json={"session_id": "s_private", "message": "test", "answer": "no"}).status_code == 404
     client.delete("/api/sessions/s_private")
     client.cookies.clear()
     client.cookies.set(main.COOKIE_NAME, owner_cookie)
     assert client.get("/api/sessions/s_private").status_code == 200
-
-
-def test_auto_extract_setting_respected(client):
-    client.put("/api/settings", json={"auto_extract": "0"})
-    prep = client.post("/api/chat/prepare", json={"message": "I prefer Python."}).json()
-    result = client.post("/api/chat/commit", json={"session_id": prep["session_id"], "message": "I prefer Python.", "answer": "Noted."}).json()
-    assert result["memories_saved"] == []
-    assert client.get("/api/memories").json() == []
 
 
 def test_default_migration_preserves_custom_persona(client):
@@ -109,7 +98,7 @@ def test_default_migration_preserves_custom_persona(client):
     store.set_setting("model", "Archiver 2.5 (in-browser)", uid)
     store.set_setting("persona", "My custom persona", uid)
     main.apply_defaults(store, uid)
-    assert store.get_setting("model", user_id=uid) == "Archiver 5.2 (in-browser)"
+    assert store.get_setting("model", user_id=uid) == "Archiver 5.3 (in-browser)"
     assert store.get_setting("persona", user_id=uid) == "My custom persona"
     # 4.0 retired persona upgrades to 5.
     store.set_setting("persona", main.RETIRED_PERSONAS[0], uid)
@@ -128,7 +117,7 @@ def test_restore_defaults_replaces_custom_settings(client):
     assert body["has_api_key"] is False
     assert "api_key" not in main.app.state.store.settings(secret=True, user_id=client.cookies.get(main.COOKIE_NAME))
     # Default model in settings is now 5.
-    assert body["model"] == "Archiver 5.2 (in-browser)"
+    assert body["model"] == "Archiver 5.3 (in-browser)"
 
 
 def test_retry_removes_trailing_turn_for_replacement(client):
@@ -211,7 +200,7 @@ def test_health_performs_no_outbound_fetch(client, monkeypatch):
     response = client.get("/api/health")
     assert response.status_code == 200
     assert response.json()["ok"] is True
-    assert response.json()["version"] == "5.2"
+    assert response.json()["version"] == "5.3"
     assert calls == []
 
 
@@ -320,32 +309,37 @@ def test_persona_mentions_concurrent_search_and_unverified_fallback():
 def test_settings_default_mentions_local_provider_41(client):
     """Settings endpoint returns the Archiver 5 default model label and excludes anthropic."""
     body = client.get("/api/settings").json()
-    assert body["model"] == "Archiver 5.2 (in-browser)"
-    assert body["providers"]["local"]["default_model"] == "Archiver 5.2 (in-browser)"
+    assert body["model"] == "Archiver 5.3 (in-browser)"
+    assert body["providers"]["local"]["default_model"] == "Archiver 5.3 (in-browser)"
     assert "anthropic" not in body["providers"]
 
 
 def test_docs_match_the_release():
-    """Docs drift is the failure mode that keeps coming back: the README said
-    4.3 and 1,515 cards while the app shipped 5.x with 1,526."""
+    """Docs drift is the failure mode that keeps coming back: the README once
+    said 4.3 and 1,515 cards while the app shipped 5.x with more."""
     here = Path(__file__).resolve().parent.parent
     kb = (here / "web" / "archiver-knowledge.js").read_text(encoding="utf-8")
     changelog = (here / "CHANGELOG.md").read_text(encoding="utf-8")
     readme = (here / "README.md").read_text(encoding="utf-8")
     upgrade = (here / "docs" / "MODEL-UPGRADE.md").read_text(encoding="utf-8")
 
-    assert "version: '5.2'" in kb
-    # The 5.1 cards, checked by id so a dropped card fails here rather than
+    assert "version: '5.3'" in kb
+    # Cards are checked by id so a dropped card fails here rather than
     # silently shrinking the corpus. The total itself is asserted in
     # tests/smoke.js, which loads the corpus rather than grepping it.
     for card_id in ("sop-overview", "sop-gandolfini", "sop-finale", "sop-cast", "sop-melfi",
                     "sop-theme", "sop-locations", "sop-many-saints", "sop-pine-barrens", "sop-legacy"):
         assert f"id: '{card_id}'" in kb, card_id
-    assert "...SOPRANOS]" in kb, 'the new cards are in the shipped corpus'
+    # The 5.3 expansion, same rule.
+    for card_id in ("ai-llm", "ai-transformer", "ai-rag", "ai-hallucination", "space-blackhole",
+                    "space-jwst", "space-darkmatter", "climate-change", "climate-el-nino",
+                    "tech-vectordb", "health-mrna", "econ-inflation", "hist-turing"):
+        assert f"id: '{card_id}'" in kb, card_id
+    assert "...MORE53]" in kb, 'the new cards are in the shipped corpus'
 
-    assert changelog.startswith("## 5.2 — 2026-09-29"), changelog[:40]
-    assert "1,526" in changelog
-    assert readme.startswith("# Archiver 5.2")
-    assert "Archiver 5.2 — our own model" in readme
-    assert "1,526 cards" in readme
-    assert "Archiver 5.2" in upgrade
+    assert changelog.startswith("## 5.3 — 2026-09-29"), changelog[:40]
+    assert "1,556" in changelog
+    assert readme.startswith("# Archiver 5.3")
+    assert "Archiver 5.3 — our own model" in readme
+    assert "1,556 cards" in readme
+    assert "Archiver 5.3" in upgrade
