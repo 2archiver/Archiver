@@ -239,4 +239,6 @@ def test_diagnostics_script_is_shipped_and_wired(client):
     assert r.status_code == 200
     assert "crossOriginIsolated" in r.text and "db_created_at" in r.text
     page = client.get("/").text
-    assert "/static/archiver-diag.js" in page and 'id="openDiagnostics"' in page
+    # The shell references it document-relatively (host-agnostic for Pages);
+    # from the app root that resolves to the same /static/… URL.
+    assert 'src="static/archiver-diag.js"' in page and 'id="openDiagnostics"' in page

@@ -253,7 +253,7 @@
 
   async function checkServerReset() {
     try {
-      const r = await fetch('/api/health', { cache: 'no-store', credentials: 'same-origin' });
+      const r = await fetch(new URL('api/health', document.baseURI).href, { cache: 'no-store', credentials: 'same-origin' });
       if (!r.ok) return;
       const h = await r.json();
       server = h;

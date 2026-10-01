@@ -7,6 +7,15 @@
 (function () {
   'use strict';
 
+  /* Hosting-agnostic URL resolution — see the matching note in index.html.
+     Relative specs resolve against the document (root or /Archiver/ on a
+     project-pages host); in the Node VM harness there is no document.baseURI,
+     so ABS falls back to the root-absolute paths the tests expect. */
+  const ABS = (p) => {
+    const rel = String(p).replace(/^\/+/, '');
+    try { return new URL(rel, document.baseURI).href; } catch (_) { return '/' + rel; }
+  };
+
   /* One definition of the version, so the label in the sidebar, the persona, the
      self-description, the API and the tests cannot disagree with each other. */
   const VERSION = '5.3';
@@ -963,9 +972,9 @@ I can describe my capabilities and limitations; that is not consciousness or fee
      started for a greeting, a calculation or a pasted-text extraction. Model
      weights are fetched from their publishers into the browser cache; there is
      no manual download button on either path. */
-  const WEBLLM_RUNTIME = '/static/vendor/web-llm-0.2.80.js';
-  const WLLAMA_RUNTIME = '/static/vendor/wllama-3.6.1.js';
-  const WLLAMA_WASM = '/static/vendor/wllama-3.6.1.wasm';
+  const WEBLLM_RUNTIME = ABS('static/vendor/web-llm-0.2.80.js');
+  const WLLAMA_RUNTIME = ABS('static/vendor/wllama-3.6.1.js');
+  const WLLAMA_WASM = ABS('static/vendor/wllama-3.6.1.wasm');
 
   // Mobile Safari can take several minutes to fetch and compile model assets.
   // A 90-second ceiling reliably killed first-run loads on iPhone networks.
@@ -1538,7 +1547,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       const records = mod.prebuiltAppConfig && mod.prebuiltAppConfig.model_list;
       const record = Array.isArray(records) && records.find(m => m.model_id === selected);
       if (!record) { lastErr = new Error('The bundled runtime does not include the configured model.'); continue; }
-      ctx.worker = new Worker('/static/archiver-worker.js', { type: 'module' });
+      ctx.worker = new Worker(ABS('static/archiver-worker.js'), { type: 'module' });
       let candidate = null;
       try {
         candidate = await mod.CreateWebWorkerMLCEngine(ctx.worker, selected, {
@@ -1581,6 +1590,17 @@ I can describe my capabilities and limitations; that is not consciousness or fee
      and a unified cache cut the resident memory roughly in half, which is the
      difference between working and being killed on an iPhone. */
   async function loadWASM(choice, wanted, ctx) {
+    /* Preflight shared-memory availability. The vendored wasm build always
+       allocates WebAssembly.Memory({shared:true}); browsers only allow that in
+       a cross-origin-isolated context (COOP+COEP) — which the static GitHub
+       Pages deploy grants with a one-time service-worker bootstrap. If the
+       host cannot grant it, fail here with a clear reason instead of after the
+       multi-hundred-MB weight download has already streamed. Skipped off the
+       network (file://, test harnesses). */
+    const httpish = (typeof self !== 'undefined' && self.location && /^https?:$/.test(String(self.location.protocol || '')));
+    if (httpish && typeof SharedArrayBuffer === 'undefined') {
+      throw new Error('The WebAssembly runtime needs SharedArrayBuffer, which this host does not enable. On the static GitHub Pages preview, reload once to finish the isolation bootstrap; otherwise use a WebGPU browser or the full app server.');
+    }
     const cachedBeforeW = !!readPersistedBackend();
     emitProgress(cachedBeforeW
       ? 'Archiver 5.3 · loading WebAssembly from browser cache…'
@@ -2009,7 +2029,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     try {
       while (attempt < 2) {
         try {
-          const res = await fetch('/api/search?limit=' + (limit || 3) + '&q=' + encodeURIComponent(query), { signal: controller.signal, cache: 'no-store' });
+          const res = await fetch(ABS('api/search?limit=' + (limit || 3) + '&q=' + encodeURIComponent(query)), { signal: controller.signal, cache: 'no-store' });
           if (!res.ok) {
             if ((res.status === 502 || res.status === 503 || res.status === 504) && attempt === 0) {
               attempt++;

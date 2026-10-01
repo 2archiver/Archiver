@@ -1,3 +1,12 @@
+## Pages — 2026-10-01
+
+### Static GitHub Pages deployment — https://2archiver.github.io/Archiver/
+
+- **The frontend now also ships with no backend.** `scripts/build_pages.py` + a `Pages` workflow publish `web/` to GitHub Pages; the safety gate refuses to emit databases, Python sources, `.env`/`.git` or key files.
+- **Host-agnostic paths.** Asset refs are document-relative and fetches rebase through `ABS()`, so one build of `web/` serves correctly from `/` (Render) and `/Archiver/` (Pages). PWA `start_url`/`scope` are relative, so a Pages install can never claim the whole `github.io` origin.
+- **Honest static mode.** A single boot probe detects the missing server: sync is skipped silently, search fails through the existing "no usable sources" path, and export explains itself — one notice, no per-turn nagging.
+- **Shared memory on a header-less host.** The Pages build injects a one-time `archiver-coi-sw.js` bootstrap that synthesizes the COOP/COEP isolation the WebAssembly runtime needs (Pages cannot send headers); browsers that already allow `SharedArrayBuffer` never reload. The wasm preflight now fails with a named cause *before* downloading weights.
+
 ## 5.3 — 2026-09-29
 
 ### Qwen3 model, no memories, refresh-free, redesigned
