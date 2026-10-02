@@ -11,20 +11,72 @@ is deployed, so there is no database, no memory bank and no API key that could
 leak — the builder additionally refuses to emit `*.db`, `*.py`, `.env`, `.git`
 or key files even if they existed in the checkout.
 
-## One-time setup (repository owner)
+## The Pages source: GitHub Actions, asserted by the workflow
 
-Pages has to build from the workflow rather than from a branch folder:
-**Settings → Pages → Build and deployment → Source → GitHub Actions** — or
+Pages has to build from the workflow rather than from a branch folder, and the
+workflow no longer assumes that is already true.
+`scripts/ensure_pages_source.py` runs before every build on `main` and is a
+no-op unless something is wrong:
+
+- source already *GitHub Actions* → one GET, nothing else;
+- source *Deploy from a branch* → `PUT /repos/…/pages` with
+  `build_type=workflow`, then a re-read to confirm it took;
+- Pages not enabled at all → the same call as a `POST`.
+
+If the API refuses (the run's token may not change repository settings), the
+step fails with the settings path instead of deploying into a host that will
+404. The manual equivalent remains
 
 ```bash
 gh api -X PUT repos/2archiver/Archiver/pages -f build_type=workflow
 ```
 
-While the source is still *Deploy from a branch* (`main` / root), GitHub serves
-the repository README through Jekyll instead of the app, and the `deploy` job
-of the Pages workflow fails with "Ensure GitHub Pages has been enabled". After
-the switch, the next push to `main` (or **Actions → Pages → Run workflow**)
-publishes the site.
+or **Settings → Pages → Build and deployment → Source → GitHub Actions**.
+
+`actions/configure-pages@v5` with `enablement: true` looks like the standard
+way to assert this and is not: it calls `getPagesSite()` first and returns the
+existing site when there is one, so `build_type: workflow` is only sent when
+Pages is off entirely. Against a branch-sourced site it succeeds in about a
+second having changed nothing, which is why the API call lives in the repo.
+
+## A green deploy is not a working site (2026-10-02)
+
+On 2026-10-02 <https://2archiver.github.io/Archiver/> served GitHub's 404 page
+— *"The site configured at this address does not contain the requested file …
+For root URLs (like `http://example.com/`) you must provide an `index.html`
+file"* — while the `Pages` workflow's deploy job and the `github-pages`
+deployment status were both green.
+
+What had happened: the repository's Pages source was on *Deploy from a branch*
+(`main` / `docs`), so GitHub's built-in builder ran on the same push as the
+workflow, landed a couple of minutes later, and replaced the deployed app with
+its own build of `docs/` — five rendered markdown files and no `index.html`.
+The site's last successful deployment was that 34 KB artifact, while the
+workflow's was 9.4 MB. `/Archiver/` 404'd; `/Archiver/PAGES.html` answered 200
+with the rendered copy of this file, which is how the leftover was identified.
+`actions/deploy-pages` had done its job — it uploads an artifact and asks Pages
+to publish it, and nothing tells it that something else publishes afterwards.
+
+Three guards now make that failure hard to repeat and impossible to miss:
+
+- **The source assertion above**, so GitHub's built-in builder stops being
+  scheduled at all.
+- **A settle step**: when the assertion did change the source, a built-in build
+  already queued for the same commit is allowed to finish before the deploy, so
+  the workflow's artifact is the last one published (a settings change stops
+  new builds being queued, but not a run that already exists).
+- **A post-deploy check**: `scripts/verify_pages_site.py` fetches the URL
+  `actions/deploy-pages` reported and requires the app shell (the page must name
+  `static/archiver-engine.js` — GitHub's 404 page and the docs-only build do
+  not) plus a 200 for `manifest.json`, `favicon.svg`, `archiver-coi-sw.js`,
+  `static/archiver-engine.js`, `static/archiver-worker.js` and
+  `static/vendor/wllama-3.6.1.wasm`. It retries for two minutes because a fresh
+  deployment takes a moment to reach every edge, and it fails the run with the
+  settings path if the host is serving something else.
+
+The workflow also runs the whole thing once a day (`cron: '17 6 * * *'`), so a
+site replaced by a hand-made settings change is repaired — or reported red —
+within a day rather than waiting for the next push.
 
 ## How one codebase serves two hosts
 
@@ -126,8 +178,15 @@ live site.
 ```bash
 make pages                      # → dist/pages/
 python3 -m http.server -d "$(dirname dist/pages)" 8080   # then http://localhost:8080/pages/
-make test                       # includes tests/pages.js (layout, refs, safety gates)
+make test                       # includes tests/pages.js and tests/test_pages_deploy.py
 ```
+
+`tests/test_pages_deploy.py` covers the two guards offline: the source assertion
+against a fake `gh` (already-workflow, branch-sourced, not-enabled, refused and
+write-did-not-take), and the post-deploy verifier against a real loopback HTTP
+server serving an app-shaped site, a docs-only site (the 2026-10-02 state) and a
+site missing an asset. One test builds the real site and checks every path the
+verifier demands still exists, so a rename cannot turn a good deploy red.
 
 ## What remains Render-only
 

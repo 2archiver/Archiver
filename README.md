@@ -13,8 +13,11 @@ WebAssembly) all work; live web search and cross-device sync are server
 features and report themselves unavailable. A `scripts/build_pages.py` safety
 gate keeps databases, Python and secrets out of the public artifact, and a
 one-time service-worker bootstrap supplies the cross-origin-isolation headers
-Pages cannot send. The repository owner switches **Settings → Pages → Source**
-to *GitHub Actions* once; see [docs/PAGES.md](docs/PAGES.md).
+Pages cannot send. The workflow itself asserts the **GitHub Actions** Pages
+source before it deploys, waits out any built-in branch build queued for the
+same commit, and then fetches the published URL and fails the run if it is not
+the app — a branch-sourced or replaced deployment goes red instead of 404ing;
+see [docs/PAGES.md](docs/PAGES.md).
 
 ## Default model — lighter Qwen2.5-0.5B (October 2026)
 
