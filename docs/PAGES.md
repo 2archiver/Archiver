@@ -1,9 +1,9 @@
-# Archiver on GitHub Pages — the static preview
+# Archiver on GitHub Pages — the public site
 
-**Live site:** <https://2archiver.github.io/Archiver/>
+**Public site:** <https://2archiver.github.io/Archiver/>
 **Workflow:** `.github/workflows/pages.yml` → `scripts/build_pages.py` → `actions/deploy-pages`
 
-Pages hosts the *frontend only*. That is the whole point of the architecture:
+The public-facing app has moved to the project site on GitHub Pages. The Render deployment remains available as an optional backend for live web search and cross-device sync; GitHub Pages is the public front door and runs the local-first client. Pages hosts the *frontend only*. That is the whole point of the architecture:
 generation runs in the visitor's browser (WebGPU where the browser has it, the
 WebAssembly runtime where it does not), the knowledge corpus is a bundled
 JavaScript file, and conversations live in `localStorage`. Nothing server-side
@@ -93,17 +93,18 @@ the whole `github.io` origin.
 
 ## What static mode disables
 
-On the first load the app probes `api/health`. A static host answers 404, the
-app marks `SERVER.online = false` once, and from then on:
+After the local interface and cached conversation are ready, the app probes
+`api/health`. A static host answers 404, the app marks `SERVER.online = false`,
+and from then on:
 
 - **Server sync** (session mirroring, settings store) is skipped silently —
   chats still save and reload from this browser.
-- **Live web search** fails fast with the existing honest error path
-  ("no usable sources"), never a hang: the Pages artifact has no search proxy.
+- **Live web search** needs the optional backend and cannot retrieve sources on
+  Pages; local knowledge and on-device generation remain available.
 - **Settings → Export archive** says it needs the server and points at the
   per-conversation Download, which is browser-local.
-- The thought-panel toast explains the mode once per load instead of nagging
-  after every turn.
+- There is no startup warning toast; the local app opens immediately. Actions
+  that specifically need the server explain that when attempted.
 
 ## Shared memory without COOP/COEP headers
 

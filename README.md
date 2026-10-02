@@ -4,20 +4,11 @@
 
 No account or model-provider API key. Two inference runtimes are bundled with the website — WebGPU where a browser offers it, WebAssembly where it does not — and model assets are fetched and cached automatically in the browser. No model server, deployment-time npm step, or model weights in Git.
 
-## Static preview — GitHub Pages
+## Public site — GitHub Pages
 
-The same frontend also runs with no backend at all, deployed by GitHub Actions
-from this repository: **[https://2archiver.github.io/Archiver/](https://2archiver.github.io/Archiver/)**.
-Local tools, the knowledge corpus and on-device generation (WebGPU and
-WebAssembly) all work; live web search and cross-device sync are server
-features and report themselves unavailable. A `scripts/build_pages.py` safety
-gate keeps databases, Python and secrets out of the public artifact, and a
-one-time service-worker bootstrap supplies the cross-origin-isolation headers
-Pages cannot send. The workflow itself asserts the **GitHub Actions** Pages
-source before it deploys, waits out any built-in branch build queued for the
-same commit, and then fetches the published URL and fails the run if it is not
-the app — a branch-sourced or replaced deployment goes red instead of 404ing;
-see [docs/PAGES.md](docs/PAGES.md).
+**The public app is [https://2archiver.github.io/Archiver/](https://2archiver.github.io/Archiver/).** It is a static, local-first deployment published by GitHub Actions from this repository. Local tools, the knowledge corpus, the on-device model (WebGPU or WebAssembly), and browser-stored chats work there. Live web search and cross-device sync need the optional server-backed deployment; the app no longer blocks first launch with a warning when those features are absent.
+
+The Render deployment remains available for server-backed search and sync. GitHub Pages is the public front door, not a replacement for the optional backend. A `scripts/build_pages.py` safety gate keeps databases, Python and secrets out of the public artifact, and a one-time service-worker bootstrap supplies the cross-origin-isolation headers Pages cannot send. The workflow asserts the **GitHub Actions** Pages source before deployment, waits out any built-in branch build queued for the same commit, then fetches the published URL and fails if it is not the app — a branch-sourced or replaced deployment goes red instead of 404ing; see [docs/PAGES.md](docs/PAGES.md).
 
 ## Default model — lighter Qwen2.5-0.5B (October 2026)
 
