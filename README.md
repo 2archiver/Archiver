@@ -4,6 +4,17 @@
 
 No account or model-provider API key. Two inference runtimes are bundled with the website — WebGPU where a browser offers it, WebAssembly where it does not — and model assets are fetched and cached automatically in the browser. No model server, deployment-time npm step, or model weights in Git.
 
+## Static preview — GitHub Pages
+
+The same frontend also runs with no backend at all, deployed by GitHub Actions
+from this repository: **[https://2archiver.github.io/Archiver/](https://2archiver.github.io/Archiver/)**.
+Local tools, the knowledge corpus and on-device generation (WebGPU and
+WebAssembly) all work; live web search and cross-device sync are server
+features and report themselves unavailable. A `scripts/build_pages.py` safety
+gate keeps databases, Python and secrets out of the public artifact, and a
+one-time service-worker bootstrap supplies the cross-origin-isolation headers
+Pages cannot send. See [docs/PAGES.md](docs/PAGES.md).
+
 ## New in 5.3 — Qwen3 model, no memories, refresh-free, redesigned
 
 - **Model upgraded to Qwen3-0.6B.** Both runtimes prefer our own Qwen3-0.6B and fall back automatically to the proven Qwen2.5-0.5B if a Qwen3 artifact is missing or CORS-blocked, so Safari and weaker GPUs still generate.
