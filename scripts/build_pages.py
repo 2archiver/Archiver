@@ -15,7 +15,10 @@ sense there:
 * A five-line bootstrap in <head> registers `archiver-coi-sw.js` and reloads
   the page once so GitHub Pages — which cannot send response headers — ends
   up cross-origin-isolated anyway, keeping the multithreaded WebAssembly
-  runtime (SharedArrayBuffer) alive on Firefox and Safari.
+  runtime (SharedArrayBuffer) alive. Desktop Chrome and Edge gate
+  SharedArrayBuffer behind isolation too, so every desktop browser takes the
+  one-time reload on its first visit; the worker stamps worker scripts as well
+  as documents, because an isolated page refuses a worker script without COEP.
 
 SAFETY GATES — the build refuses to publish a site that is anything other
 than the static frontend:
@@ -48,9 +51,10 @@ ROOT_FILES = ("index.html", "manifest.json", "favicon.svg", "apple-touch-icon.pn
 COI_BOOTSTRAP = """<!-- pages-bootstrap: added by scripts/build_pages.py. GitHub Pages cannot send
      COOP/COEP response headers, and the WebAssembly runtime needs a
      cross-origin-isolated document. The service worker below synthesizes the
-     headers for navigations; the one-time reload then lands on an isolated
-     page. sessionStorage makes the reload exactly-once; browsers that already
-     grant SharedArrayBuffer (Chrome, Edge) never reload. -->
+     headers for documents and worker scripts; the one-time reload then lands
+     on an isolated page. sessionStorage makes the reload exactly-once, and a
+     page that is already isolated (or a browser that grants SharedArrayBuffer
+     on its own) never reloads. -->
 <script>
 (function () {
   try {

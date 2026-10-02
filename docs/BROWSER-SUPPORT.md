@@ -57,6 +57,12 @@ weights are fetched with `fetch()` (CORS mode) from Hugging Face / GitHub raw,
 which send `Access-Control-Allow-Origin: *`, so they pass COEP. Set
 `ARCHIVER_COEP=off` or `credentialless` to change this without a code edit.
 
+On **GitHub Pages**, which cannot send response headers, a same-origin service
+worker (`web/archiver-coi-sw.js`) stamps the same two headers on documents *and*
+worker scripts, and the page reloads once on a browser's first visit. Desktop
+Chrome and Edge need this too — they only expose `SharedArrayBuffer` in an
+isolated page. See [PAGES.md](PAGES.md).
+
 ## Manual test checklist
 
 Run on a fresh profile (or after "Clear cached model weights" in Diagnostics).

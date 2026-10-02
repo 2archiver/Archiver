@@ -11,6 +11,21 @@ is deployed, so there is no database, no memory bank and no API key that could
 leak — the builder additionally refuses to emit `*.db`, `*.py`, `.env`, `.git`
 or key files even if they existed in the checkout.
 
+## One-time setup (repository owner)
+
+Pages has to build from the workflow rather than from a branch folder:
+**Settings → Pages → Build and deployment → Source → GitHub Actions** — or
+
+```bash
+gh api -X PUT repos/2archiver/Archiver/pages -f build_type=workflow
+```
+
+While the source is still *Deploy from a branch* (`main` / root), GitHub serves
+the repository README through Jekyll instead of the app, and the `deploy` job
+of the Pages workflow fails with "Ensure GitHub Pages has been enabled". After
+the switch, the next push to `main` (or **Actions → Pages → Run workflow**)
+publishes the site.
+
 ## How one codebase serves two hosts
 
 Every asset reference in `web/` is document-relative and every same-origin
@@ -48,18 +63,63 @@ headers itself; **GitHub Pages cannot send any response headers.**
 `scripts/build_pages.py` therefore injects a five-line bootstrap that
 registers `web/archiver-coi-sw.js` — a service worker that synthesizes
 `Cross-Origin-Opener-Policy: same-origin` and
-`Cross-Origin-Embedder-Policy: require-corp` on same-origin navigations.
-That is the standard GitHub-Pages trick for isolation; the page reloads
-exactly once (guarded by `sessionStorage`, no reload loops) and lands
-isolated. Chrome and Edge ship `SharedArrayBuffer` in any secure context, so
-they never reload at all. If a browser refuses SW-granted isolation, the
-engine's preflight fails before the weights download with a message that
-names the cause instead of a mystery.
+`Cross-Origin-Embedder-Policy: require-corp` on same-origin **documents and
+worker scripts**. That is the standard GitHub-Pages trick for isolation; the
+page reloads exactly once (guarded by `sessionStorage`, no reload loops) and
+lands isolated. Desktop Chrome and Edge gate `SharedArrayBuffer` behind
+isolation as well, so every desktop browser takes that one reload on its first
+visit; a page that is already isolated never reloads. If a browser refuses
+SW-granted isolation, the engine's preflight fails before the weights download
+with a message that names the cause instead of a mystery.
+
+**Worker scripts matter.** A page served with `COEP: require-corp` refuses to
+start a worker whose script response does not carry COEP itself. Stamping only
+navigations (the first version of this worker) left the WebGPU model worker
+(`static/archiver-worker.js`) blocked on every isolated page — Chromium reports
+`net::ERR_BLOCKED_BY_RESPONSE`. Opaque and redirect responses are handed back
+untouched, since they cannot be rebuilt. `tests/pages.js` runs the worker
+against a fake scope to keep all of this honest.
 
 This mirrors Render's own `ARCHIVER_COEP=require-corp` default, so the set of
 subresources (same-origin files, CORS-mode model downloads from
 huggingface.co) is unchanged — everything the Pages site loads already
 satisfies `require-corp`.
+
+## The model is not what limits github.io
+
+Pages only hosts the page and the two vendored runtimes (`web/vendor/`, about
+20 MB). Model weights are never in the repository or the artifact: both
+families are fetched from huggingface.co in CORS mode (which `require-corp`
+allows) and cached in the visitor's browser, so *which* model is the default
+changes the visitor's download and GPU memory, not whether the site deploys.
+What did gate the site was the host: server-rooted URLs, no backend, and no
+way to send COOP/COEP headers — the sections above. The default is
+Qwen2.5-0.5B-Instruct with Qwen3-0.6B as fallback
+(see [MODEL-UPGRADE.md](MODEL-UPGRADE.md)); on the CPU path both are the same
+~429 MB download.
+
+## What was verified, and what was not
+
+Checked in headless Chromium 153 against the built site served at `/Archiver/`
+by a static server that sends no COOP/COEP headers (a stand-in for Pages on
+`http://localhost`):
+
+- the service worker registers, the page reloads exactly once, and
+  `crossOriginIsolated` / `SharedArrayBuffer` are then available (neither is
+  available in desktop Chromium before that);
+- the WebGPU model worker (`static/archiver-worker.js`, a module worker) is
+  blocked with the first version of the service worker and starts with this one;
+- with a small random-weight GGUF standing in for the Qwen2.5 file (served from
+  a mocked `huggingface.co`), the unmodified page loads the real vendored
+  wllama 3.6.1 build, starts its multithreaded workers, requests the
+  `qwen2.5-0.5b-instruct-q4_0.gguf` URL first, and streams a generation;
+- no console errors or failed requests other than the expected `api/health`
+  404 of the static-mode probe.
+
+**Not verified:** WebGPU generation (headless Chromium has no usable adapter),
+real Qwen weights or answer quality, Hugging Face reachability from a visitor's
+network, and Safari or Firefox. Treat those as the first things to try on the
+live site.
 
 ## Rebuilding locally
 

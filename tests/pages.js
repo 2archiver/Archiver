@@ -10,6 +10,7 @@ const { execFileSync } = require('node:child_process');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const vm = require('node:vm');
 
 const ROOT = path.join(__dirname, '..');
 const out = fs.mkdtempSync(path.join(os.tmpdir(), 'archiver-pages-'));
@@ -54,6 +55,42 @@ const sw = site('archiver-coi-sw.js');
 check(sw.includes('Cross-Origin-Opener-Policy') && sw.includes('Cross-Origin-Embedder-Policy'), 'worker injects both isolation headers');
 check(/url\.origin !== self\.location\.origin/.test(sw), 'worker leaves cross-origin requests untouched');
 
+/* The worker is exercised, not just grepped: run it against a fake service-worker
+   scope. Real-browser finding (Chromium 153): with COEP: require-corp on the page, a
+   dedicated worker whose script response lacks COEP is refused with
+   net::ERR_BLOCKED_BY_RESPONSE — which would silently kill the WebGPU model worker. */
+const isolationWorkerChecked = (async () => {
+  const handlers = {};
+  const scope = {
+    location: { origin: 'https://example.github.io' },
+    addEventListener: (type, fn) => { handlers[type] = fn; },
+    skipWaiting() {}, clients: { claim: async () => {} },
+  };
+  let upstream = () => new Response('body', { status: 200, headers: { 'content-type': 'text/javascript' } });
+  vm.runInNewContext(sw, { self: scope, URL, Headers, Response, fetch: async () => upstream() });
+  const run = async (req) => {
+    let responded = null;
+    handlers.fetch({ request: { method: 'GET', cache: 'default', mode: 'same-origin', destination: '', url: 'https://example.github.io/Archiver/x', ...req },
+                     respondWith: (p) => { responded = p; } });
+    return responded && await responded;
+  };
+  const doc = await run({ mode: 'navigate', destination: 'document', url: 'https://example.github.io/Archiver/' });
+  check(doc.headers.get('Cross-Origin-Embedder-Policy') === 'require-corp' && doc.headers.get('Cross-Origin-Opener-Policy') === 'same-origin',
+    'worker: navigations are isolated');
+  const dedicated = await run({ destination: 'worker', url: 'https://example.github.io/Archiver/static/archiver-worker.js' });
+  check(dedicated && dedicated.headers.get('Cross-Origin-Embedder-Policy') === 'require-corp',
+    'worker: dedicated worker scripts carry COEP (the WebGPU model worker would be blocked otherwise)');
+  const shared = await run({ destination: 'sharedworker' });
+  check(shared && shared.headers.get('Cross-Origin-Embedder-Policy') === 'require-corp', 'worker: shared worker scripts carry COEP');
+  for (const destination of ['script', 'image', 'style', 'font', ''])
+    check((await run({ destination })) === null, `worker: ${destination || 'fetch()'} subresources pass through untouched`);
+  check((await run({ destination: 'worker', url: 'https://huggingface.co/x.js' })) === null, 'worker: cross-origin requests are left alone');
+  check((await run({ method: 'POST', mode: 'navigate', destination: 'document' })) === null, 'worker: only GET is touched');
+  upstream = () => ({ status: 0, type: 'opaqueredirect' });
+  const redirect = await run({ mode: 'navigate', destination: 'document', url: 'https://example.github.io/Archiver/' });
+  check(redirect && redirect.type === 'opaqueredirect', 'worker: an opaque redirect is passed back as it is, not rebuilt');
+})();
+
 /* ---- safety gates ---- */
 const files = [];
 (function r(d) { for (const e of fs.readdirSync(d, { withFileTypes: true })) {
@@ -75,4 +112,4 @@ try {
 }
 
 fs.rmSync(out, { recursive: true, force: true });
-console.log(`pages: ${checks} checks passed`);
+isolationWorkerChecked.then(() => console.log(`pages: ${checks} checks passed`), (e) => { console.error(e); process.exit(1); });
