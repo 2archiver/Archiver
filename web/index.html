@@ -1299,7 +1299,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
             <b id="engineMode">Browser model loads when needed</b>
             <span class="mtag" id="engineModel"></span>
           </div>
-          <p id="engineBlurb">Archiver 5.3 — our own compact on-device model (0.6B architecture), running privately in your browser with zero external AI providers.</p>
+          <p id="engineBlurb">Archiver 5.3 — our own compact on-device model (0.5B class), running privately in your browser with zero external AI providers.</p>
           <div class="ai-confirmation" id="aiConfirmation" role="status" aria-live="polite">
             <span class="mark" aria-hidden="true">✓</span>
             <span><strong id="aiConfirmationTitle">Archiver 5.3 is always enabled</strong><small id="aiConfirmationDetail">It prepares in the background the moment you open this page.</small></span>
@@ -1398,7 +1398,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
         <div class="update-row">
           <div class="update-meta">
             <b>5.3</b><span>2026-09-29 · latest</span>
-            <p>Archiver 5.3 — Qwen3-0.6B model with automatic fallback, a bigger knowledge base, no persistent memory, a refresh-free tab lifecycle, and a redesigned interface.</p>
+            <p>Archiver 5.3 — lighter Qwen2.5-0.5B default model (Qwen3-0.6B as fallback), a bigger knowledge base, no persistent memory, a refresh-free tab lifecycle, and a redesigned interface.</p>
           </div>
           <button class="btn sm" id="openChangelog" style="white-space:nowrap; flex-shrink:0;">View changelog →</button>
         </div>
@@ -1463,10 +1463,10 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
       <div class="changelog-timeline">
         <div class="cl-entry" style="border-color:var(--accent);">
           <div class="cl-head"><span class="cl-ver">5.3</span><span class="cl-date">2026-09-29</span></div>
-          <div class="cl-title">5.3 — Qwen3 model, no persistent memory, refresh-free tab, redesigned interface</div>
+          <div class="cl-title">5.3 — lighter default model, no persistent memory, refresh-free tab, redesigned interface</div>
           <div class="cl-body">
             <ul>
-              <li><b>Model upgraded to Qwen3-0.6B.</b> Both runtimes now prefer our own Qwen3-0.6B and fall back automatically to the proven Qwen2.5-0.5B if a Qwen3 artifact is missing or CORS-blocked, so Safari and weaker GPUs still generate.</li>
+              <li><b>Lighter default model (updated 2026-10-02).</b> 5.3 first shipped Qwen3-0.6B; the default is now the smaller Qwen2.5-0.5B-Instruct on both runtimes — about a third less GPU memory in WebLLM's catalogue — and Qwen3-0.6B is only an automatic fallback if every Qwen2.5 artifact is missing or CORS-blocked, so Safari and weaker GPUs still generate.</li>
               <li><b>Memories removed.</b> Archiver no longer remembers anything about you between chats. Conversations still live in this browser and may sync to this app's server, but there is no durable memory store.</li>
               <li><b>No more random refresh.</b> The model worker is kept warm through tab backgrounding, screen lock and WebGPU device loss instead of being torn down and reloaded, so the page no longer appears to reset while you use it.</li>
               <li><b>Knowledge base expanded.</b> New cards across science, technology, culture and current events.</li>

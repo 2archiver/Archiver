@@ -13,11 +13,22 @@ WebAssembly) all work; live web search and cross-device sync are server
 features and report themselves unavailable. A `scripts/build_pages.py` safety
 gate keeps databases, Python and secrets out of the public artifact, and a
 one-time service-worker bootstrap supplies the cross-origin-isolation headers
-Pages cannot send. See [docs/PAGES.md](docs/PAGES.md).
+Pages cannot send. The repository owner switches **Settings → Pages → Source**
+to *GitHub Actions* once; see [docs/PAGES.md](docs/PAGES.md).
+
+## Default model — lighter Qwen2.5-0.5B (October 2026)
+
+For static hosting the default model is **Qwen2.5-0.5B-Instruct** again, on both
+runtimes — about a third less GPU memory than Qwen3-0.6B in WebLLM's catalogue
+(~945 MB against ~1.4 GB at q4f16_1). **Qwen3-0.6B** stays as an automatic
+fallback, tried only when every Qwen2.5 artifact is missing or blocked. The name
+(Archiver 5.3), persona and everything else are unchanged. The CPU/WebAssembly
+download is the same size either way (~429 MB at Q4_0), so the saving is on the
+GPU path. Details: [docs/MODEL-UPGRADE.md](docs/MODEL-UPGRADE.md).
 
 ## New in 5.3 — Qwen3 model, no memories, refresh-free, redesigned
 
-- **Model upgraded to Qwen3-0.6B.** Both runtimes prefer our own Qwen3-0.6B and fall back automatically to the proven Qwen2.5-0.5B if a Qwen3 artifact is missing or CORS-blocked, so Safari and weaker GPUs still generate.
+- **Qwen3-0.6B, since made the fallback.** 5.3 first shipped Qwen3-0.6B as the default; the October 2026 static-hosting build puts the lighter Qwen2.5-0.5B first on both runtimes and keeps Qwen3-0.6B as the automatic fallback if every Qwen2.5 artifact is missing or CORS-blocked (see *Default model* above).
 - **Memories removed.** Archiver no longer remembers anything about you between chats — there is no durable memory store. Conversations still live in this browser and may sync to this app's server.
 - **No more random refresh.** The model worker is kept warm through tab backgrounding, screen lock and WebGPU device loss instead of being torn down and reloaded, so the page no longer appears to reset while you use it.
 - **Knowledge base expanded** with new cards across science, technology, culture and current events.
@@ -267,8 +278,8 @@ download button. Greetings, calculations, stored-topic answers, and text
 extraction do not trigger an expensive model download.
 
 - **Two bundled runtimes, chosen automatically:** `web/vendor/web-llm-0.2.80.js` when the browser exposes a usable WebGPU adapter, otherwise `web/vendor/wllama-3.6.1.js` plus `wllama-3.6.1.wasm` on the CPU. Both are unmodified upstream builds, shared by the page and worker, served same-origin, precompressed, with long-lived versioned caching, their licenses, and checksum-verified reproduction scripts. The WASM binary is served as `application/wasm` so streaming compilation works. No inference-library CDN dependency at runtime.
-- **Compact model:** the **Qwen 3 0.6B** family (Archiver 5.2) at Q4 on both paths. The GPU path chooses f16 or f32 by adapter capability; the WASM path uses a GGUF of the same model, tried from three upstream artifacts in order so one renamed file cannot disable the fallback. It never tries a larger model.
-- **Automatic assets:** the first generative request fetches weights directly from the upstream model/library hosts, not through Render — a few hundred MB on GPU, ~490 MB of GGUF on CPU. Each runtime caches them in browser storage and reuses them when storage permits. Clearing browser data or cache eviction can require another transfer.
+- **Compact model:** **Qwen2.5-0.5B-Instruct** at Q4 on both paths, with **Qwen 3 0.6B** only as an automatic fallback. The GPU path chooses f16 or f32 by adapter capability; the WASM path uses a GGUF of the same model, tried from three upstream artifacts in order (Q4_0, Q4_K_M, Q8_0) before the three Qwen3 ones, so one renamed file cannot disable the fallback. It never tries a larger model.
+- **Automatic assets:** the first generative request fetches weights directly from the upstream model/library hosts, not through Render — a few hundred MB on GPU, ~430 MB of GGUF on CPU. Each runtime caches them in browser storage and reuses them when storage permits. Clearing browser data or cache eviction can require another transfer.
 - **Device requirements:** HTTPS (or localhost) and enough free memory. The GPU path additionally needs WebGPU and sufficient GPU memory; the WASM path needs neither, only WebAssembly workers, which every current browser has. Without `Cross-Origin-Opener-Policy`/`Cross-Origin-Embedder-Policy` headers, wllama detects that and runs single-threaded — intended here, since COEP would put every cross-origin model fetch behind a CORP requirement.
 - **Graceful fallback:** offline, Data Saver, or initialization errors leave instant tools available and say why. A missing or unusable GPU is no longer a dead end — it selects the WASM runtime. Initialization is bounded, failed initialization is isolated, and **Try browser generation again** starts a fresh worker. Stop cancels initialization as well as generation.
 - **Browser generation:** always enabled and started on demand for open-ended tasks. Settings shows which runtime is enabled, loading, active, or unavailable; a retry action is available when initialization fails. The first-use model download requires a network connection. Initialization is allowed up to eight minutes on mobile Safari's GPU path and twelve on the WASM path, which compiles an 8 MB module before it can start on the weights.

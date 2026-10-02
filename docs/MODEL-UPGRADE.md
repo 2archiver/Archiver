@@ -1,6 +1,24 @@
 # Archiver 5 Model Architecture & Safari Optimisation (September 2026)
 
-Current production baseline: **Archiver 5.3** — Archiver's own compact on-device model built on the `Qwen3-0.6B` architecture, running WebLLM 0.2.80 (`Qwen3-0.6B-q4f16_1-MLC` / `Qwen3-0.6B-q4f32_1-MLC`) on WebGPU and `Qwen3-0.6B` GGUF (`Qwen3-0.6B-Q4_0.gguf` / `Qwen3-0.6B-Q4_K_M.gguf` / `Qwen3-0.6B-Q8_0.gguf`) on wllama 3.6.1 (`libllama b10663` with native `qwen3` architecture support) for Safari/CPU. Zero third-party cloud AI providers are used for in-browser generation.
+Current production baseline: **Archiver 5.3** — Archiver's own compact on-device model built on `Qwen2.5-0.5B-Instruct`, running WebLLM 0.2.80 (`Qwen2.5-0.5B-Instruct-q4f16_1-MLC` / `Qwen2.5-0.5B-Instruct-q4f32_1-MLC`) on WebGPU and `Qwen2.5-0.5B-Instruct` GGUF (`qwen2.5-0.5b-instruct-q4_0.gguf` / `-q4_k_m.gguf` / `-q8_0.gguf`) on wllama 3.6.1 for Safari/CPU. `Qwen3-0.6B` (`Qwen3-0.6B-q4f16_1-MLC` / `-q4f32_1-MLC`, and the `Qwen3-0.6B` Q4_0 / Q4_K_M / Q8_0 GGUFs) remains as an automatic fallback. Zero third-party cloud AI providers are used for in-browser generation.
+
+## Qwen2.5 is the default again (October 2026)
+
+5.3 shipped `Qwen3-0.6B` first. For static hosting (GitHub Pages) the default is now the lighter `Qwen2.5-0.5B-Instruct` — the Archiver 4.3 model — on both runtimes, and `Qwen3-0.6B` is only an automatic fallback.
+
+| | Qwen2.5-0.5B-Instruct | Qwen3-0.6B |
+|---|---|---|
+| WebLLM `vram_required_MB` (q4f16_1 / q4f32_1) | 944.62 / 1060.2 | 1403.34 / 1924.98 |
+| GGUF Q4_0 size | 428,730,208 B | 428,970,080 B |
+| Hidden thinking pass | none | yes (switch needed) |
+
+(VRAM figures are the pinned `web-llm-0.2.80` catalogue values; GGUF sizes are from the Hugging Face file listings.) The saving is on the GPU path — about a third less at q4f16_1. **The CPU/WebAssembly download is the same size either way**, so this change does not by itself make the WebAssembly path cheaper.
+
+- **Selection.** WebGPU tries `PREFERRED` (Qwen2.5, f16 or f32 by adapter capability) and falls back to the matching `FALLBACK_MODELS` (Qwen3) entry only when the first cannot load. WebAssembly walks `WASM_SOURCES`: Qwen2.5 Q4_0, Q4_K_M, Q8_0, then Qwen3 Q4_0, Q4_K_M, Q8_0. Neither path ever picks a larger catalogue model.
+- **Qwen3-only switches are gated.** `hasThinkingMode(id)` is true only for Qwen3 ids/URLs. `extra_body.enable_thinking` (WebGPU), `chat_template_kwargs` and the `/no_think` prompt token (CPU) are sent only then. WebLLM 0.2.80 appends a literal empty `<think></think>` block to the assistant turn whenever `enable_thinking` is `false`, for any model — harmless to Qwen3, noise in Qwen2.5's prompt.
+- **Warm start.** `VALID_MODELS` holds only the primary model, so a persisted Qwen3 entry (from an earlier 5.x build or from a fallback load) is dropped and the primary is tried first on the next session; the page never claims a cache hit for weights the browser doesn't hold.
+- **Branding.** Unchanged: both families render as `Archiver 5.3`.
+- **Not benchmarked here.** Real weights and WebGPU generation were not run in the CI/sandbox environment; automated tests stub inference (see `tests/model.js`).
 
 ## 5.3 — Qwen3 with a legacy fallback, refresh-free tab, no memories (September 2026)
 
@@ -52,6 +70,8 @@ Current production baseline: **Archiver 5.3** — Archiver's own compact on-devi
   you type, so the first token is not waiting on retrieval.
 
 ## Archiver 5 Improvements & Safari Optimisations
+
+_This list describes the 5.0–5.3 Qwen3-first design. Since October 2026 the Qwen3 artifacts below are the fallback and Qwen2.5-0.5B-Instruct is tried first — see the section above._
 
 1. **WebGPU (WebLLM 0.2.80):** Uses `Qwen3-0.6B-q4f16_1-MLC` (or `Qwen3-0.6B-q4f32_1-MLC` when `shader-f16` is absent), marked `low_resource_required: true` in the bundled WebLLM catalogue. 5.2 adds device-lost listener and f16 fallback hardening.
 2. **Safari-optimised WebAssembly (wllama 3.6.1):**

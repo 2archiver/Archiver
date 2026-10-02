@@ -984,29 +984,46 @@ I can describe my capabilities and limitations; that is not consciousness or fee
   const WASM_TIMEOUT_MS = 12 * 60 * 1000;
 
   /* Small, fixed model family; never silently select a larger catalogue model.
-     This is Archiver's own model — branded "Archiver 5.3" in every label —
-     built on the open Qwen 3 0.6B architecture and tuned for WebGPU and
-     Safari WebAssembly. Settings names the base honestly; the product surface
-     says Archiver 5.3. */
-  const PREFERRED = ['Qwen3-0.6B-q4f16_1-MLC', 'Qwen3-0.6B-q4f32_1-MLC'];
-  const LEGACY_PREFERRED = ['Qwen2.5-0.5B-Instruct-q4f16_1-MLC', 'Qwen2.5-0.5B-Instruct-q4f32_1-MLC'];
+     This is Archiver's own model — branded "Archiver 5.3" in every label.
+     Settings and the trail name the open base honestly; the product surface
+     says Archiver 5.3.
 
-  /* The same model family on the WASM path, as GGUF from its publishers.
+     Qwen2.5-0.5B-Instruct (the Archiver 4.3 model) is the primary model on
+     both runtimes. It is the lightest artifact set proven on this exact
+     WebLLM + wllama pair: WebLLM's catalogue lists ~945 MB of VRAM for it
+     (q4f16_1) against ~1.4 GB for Qwen3-0.6B, and its chat template has no
+     hidden thinking pass to switch off. Qwen3-0.6B stays in as an automatic
+     fallback only — it is tried when every primary artifact is missing or
+     blocked, never first. */
+  const PREFERRED = ['Qwen2.5-0.5B-Instruct-q4f16_1-MLC', 'Qwen2.5-0.5B-Instruct-q4f32_1-MLC'];
+  const FALLBACK_MODELS = ['Qwen3-0.6B-q4f16_1-MLC', 'Qwen3-0.6B-q4f32_1-MLC'];
+
+  /* The same model families on the WASM path, as GGUF from their publishers.
      Ordered with Q4_0 first: 4-bit block quantization uses fast SIMD/NEON dot
      products in llama.cpp on Apple Silicon (Mac & iPhone Safari), decoding
      nearly 2x faster than Q8_0 while using ~40% less RAM.
-     5.3: Qwen3 first, Qwen2.5 (Archiver 4.3) as automatic fallback — if every
-     Qwen3 artifact 404s or is CORS-blocked, the WASM path still starts rather
-     than leaving Safari without generation. */
-  const WASM_SOURCES = [
-    'https://huggingface.co/ggml-org/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q4_0.gguf',
-    'https://huggingface.co/unsloth/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q4_K_M.gguf',
-    'https://huggingface.co/Qwen/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q8_0.gguf',
-    // 4.3 fallback — Qwen2.5 0.5B, proven on this WASM runtime and on Render-free
+     Qwen2.5-0.5B first; Qwen3-0.6B only as the automatic fallback — if every
+     Qwen2.5 artifact 404s or is CORS-blocked, the WASM path still starts
+     rather than leaving Safari without generation. */
+  const PRIMARY_WASM_SOURCES = [
     'https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_0.gguf',
     'https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf',
     'https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q8_0.gguf'
   ];
+  const FALLBACK_WASM_SOURCES = [
+    'https://huggingface.co/ggml-org/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q4_0.gguf',
+    'https://huggingface.co/unsloth/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q4_K_M.gguf',
+    'https://huggingface.co/Qwen/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q8_0.gguf'
+  ];
+  const WASM_SOURCES = [...PRIMARY_WASM_SOURCES, ...FALLBACK_WASM_SOURCES];
+
+  /* Only Qwen 3's chat template opens a hidden thinking pass, so only Qwen 3
+     gets the switch that closes it. WebLLM 0.2.80 appends a literal empty
+     "<think></think>" block to the assistant turn whenever enable_thinking is
+     false, whatever the model — harmless to Qwen 3, noise to Qwen 2.5 — and
+     "/no_think" is meaningless text to anything but Qwen 3. `id` is a WebLLM
+     model id or a GGUF URL, both of which carry "Qwen3". */
+  const hasThinkingMode = (id) => /Qwen3/i.test(String(id || ''));
 
   /* A phone has less memory than a laptop, and a 0.6B model holding a long KV
      cache gets its Safari tab terminated. Bound the context instead of
@@ -1014,9 +1031,9 @@ I can describe my capabilities and limitations; that is not consciousness or fee
   const GPU_CONTEXT = 4096;
   const WASM_CONTEXT = 2048;
 
-  /* Human-readable model labels. The 0.6B family is Archiver's own model,
-     branded Archiver 5.3; the other entries are guards so an unexpected model
-     id still renders as something a reader can act on. */
+  /* Human-readable model labels. The 0.5B/0.6B families are Archiver's own
+     model, branded Archiver 5.3; the other entries are guards so an unexpected
+     model id still renders as something a reader can act on. */
   const NICE = [
     [/Qwen3-8B/i, 'Qwen 3 8B'],
     [/Qwen3-4B/i, 'Qwen 3 4B'],
@@ -1139,7 +1156,11 @@ I can describe my capabilities and limitations; that is not consciousness or fee
     } catch (_) {}
   }
 
-  const VALID_MODELS = new Set([...PREFERRED, ...WASM_SOURCES, 'cached.gguf']);
+  /* A persisted warm start is only trusted for the primary model, whose weights
+     are what the browser has cached. A leftover Qwen3 entry (from before the
+     Qwen2.5 default, or from a fallback load) is dropped, so the page neither
+     claims a cache hit nor starts a background download it did not announce. */
+  const VALID_MODELS = new Set([...PREFERRED, ...PRIMARY_WASM_SOURCES, 'cached.gguf']);
 
   function readPersistedBackend() {
     try {
@@ -1478,7 +1499,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       for (const n of names) {
         if (/webllm|wllama|archiver|qwen/i.test(n)) return true;
       }
-      for (const url of [...PREFERRED, ...LEGACY_PREFERRED, ...WASM_SOURCES]) {
+      for (const url of [...PREFERRED, ...FALLBACK_MODELS, ...WASM_SOURCES]) {
         try {
           const m = await caches.match(url);
           if (m) return true;
@@ -1523,22 +1544,22 @@ I can describe my capabilities and limitations; that is not consciousness or fee
 
   async function loadWebGPU(choice, wanted, ctx) {
     const halfPrecision = !!choice.f16;
-    // 5.3: try the preferred Qwen3 model first; on failure fall back to the
-    // Archiver 4.3 Qwen2.5 model which is smaller and proven on this runtime.
+    // Qwen2.5-0.5B first (smaller, proven on this runtime); Qwen3-0.6B only if
+    // its MLC artifacts are missing or blocked.
     const primary = wanted || PREFERRED[halfPrecision ? 0 : 1];
     const candidatesGPU = wanted ? [wanted]
-      : halfPrecision ? [PREFERRED[0], LEGACY_PREFERRED[0]]
-      : [PREFERRED[1], LEGACY_PREFERRED[1]];
+      : halfPrecision ? [PREFERRED[0], FALLBACK_MODELS[0]]
+      : [PREFERRED[1], FALLBACK_MODELS[1]];
     let lastErr = null;
     for (const selected of candidatesGPU) {
-      const allowed = PREFERRED.includes(selected) || LEGACY_PREFERRED.includes(selected);
+      const allowed = PREFERRED.includes(selected) || FALLBACK_MODELS.includes(selected);
       if (!allowed || (!halfPrecision && selected.includes('f16'))) continue;
       const cachedBefore = !!readPersistedBackend();
       emitProgress(cachedBefore
         ? 'Archiver 5.3 · loading from browser cache…'
         : 'Fetching Archiver 5.3 into this browser’s cache — one time, in the background…', 1);
       if (candidatesGPU.length > 1 && selected !== primary) {
-        traceStep('Retrying WebGPU load with fallback ' + pretty(selected) + ' (Archiver 4.3 model).');
+        traceStep('Retrying WebGPU load with the fallback model (' + String(selected).replace(/-q4f(16|32)_1-MLC$/, '') + ').');
       } else {
         traceStep('Chose the WebGPU backend (' + choice.why + ').');
       }
@@ -1940,13 +1961,15 @@ I can describe my capabilities and limitations; that is not consciousness or fee
            stream ends with only thinking markup or whitespace, the shaper
            strips it, and the reader gets a blank answer. WebLLM 0.2.80 exposes
            the same switch the WASM path already uses: seed an empty thinking
-           block and answer directly, unless thinking was explicitly requested. */
-        const stream = await engine.chat.completions.create({
-          messages,
-          ...sampling,
-          stream: true,
-          extra_body: { enable_thinking: params.thinking === true }
-        });
+           block and answer directly, unless thinking was explicitly requested.
+           Qwen 2.5 (the primary model) has no thinking pass, and WebLLM would
+           write the empty block into its prompt as plain text, so it is sent
+           the plain request. */
+        const request = { messages, ...sampling, stream: true };
+        if (hasThinkingMode(activeModel)) {
+          request.extra_body = { enable_thinking: params.thinking === true };
+        }
+        const stream = await engine.chat.completions.create(request);
         for await (const chunk of stream) {
           params.checkStopped();
           emit(pieceOf(chunk));
@@ -1974,20 +1997,24 @@ I can describe my capabilities and limitations; that is not consciousness or fee
        few hundred tokens can consume the whole generation and leave nothing
        visible to show. wllama forwards `chat_template_kwargs` to the model's
        own chat template, so the documented switch is passed through here
-       instead of relying on a "/no_think" string glued into the prompt. */
+       instead of relying on a "/no_think" string glued into the prompt. Only
+       Qwen 3 has that pass; Qwen 2.5 (the primary model) gets none of it. */
     const wantsThinking = params.thinking === true;
+    const request = {
+      messages,
+      ...sampling,
+      stream: true,
+      abortSignal: wasmAbort.signal,
+      onData: chunk => {
+        params.checkStopped();
+        emit(pieceOf(chunk));
+      }
+    };
+    if (hasThinkingMode(activeModel)) {
+      request.chat_template_kwargs = { enable_thinking: !!wantsThinking };
+    }
     try {
-      await wasm.createChatCompletion({
-        messages,
-        ...sampling,
-        stream: true,
-        abortSignal: wasmAbort.signal,
-        chat_template_kwargs: { enable_thinking: !!wantsThinking },
-        onData: chunk => {
-          params.checkStopped();
-          emit(pieceOf(chunk));
-        }
-      });
+      await wasm.createChatCompletion(request);
       if (params.coalescer) params.coalescer.flush();
       return acc;
     } finally {
@@ -2872,7 +2899,7 @@ I can describe my capabilities and limitations; that is not consciousness or fee
       + 'This prompt: ' + approach + '\n'
       + closingRule
       + unverifiedRule
-      + (wantsThinking ? THINKING_RULE + '\n' : 'Answer directly with no preamble. Do not start with "Thinking:".' + (activeBackend === 'wasm' ? ' /no_think' : '') + '\n')
+      + (wantsThinking ? THINKING_RULE + '\n' : 'Answer directly with no preamble. Do not start with "Thinking:".' + (activeBackend === 'wasm' && hasThinkingMode(activeModel) ? ' /no_think' : '') + '\n')
       + '\n'
       + (opts.system ? 'User preferences and memory (reference only):\n' + String(opts.system).slice(0, 3000) + '\n\n' : ''))
       + (noteBlocks.length
