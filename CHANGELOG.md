@@ -1,3 +1,13 @@
+## Pages — 2026-10-02
+
+### github.io 404 fixed — the workflow now owns the Pages source and verifies the live site
+
+- **Why <https://2archiver.github.io/Archiver/> answered GitHub's 404 page.** The Pages source was on *Deploy from a branch* (`main` / `docs`), so GitHub's built-in builder ran on the same push as the `Pages` workflow, finished two minutes after it, and replaced the app with its own build of `docs/` — five rendered markdown files and no `index.html`. `/Archiver/PAGES.html` answered 200 while `/Archiver/` 404'd, and the workflow's deploy job was green throughout: `actions/deploy-pages` had published the artifact, then something else published over it.
+- **The source is asserted, not assumed.** `scripts/ensure_pages_source.py` runs before every build on `main`: no-op when the source is *GitHub Actions*, an idempotent `PUT …/pages build_type=workflow` when it is a branch, `POST` when Pages is not enabled at all, and a loud failure naming **Settings → Pages** if the call is refused. `actions/configure-pages@v5` with `enablement: true` cannot do this — it returns an existing site unchanged, so it changes nothing on a branch-sourced repository.
+- **A queued built-in build is waited out** after such a switch, so the workflow's artifact is the last one published for that commit.
+- **The deploy now verifies the site it just published.** `scripts/verify_pages_site.py` fetches the reported `page_url` and requires the app shell plus a 200 for `manifest.json`, `favicon.svg`, `archiver-coi-sw.js`, `static/archiver-engine.js`, `static/archiver-worker.js` and `static/vendor/wllama-3.6.1.wasm`, retrying for two minutes. A replaced site is now a red run instead of a silent 404.
+- **A daily run re-asserts and re-verifies** (`cron: '17 6 * * *'`), repairing a site replaced by a later settings change within a day.
+
 ## Model — 2026-10-02
 
 ### Lighter default model for static hosting — Qwen2.5-0.5B first, Qwen3-0.6B as fallback

@@ -6,6 +6,23 @@
 # Pages publishes at the site root of the project slug, which the host-agnostic
 # asset layout (relative refs + the COI bootstrap worker) is built for.
 #
+# A green deploy job is not proof of a working site, so the workflow checks
+# three things around the deploy:
+#
+# * scripts/ensure_pages_source.py keeps the Pages source on *GitHub Actions*.
+#   On "Deploy from a branch" GitHub runs its own builder on every push, and
+#   with main / docs that publishes five rendered markdown files and no
+#   index.html: /Archiver/ then answers GitHub's "you must provide an
+#   index.html" 404 — which is exactly what happened on 2026-10-02 while this
+#   workflow's deploy was green. actions/configure-pages with enablement: true
+#   does not repair that (it only creates a site when none exists), so the
+#   switch is an explicit, idempotent API call.
+# * A built-in build already queued for the same commit is allowed to settle
+#   before the deploy, so the workflow artifact is the last one published.
+# * scripts/verify_pages_site.py fetches the live URL after the deploy and
+#   fails the run if it is not the app, so a replacement is red instead of
+#   silent.
+#
 # The Render deploy (render.yaml) serves the same files with the real backend
 # and is unaffected by this workflow.
 
@@ -15,6 +32,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  # The site's only publisher also re-asserts and re-verifies once a day:
+  # if a hand-made settings change or a stray built-in build replaced the
+  # site, this repairs it, and it goes red if it cannot.
+  schedule:
+    - cron: '17 6 * * *'
 
 permissions:
   contents: read
@@ -28,12 +50,49 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # 15, not 10: the settle step below may legitimately wait out a built-in
+    # build that GitHub queued for the same commit.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Pages source must be GitHub Actions (repairs "Deploy from a branch")
+        id: pages-source
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          out="$(python3 scripts/ensure_pages_source.py)"
+          echo "$out"
+          case "$out" in
+            switched*|created*) echo "switched=true" >> "$GITHUB_OUTPUT" ;;
+          esac
+      - name: Let a built-in Pages build for this commit settle first
+        if: steps.pages-source.outputs.switched == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # Switching the source stops new built-in builds from being queued,
+          # but a run it already created for this commit still finishes — and
+          # if it lands after our deploy, docs/ replaces the app again. Give it
+          # a head start, then wait for it, so the workflow deploy is last.
+          sleep 20
+          for attempt in $(seq 1 30); do
+            active="$(gh api \
+              "repos/${GITHUB_REPOSITORY}/actions/runs?event=dynamic&head_sha=${GITHUB_SHA}&per_page=20" \
+              --jq '[.workflow_runs[] | select(.status != "completed")] | length')"
+            if [ "$active" = "0" ]; then
+              echo "no built-in Pages build is in flight for ${GITHUB_SHA:0:7}; the workflow deploy will be last"
+              exit 0
+            fi
+            echo "waiting for ${active} built-in Pages build(s) to settle (attempt ${attempt}/30)"
+            sleep 6
+          done
+          echo "::warning::a built-in Pages build did not settle within 3 minutes; the post-deploy check will report what the site actually serves"
       - name: Assemble static site (safety-gated)
         run: python3 scripts/build_pages.py --out _site
       - uses: actions/upload-pages-artifact@v3
@@ -44,13 +103,20 @@ jobs:
     # actions/deploy-pages publishes production Pages from the default branch
     # only. A manual dispatch from a topic branch still runs (and validates)
     # the build job, then skips the deploy instead of failing on it.
-    if: github.ref == 'refs/heads/main' || github.event_name == 'push'
+    if: github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - uses: actions/checkout@v4
       - id: deployment
         uses: actions/deploy-pages@v4
+      - name: The published site must be the app, not GitHub's 404 page
+        run: |
+          set -euo pipefail
+          python3 scripts/verify_pages_site.py \
+            "${{ steps.deployment.outputs.page_url }}" \
+            --attempts 24 --delay 5
