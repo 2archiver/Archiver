@@ -1,3 +1,13 @@
+## Public site & UX — 2026-10-02
+
+### GitHub Pages is the public front door
+
+- **Public destination: <https://2archiver.github.io/Archiver/>.** The README and Pages guide now make GitHub Pages the public front door. It serves the static, local-first client; the Render deployment remains available for server-backed live search and cross-device sync.
+- **Clear about the trade-off, without the boot interruption.** On GitHub Pages, local knowledge, the on-device model and browser-stored chats still work; server search and sync do not. The app no longer interrupts first launch with a backend warning, and the redundant model/sync footer and persistent shortcut hint are gone. Useful in-progress status messages remain.
+- **Local UI comes first.** Server detection runs after the local interface and cached conversation are ready, so a slow or absent backend does not hold the screen hostage.
+- **Safari viewport fallback restored.** Layout uses `-webkit-fill-available` on older iOS Safari, `100dvh` where supported, and `100vh` as the baseline fallback.
+- **Markup cleanup.** Removed an accidental duplicate fragment after the closing HTML document.
+
 ## Pages — 2026-10-02
 
 ### github.io 404 fixed — the workflow now owns the Pages source and verifies the live site
@@ -25,7 +35,7 @@
 
 - **The frontend now also ships with no backend.** `scripts/build_pages.py` + a `Pages` workflow publish `web/` to GitHub Pages; the safety gate refuses to emit databases, Python sources, `.env`/`.git` or key files.
 - **Host-agnostic paths.** Asset refs are document-relative and fetches rebase through `ABS()`, so one build of `web/` serves correctly from `/` (Render) and `/Archiver/` (Pages). PWA `start_url`/`scope` are relative, so a Pages install can never claim the whole `github.io` origin.
-- **Honest static mode.** A single boot probe detects the missing server: sync is skipped silently, search fails through the existing "no usable sources" path, and export explains itself — one notice, no per-turn nagging.
+- **Honest static mode.** A boot probe detects the missing server: sync is skipped silently, search fails through the existing "no usable sources" path, and export explains itself. The current UX performs this probe after the local UI is ready and does not show a startup warning.
 - **Shared memory on a header-less host.** The Pages build injects a one-time `archiver-coi-sw.js` bootstrap that synthesizes the COOP/COEP isolation the WebAssembly runtime needs (Pages cannot send headers); a page that is already isolated never reloads. The wasm preflight now fails with a named cause *before* downloading weights.
 
 ## 5.3 — 2026-09-29

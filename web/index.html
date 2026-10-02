@@ -533,7 +533,7 @@ a:hover { text-decoration-color: var(--ink); }
 .send-btn:hover { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .send-btn:disabled { opacity: 0.4; pointer-events: none; }
 .send-btn svg { width: 16px; height: 16px; }
-.composer-hint { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 11px; color: var(--ink-3); padding: 7px 4px 0; }
+.composer-hint { display: flex; justify-content: flex-end; font-family: var(--mono); font-size: 11px; color: var(--ink-3); padding: 7px 4px 0; }
 .composer-hint kbd {
   font-family: var(--mono); font-size: 10.5px; background: var(--surface); border: var(--border); border-bottom-width: 2px; padding: 1px 5px; border-radius: 4px; color: var(--ink-2);
 }
@@ -945,8 +945,9 @@ a:hover { text-decoration-color: var(--ink); }
 .msg-actions { opacity: 1; }
 .msg-body pre, .code-block { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .msg-body table { display: block; max-width: 100%; overflow-x: auto; }
-.composer-hint { min-height: 18px; gap: 12px; }
+.composer-hint { min-height: 0; gap: 0; padding: 0; line-height: 0; }
 #composerStatus { text-align: right; }
+#composerStatus:not(:empty) { padding: 7px 4px 0; line-height: 1.4; }
 #sendBtn { border-radius: 50%; width: 44px; height: 44px; }
 #sendBtn[data-stopping="true"] svg { display: none; }
 #sendBtn[data-stopping="true"]::after { content: ''; width: 13px; height: 13px; background: currentColor; border-radius: 3px; }
@@ -968,7 +969,6 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
   .composer-tools { padding: 4px 8px 8px; }
   .composer-tools .left { gap: 2px; }
   .ghost-btn { padding: 6px 8px; font-size: 10px; }
-  .composer-hint > span:first-child { display: none; }
   .composer-hint { justify-content: flex-end; font-size: 10px; }
   .msg-row.user .msg-body { max-width: 90%; }
   #chatThread { padding: 18px 16px; }
@@ -1019,9 +1019,16 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
    --kb-height is the software keyboard, and is 0 whenever there is no keyboard
    (a collapsing toolbar does not count). Sizing the shell from the visual
    viewport instead is what used to squeeze the thread while typing and leave a
-   blank gutter under the composer afterwards. */
-:root { --viewport-height: 100dvh; --kb-height: 0px; }
-.app-shell { height: var(--viewport-height, 100dvh); }
+   blank gutter under the composer afterwards. Keep a 100vh fallback for older
+   iOS Safari versions that do not understand dynamic viewport units. */
+:root { --viewport-height: 100vh; --kb-height: 0px; }
+@supports (-webkit-touch-callout: none) {
+  :root { --viewport-height: -webkit-fill-available; }
+}
+@supports (height: 100dvh) {
+  :root { --viewport-height: 100dvh; }
+}
+.app-shell { height: var(--viewport-height, 100vh); }
 
 /* A fixed overlay does not move when iOS scrolls the document to reveal a
    caret, so its bottom edge ends up behind the keyboard. Give the keyboard the
@@ -1247,7 +1254,6 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
           <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg> Optimised for Safari</span>
         </div>
         <div class="ob-chips" id="chips"></div>
-        <div style="margin-top:18px; font-size:11px; color:var(--ink-3);">Archiver 5.3 — our own on-device model · Chats can sync to this app’s server</div>
       </div>
       <div id="chatThread" class="hidden" role="log" aria-label="Conversation" aria-live="polite" aria-relevant="additions"></div>
     </div>
@@ -1270,7 +1276,6 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
         </div>
         <div class="ai-runtime-status" id="aiRuntimeStatus" role="status" aria-live="polite">Browser model loads when needed</div>
         <div class="composer-hint">
-          <span>Enter to send · Shift+Enter for newline · / to focus</span>
           <span id="composerStatus" role="status" aria-live="polite"></span>
         </div>
       </div>
@@ -2866,18 +2871,6 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
 
   /* ---------- boot ---------- */
   async function boot() {
-    /* One cheap probe decides whether server features exist at all. A static
-       hosting (GitHub Pages) answers with 404/HTML or nothing; treat that as
-       "no backend" once, then run client-only with a single honest notice.
-       The race keeps a hanging host from delaying boot. */
-    try {
-      const pinger = fetch(ABS('api/health'), { cache: 'no-store', credentials: 'same-origin' })
-        .then(r => r.ok, () => false);
-      SERVER.online = await Promise.race([pinger, new Promise(res => setTimeout(() => res(false), 5000))]);
-    } catch (_) { SERVER.online = false; }
-    if (SERVER.online === false) {
-      toast('No app server found — live web search and cross-device sync are off. Everything else, including the on-device model, still works.');
-    }
     bind();
     if (window.Archiver) window.Archiver.onProgress(() => paintEngine());
     initTouch();
@@ -2925,6 +2918,15 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     if (lastActive && LocalStore.getMessages(lastActive).length > 0) {
       openSession(lastActive);
     }
+
+    /* Probe after the local UI and cached conversation are ready, so a slow
+       or absent server never delays the first usable screen. Static hosting
+       quietly runs client-only; the browser model remains available either way. */
+    try {
+      const pinger = fetch(ABS('api/health'), { cache: 'no-store', credentials: 'same-origin' })
+        .then(r => r.ok, () => false);
+      SERVER.online = await Promise.race([pinger, new Promise(res => setTimeout(() => res(false), 5000))]);
+    } catch (_) { SERVER.online = false; }
 
     await loadSessions();
     try {
@@ -3129,13 +3131,6 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     });
     // expose for console
     window.__archiverChangelog = { open: openCl, close: closeCl };
-  }catch(e){}
-})();
-</script>
-
-</body>
-</html>
-rchiverChangelog = { open: openCl, close: closeCl };
   }catch(e){}
 })();
 </script>

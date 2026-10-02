@@ -36,6 +36,10 @@ check(idx.includes('src="static/archiver-engine.js"'), 'index.html: script srcs 
 check(idx.includes('href="manifest.json"') && idx.includes('href="favicon.svg"'), 'index.html: root links are relative');
 check(idx.includes('document.baseURI') && /const ABS = /.test(idx), 'index.html: fetches route through the ABS rebaser');
 check(/api\/archive\/export/.test(idx) && !/location\.href = '\/api/.test(idx), 'index.html: export rebased, never raw-navigates');
+check(!idx.includes('No app server found — live web search and cross-device sync are off'), 'index.html: serverless boot has no intrusive warning toast');
+check(!idx.includes('Archiver 5.3 — our own on-device model · Chats can sync to this app’s server'), 'index.html: removed redundant start-page footer copy');
+check(!idx.includes('Enter to send · Shift+Enter for newline · / to focus'), 'index.html: removed persistent composer shortcut footer copy');
+check(idx.includes('--viewport-height: 100vh') && idx.includes('--viewport-height: -webkit-fill-available') && idx.includes('@supports (height: 100dvh)'), 'index.html: Safari viewport units have legacy, iOS, and dynamic fallbacks');
 
 const engine = site('static/archiver-engine.js');
 check(engine.includes("ABS('static/vendor/wllama-3.6.1.js')"), 'engine: runtimes resolve through ABS');
