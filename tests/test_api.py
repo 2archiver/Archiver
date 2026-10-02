@@ -55,10 +55,12 @@ def test_both_inference_runtimes_are_shipped(client):
         assert gzipped.headers["vary"] == "Accept-Encoding"
         assert gzipped.headers.get("content-encoding") == "gzip", name
         assert len(gzipped.content) == len(plain.content), name
-    # The engine must point at exactly the assets this server ships.
+    # The engine must point at exactly the assets this server ships — via
+    # ABS(), the host-agnostic resolver that rebases under a project-pages
+    # subpath and returns these same /static/… URLs from the app root.
     engine = client.get("/static/archiver-engine.js").text
     for name in ("web-llm-0.2.80.js", "wllama-3.6.1.js", "wllama-3.6.1.wasm"):
-        assert f"/static/vendor/{name}" in engine, name
+        assert f"ABS('static/vendor/{name}')" in engine, name
     assert client.get("/static/vendor/does-not-exist.js").status_code == 404
     # Licenses and notes in the same directory still come from the static mount.
     assert client.get("/static/vendor/README.md").status_code == 200
@@ -337,7 +339,9 @@ def test_docs_match_the_release():
         assert f"id: '{card_id}'" in kb, card_id
     assert "...MORE53]" in kb, 'the new cards are in the shipped corpus'
 
-    assert changelog.startswith("## 5.3 — 2026-09-29"), changelog[:40]
+    # The newest release must lead the version entries; a deployment section
+    # (Pages) may sit above it, so "startswith" becomes "above 5.2".
+    assert "## 5.3 — 2026-09-29" in changelog.split("## 5.2 —", 1)[0], changelog[:40]
     assert "1,556" in changelog
     assert readme.startswith("# Archiver 5.3")
     assert "Archiver 5.3 — our own model" in readme

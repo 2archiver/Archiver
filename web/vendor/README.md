@@ -56,22 +56,24 @@ Safari would otherwise buffer the whole 8 MB module before compiling it.
 
 The engine loads it with `n_gpu_layers: 0`, which forces CPU inference and stops
 the runtime reaching for a WebGPU compatibility shim we already know is
-unavailable. Multi-threading needs `Cross-Origin-Opener-Policy` and
-`Cross-Origin-Embedder-Policy` headers; this deployment does not set them, so
-wllama detects that and runs single-threaded. That is the intended, safe path —
-adding COEP would put every cross-origin model fetch behind a CORP requirement.
+unavailable. The 3.6.1 build allocates shared (and 64-bit) WebAssembly memory
+even for one thread, so it needs a cross-origin-isolated page
+(`Cross-Origin-Opener-Policy` + `Cross-Origin-Embedder-Policy`). The app server
+sends both; on GitHub Pages a service worker supplies them (`docs/PAGES.md`).
+Model weights are fetched in CORS mode, so `require-corp` does not block them.
 
 ## Model weights are not vendored
 
 **These files are runtime code, not model weights.** Each runtime fetches the
-selected Qwen2.5 0.5B artifacts from their publishers:
+selected Qwen2.5-0.5B-Instruct artifacts (with Qwen3-0.6B as an automatic fallback) from their publishers:
 
 - WebGPU: the model, tokenizer and compiled GPU library listed in WebLLM's
   pinned catalog. Cached through WebLLM's browser Cache API.
 - WASM: a GGUF of the same model family from
-  `Qwen/Qwen2.5-0.5B-Instruct-GGUF`, tried in the order listed in
-  `WASM_SOURCES` in `archiver-engine.js` so one renamed artifact cannot disable
-  the fallback. Cached through wllama's own cache manager.
+  `Qwen/Qwen2.5-0.5B-Instruct-GGUF` (then, only if all three fail, the Qwen3-0.6B
+  GGUFs), tried in the order listed in `WASM_SOURCES` in `archiver-engine.js` so
+  one renamed artifact cannot disable the fallback. Cached through wllama's own
+  cache manager.
 
 Both caches are subject to browser storage availability and eviction, and
 neither is a durable backup of user data. Weights are never downloaded to the

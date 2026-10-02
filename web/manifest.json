@@ -2,8 +2,8 @@
   "name": "Archiver 5.2 — Your everyday assistant",
   "short_name": "Archiver",
   "description": "Archiver 5.2 — our own model, running directly in your browser. Instant local tools, open-ended answers on WebGPU or Safari-optimised WebAssembly, and live web when you ask. Every answer shows what it did.",
-  "start_url": "/",
-  "scope": "/",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],
   "background_color": "#F4F1EA",
@@ -12,13 +12,13 @@
   "categories": ["productivity", "utilities", "reference"],
   "icons": [
     {
-      "src": "/apple-touch-icon.png",
+      "src": "apple-touch-icon.png",
       "sizes": "180x180",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/favicon.svg",
+      "src": "favicon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
@@ -27,12 +27,12 @@
   "shortcuts": [
     {
       "name": "New chat",
-      "url": "/#new",
+      "url": "./#new",
       "description": "Start a new conversation"
     },
     {
       "name": "Memory bank",
-      "url": "/#mem",
+      "url": "./#mem",
       "description": "Open your memory bank"
     }
   ]

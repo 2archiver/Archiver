@@ -1,4 +1,4 @@
-.PHONY: install run dev test lint
+.PHONY: install run dev test lint pages
 
 # Tests run against the venv when it exists (local), against the ambient
 # interpreter when it does not (CI can point PYTHON wherever it installed).
@@ -13,8 +13,12 @@ run:
 dev:
 	. .venv/bin/activate && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
+pages:
+	python3 scripts/build_pages.py
+
 test:
 	node tests/smoke.js
+	node tests/pages.js
 	node tests/offline.js
 	node tests/viewport.js
 	node tests/download.js

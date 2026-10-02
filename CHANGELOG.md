@@ -1,3 +1,23 @@
+## Model — 2026-10-02
+
+### Lighter default model for static hosting — Qwen2.5-0.5B first, Qwen3-0.6B as fallback
+
+- **The default model is Qwen2.5-0.5B-Instruct again**, on both runtimes (`Qwen2.5-0.5B-Instruct-q4f16_1-MLC` / `-q4f32_1-MLC` on WebGPU; `qwen2.5-0.5b-instruct` `q4_0` / `q4_k_m` / `q8_0` GGUF on WebAssembly). WebLLM's catalogue lists ~945 MB of GPU memory for it against ~1.4 GB for Qwen3-0.6B (q4f16_1). The CPU download is the same size either way (~429 MB at Q4_0).
+- **Qwen3-0.6B is now only the automatic fallback**, tried when every Qwen2.5 artifact is missing or blocked. Branding is unchanged: it is still Archiver 5.3.
+- **Qwen3-only switches are gated to Qwen3.** `extra_body.enable_thinking` (WebGPU), `chat_template_kwargs` and `/no_think` (CPU) are sent only while the Qwen3 fallback is active; WebLLM 0.2.80 would otherwise write an empty `<think></think>` block into Qwen2.5's prompt as plain text.
+- **A warm start trusts only the primary model.** A persisted Qwen3 entry from an earlier 5.x build is invalidated, so the page never claims a cache hit for weights the browser does not hold.
+- **Pages fix: worker scripts are isolated too.** The COI service worker only stamped navigations, so on an isolated page Chrome refused to start the WebGPU model worker (`net::ERR_BLOCKED_BY_RESPONSE`). It now stamps dedicated and shared worker scripts as well, and hands opaque responses back untouched. Checked in headless Chromium 153 against a header-less static host (see `docs/PAGES.md`).
+- **Knowledge cards and in-app notes** name the current model.
+
+## Pages — 2026-10-01
+
+### Static GitHub Pages deployment — https://2archiver.github.io/Archiver/
+
+- **The frontend now also ships with no backend.** `scripts/build_pages.py` + a `Pages` workflow publish `web/` to GitHub Pages; the safety gate refuses to emit databases, Python sources, `.env`/`.git` or key files.
+- **Host-agnostic paths.** Asset refs are document-relative and fetches rebase through `ABS()`, so one build of `web/` serves correctly from `/` (Render) and `/Archiver/` (Pages). PWA `start_url`/`scope` are relative, so a Pages install can never claim the whole `github.io` origin.
+- **Honest static mode.** A single boot probe detects the missing server: sync is skipped silently, search fails through the existing "no usable sources" path, and export explains itself — one notice, no per-turn nagging.
+- **Shared memory on a header-less host.** The Pages build injects a one-time `archiver-coi-sw.js` bootstrap that synthesizes the COOP/COEP isolation the WebAssembly runtime needs (Pages cannot send headers); a page that is already isolated never reloads. The wasm preflight now fails with a named cause *before* downloading weights.
+
 ## 5.3 — 2026-09-29
 
 ### Qwen3 model, no memories, refresh-free, redesigned

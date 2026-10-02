@@ -6,12 +6,14 @@ const base = process.env.BASE_URL || 'http://127.0.0.1:8000';
 const runtime = '/static/vendor/web-llm-0.2.80.js';
 const mockRuntime = `
 export const prebuiltAppConfig = { model_list: [
+  { model_id: 'Qwen2.5-0.5B-Instruct-q4f16_1-MLC' },
+  { model_id: 'Qwen2.5-0.5B-Instruct-q4f32_1-MLC' },
   { model_id: 'Qwen3-0.6B-q4f16_1-MLC' },
   { model_id: 'Qwen3-0.6B-q4f32_1-MLC' }
 ] };
 export class WebWorkerMLCEngineHandler { onmessage() {} }
 export async function CreateWebWorkerMLCEngine(worker, model, config) {
-  globalThis.__modelLoads = (globalThis.__modelLoads || 0) + 1;
+  globalThis.__modelLoads = (globalThis.__modelLoads || 0) + 1; globalThis.__modelId = model;
   config.initProgressCallback({ progress: .2, text: 'Preparing browser-generation test model' });
   await new Promise(resolve => setTimeout(resolve, 600));
   return { interruptGenerate() {}, chat: { completions: {
@@ -32,13 +34,19 @@ export async function CreateWebWorkerMLCEngine(worker, model, config) {
     const packaged = await real.evaluate(async url => {
       const mod = await import(url);
       return { create: typeof mod.CreateWebWorkerMLCEngine, worker: typeof mod.WebWorkerMLCEngineHandler,
-        small: mod.prebuiltAppConfig.model_list.some(m => m.model_id === 'Qwen3-0.6B-q4f16_1-MLC') };
+        small: ['Qwen2.5-0.5B-Instruct-q4f16_1-MLC', 'Qwen2.5-0.5B-Instruct-q4f32_1-MLC',
+          'Qwen3-0.6B-q4f16_1-MLC', 'Qwen3-0.6B-q4f32_1-MLC']
+          .every(id => mod.prebuiltAppConfig.model_list.some(m => m.model_id === id)) };
     }, runtime);
     assert.deepEqual(packaged, { create: 'function', worker: 'function', small: true });
     await real.close();
     const context = await browser.newContext();
     await context.addInitScript(() => Object.defineProperty(navigator, 'gpu', { configurable: true,
-      value: { requestAdapter: async () => ({ features: new Set(['shader-f16']) }) } }));
+      value: { requestAdapter: async () => ({ features: new Set(['shader-f16']),
+        // 4.2's capability check needs realistic limits and a working canary allocation.
+        limits: { maxStorageBufferBindingSize: 256 * 1024 * 1024, maxBufferSize: 256 * 1024 * 1024 },
+        requestDevice: async () => ({ pushErrorScope() {}, popErrorScope: async () => null,
+          createBuffer: () => ({ destroy() {} }), destroy() {} }) }) } }));
     await context.route('**/static/vendor/web-llm-0.2.80.js', route => route.fulfill({ contentType: 'application/javascript', body: mockRuntime }));
     await context.route('**/api/chat/prepare', () => {});
     const page = await context.newPage();
@@ -53,10 +61,7 @@ export async function CreateWebWorkerMLCEngine(worker, model, config) {
     assert.equal(await page.locator('#settingsOverlay').evaluate(el => el.classList.contains('on')), true);
     await page.locator('#closeSettings').click();
     assert.equal(await page.locator('#settingsOverlay').evaluate(el => el.classList.contains('on')), false);
-    await page.locator('#settingsBtn').click();
-    await page.locator('#saveSettings').click();
-    await page.waitForFunction(() => document.querySelector('#toasts').textContent.includes('Settings applied'));
-    assert.equal(await page.locator('#settingsOverlay').evaluate(el => el.classList.contains('on')), false);
+    // Settings autosave (there is no Save button): closing the panel is the commit.
     const send = async text => { await page.locator('#chatInput').fill(text); await page.locator('#sendBtn').click(); };
     await send('write a poem about rain');
     await page.waitForFunction(() => window.Archiver.status().loading);
@@ -64,6 +69,7 @@ export async function CreateWebWorkerMLCEngine(worker, model, config) {
     await page.waitForFunction(() => document.querySelector('#sendBtn').dataset.stopping === 'false');
     assert.match(await page.locator('.msg-row.ai .msg-body').last().textContent(), /Browser-generated answer/);
     assert.equal(await page.evaluate(() => globalThis.__modelLoads), 1);
+    assert.equal(await page.evaluate(() => globalThis.__modelId), 'Qwen2.5-0.5B-Instruct-q4f16_1-MLC', 'the lighter Qwen2.5 model is the default');
     await send('write another poem');
     await page.waitForFunction(() => document.querySelector('#sendBtn').dataset.stopping === 'false');
     assert.equal(await page.evaluate(() => globalThis.__modelLoads), 1);

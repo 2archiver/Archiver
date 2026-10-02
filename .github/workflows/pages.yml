@@ -1,0 +1,56 @@
+# Publishes the static Archiver frontend to GitHub Pages
+# (https://2archiver.github.io/Archiver/).
+#
+# Only web/ is deployed — never the app server — and scripts/build_pages.py
+# refuses to emit anything that looks like a database, key, or Python file.
+# Pages publishes at the site root of the project slug, which the host-agnostic
+# asset layout (relative refs + the COI bootstrap worker) is built for.
+#
+# The Render deploy (render.yaml) serves the same files with the real backend
+# and is unaffected by this workflow.
+
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Assemble static site (safety-gated)
+        run: python3 scripts/build_pages.py --out _site
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    # actions/deploy-pages publishes production Pages from the default branch
+    # only. A manual dispatch from a topic branch still runs (and validates)
+    # the build job, then skips the deploy instead of failing on it.
+    if: github.ref == 'refs/heads/main' || github.event_name == 'push'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

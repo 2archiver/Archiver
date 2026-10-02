@@ -12,7 +12,10 @@ const vm = require('node:vm');
 const GPU_RUNTIME = '/static/vendor/web-llm-0.2.80.js';
 const WASM_RUNTIME = '/static/vendor/wllama-3.6.1.js';
 const WASM_BINARY = '/static/vendor/wllama-3.6.1.wasm';
-const models = ['Qwen3-0.6B-q4f16_1-MLC', 'Qwen3-0.6B-q4f32_1-MLC'];
+/* Qwen2.5-0.5B-Instruct is the primary model on both runtimes; Qwen3-0.6B is
+   only an automatic fallback. The stub catalogue carries both, like the real one. */
+const models = ['Qwen2.5-0.5B-Instruct-q4f16_1-MLC', 'Qwen2.5-0.5B-Instruct-q4f32_1-MLC'];
+const fallbackModels = ['Qwen3-0.6B-q4f16_1-MLC', 'Qwen3-0.6B-q4f32_1-MLC'];
 
 async function fixture(options = {}) {
   const stats = {
@@ -41,6 +44,7 @@ async function fixture(options = {}) {
     async loadModelFromUrl(url, params) {
       stats.wasm.attempts++; stats.wasm.urls.push(url); stats.wasm.params = params;
       if (options.wasmFailFirst && stats.wasm.attempts === 1) throw Error('404 from the model host');
+      if (options.wasmFail && options.wasmFail.test(url)) throw Error('404 from the model host');
       if (options.wasmPending) return new Promise(resolve => { stats.wasm.resolveLoad = resolve; });
       if (params.progressCallback) params.progressCallback({ loaded: 10, total: 20 });
       if (params.progressCallback) params.progressCallback({ loaded: 20, total: 20 });
@@ -93,7 +97,7 @@ async function fixture(options = {}) {
   ctx.window = ctx;
   vm.createContext(ctx);
   const gpuStub = new vm.SyntheticModule(['prebuiltAppConfig', 'CreateWebWorkerMLCEngine'], function () {
-    this.setExport('prebuiltAppConfig', { model_list: models.map(model_id => ({ model_id })) });
+    this.setExport('prebuiltAppConfig', { model_list: (options.catalogue || [...models, ...fallbackModels]).map(model_id => ({ model_id })) });
     this.setExport('CreateWebWorkerMLCEngine', async (worker, id, config) => {
       stats.attempts++; stats.id = id; stats.config = config;
       if (options.failOnce && stats.attempts === 1) throw Error('simulated network failure');
@@ -156,8 +160,8 @@ const GENERATIVE = 'write a poem about rain';
   assert.match(stats.payload.messages[0].content, /Answer directly with no preamble/);
   assert.equal(stats.payload.top_p, 0.9);
   assert.ok(stats.payload.presence_penalty > 0, 'repetition is discouraged for a small model');
-  assert.equal(stats.payload.extra_body && stats.payload.extra_body.enable_thinking, false,
-    '5.2 fix: the GPU path disables Qwen 3\'s hidden thinking pass so it cannot eat the whole budget and return a blank answer');
+  assert.equal(stats.payload.extra_body, undefined,
+    'Qwen 2.5 has no hidden thinking pass; WebLLM would write an empty <think> block into its prompt as plain text, so the switch is not sent');
   assert.match(await A.chat('write ' + '界'.repeat(4000), []), /too long/);
   await A.chat('write another poem', []);
   assert.equal(stats.attempts, 1, 'already-loaded engine reused');
@@ -183,8 +187,8 @@ const GENERATIVE = 'write a poem about rain';
   assert.match(thought.A.trace().steps.join(' | '), /planned in one line before answering/);
   assert.match(thought.stats.payload.messages[0].content, /Begin your reply with exactly one line of the form: Thinking:/,
     'thinking:true re-enables the planning-line instruction');
-  assert.equal(thought.stats.payload.extra_body && thought.stats.payload.extra_body.enable_thinking, true,
-    'thinking:true also reaches the GPU runtime as extra_body.enable_thinking');
+  assert.equal(thought.stats.payload.extra_body, undefined,
+    'thinking:true adds the planning-line instruction, not a Qwen 3-only runtime switch, on the primary model');
 
   /* 3.3: a model that skips its planning line does not leave the panel empty —
      the pipeline's own plan (approach, evidence held, backend) stands in. */
@@ -328,8 +332,9 @@ const GENERATIVE = 'write a poem about rain';
     assert.ok([512, 1024].includes(w.stats.wasm.params.n_batch), 'Safari WASM batch size tuned for faster prefill (5.2: 512 desktop / 1024 mobile)');
     assert.ok(w.stats.wasm.params.n_threads >= 1 && w.stats.wasm.params.n_threads <= 4);
     assert.equal(w.stats.wasm.urls[0], w.A.WASM_SOURCES[0], 'weights come from the publisher, automatically');
-    assert.match(w.A.WASM_SOURCES[0], /Qwen3-0\.6B-Q4_0\.gguf/, 'Q4_0 prioritized first for fast Safari CPU SIMD decoding');
-    assert.match(w.stats.wasm.payload.messages[0].content, /\/no_think/, 'Safari CPU path appends /no_think when thinking is not requested');
+    assert.match(w.A.WASM_SOURCES[0], /qwen2\.5-0\.5b-instruct-q4_0\.gguf/, 'Qwen2.5 Q4_0 prioritized first for fast Safari CPU SIMD decoding');
+    assert.ok(!/no_think/.test(w.stats.wasm.payload.messages[0].content), 'Qwen 2.5 is not sent a Qwen 3-only /no_think token');
+    assert.equal(w.stats.wasm.payload.chat_template_kwargs, undefined, 'and no Qwen 3 template switch');
     assert.match(w.A.reply('who are you').text, /WebAssembly/);
     assert.match(w.A.trace().steps.join(' | '), /Safari\/CPU prompt compaction/, 'the trail notes Safari CPU prompt compaction');
     assert.match(w.A.trace().steps.join(' | '), /WebAssembly/, 'the trail says which runtime answered');
@@ -348,14 +353,26 @@ const GENERATIVE = 'write a poem about rain';
 
   /* Safari cache recovery: if a cached WASM model fails on first open (e.g.
      corrupted OPFS entry), it clears the stale cache and retries the same URL
-     with useCache: false before moving on. Also stale Qwen2.5 cache entries
-     are automatically invalidated. */
+     with useCache: false before moving on. A persisted warm start is trusted
+     only for the primary model: a leftover Qwen3 entry (a pre-downgrade build,
+     or a fallback load) is invalidated, so the page never claims a cache hit
+     for weights the browser does not hold. */
   const staleCache = await fixture({ noGPU: true });
   staleCache.storage.set('archiver.engine.v1', JSON.stringify({
-    model: 'Qwen2.5-0.5B-Instruct-q4f16_1-MLC', backend: 'wasm', f16: false, ts: Date.now()
+    model: 'Qwen3-0.6B-q4f16_1-MLC', backend: 'wasm', f16: false, ts: Date.now()
   }));
-  assert.equal(staleCache.A.wasReadyBefore(), false, 'obsolete Qwen2.5 cache entry is invalidated');
+  assert.equal(staleCache.A.wasReadyBefore(), false, 'obsolete Qwen3 cache entry is invalidated');
   assert.equal(staleCache.storage.has('archiver.engine.v1'), false, 'stale entry removed from localStorage');
+  const staleWasm = await fixture({ noGPU: true });
+  staleWasm.storage.set('archiver.engine.v1', JSON.stringify({
+    model: staleWasm.A.WASM_SOURCES[staleWasm.A.WASM_SOURCES.length - 1], backend: 'wasm', f16: false, ts: Date.now()
+  }));
+  assert.equal(staleWasm.A.wasReadyBefore(), false, 'a persisted Qwen3 GGUF warm start is invalidated too');
+  const currentCache = await fixture({ noGPU: true });
+  currentCache.storage.set('archiver.engine.v1', JSON.stringify({
+    model: currentCache.A.WASM_SOURCES[0], backend: 'wasm', f16: false, ts: Date.now()
+  }));
+  assert.equal(currentCache.A.wasReadyBefore(), true, 'a persisted Qwen2.5 warm start is kept');
   const corruptedCache = await fixture({ noGPU: true, cached: true, wasmFailFirst: true });
   assert.equal(corruptedCache.A.wasReadyBefore(), true);
   assert.equal(await corruptedCache.A.chat(GENERATIVE, []), 'A generated answer.');
@@ -395,6 +412,35 @@ const GENERATIVE = 'write a poem about rain';
 
   const f32 = await fixture({ f32: true });
   await f32.A.chat(GENERATIVE, []); assert.equal(f32.stats.id, models[1]);
+
+  /* ---------------- Qwen3-0.6B is a fallback, never the default ---------------- */
+  // WebGPU: only when the Qwen2.5 MLC artifacts are unavailable does Qwen3 load.
+  const gpuFallback = await fixture({ catalogue: fallbackModels });
+  assert.equal(await gpuFallback.A.chat(GENERATIVE, []), 'A generated answer.');
+  assert.equal(gpuFallback.stats.id, fallbackModels[0], 'Qwen3 loads when the Qwen2.5 artifacts are unavailable');
+  assert.equal(gpuFallback.stats.config.appConfig.model_list.length, 1, 'still no catalogue-wide fallback');
+  assert.match(gpuFallback.A.trace().steps.join(' | '), /fallback model \(Qwen3-0\.6B\)/, 'the trail says the fallback was used');
+  assert.equal(gpuFallback.stats.payload.extra_body && gpuFallback.stats.payload.extra_body.enable_thinking, false,
+    '5.2 fix kept for the fallback: Qwen 3\'s hidden thinking pass cannot eat the budget and return a blank answer');
+  const gpuFallbackThinks = await fixture({ catalogue: fallbackModels });
+  await gpuFallbackThinks.A.chat(GENERATIVE, [], { thinking: true });
+  assert.equal(gpuFallbackThinks.stats.payload.extra_body.enable_thinking, true, 'thinking:true still reaches the Qwen 3 fallback');
+  const gpuFallback32 = await fixture({ catalogue: fallbackModels, f32: true });
+  await gpuFallback32.A.chat(GENERATIVE, []); assert.equal(gpuFallback32.stats.id, fallbackModels[1]);
+  const gpuFallbackCache = gpuFallback.A.wasReadyBefore();
+  assert.equal(gpuFallbackCache, false, 'a fallback load does not leave a warm-start entry that would claim a cache hit');
+  // WebAssembly: three Qwen2.5 GGUFs are tried before the first Qwen3 one.
+  const wasmFallback = await fixture({ noGPU: true, wasmFail: /qwen2\.5/i });
+  assert.equal(await wasmFallback.A.chat(GENERATIVE, []), 'A generated answer.');
+  assert.equal(wasmFallback.stats.wasm.urls.length, 4, 'every Qwen2.5 source is tried before any Qwen3 source');
+  assert.ok(wasmFallback.stats.wasm.urls.slice(0, 3).every(u => /qwen2\.5/i.test(u)));
+  assert.match(wasmFallback.stats.wasm.loaded, /Qwen3-0\.6B-Q4_0\.gguf/, 'Qwen3 Q4_0 is the first fallback source');
+  assert.match(wasmFallback.stats.wasm.payload.messages[0].content, /\/no_think/, 'the Qwen 3 fallback keeps /no_think on the CPU path');
+  assert.equal(wasmFallback.stats.wasm.payload.chat_template_kwargs.enable_thinking, false, 'and its template switch');
+  assert.deepEqual(Array.from(wasmFallback.A.WASM_SOURCES.slice(0, 3)).map(u => u.split('/').pop()),
+    ['qwen2.5-0.5b-instruct-q4_0.gguf', 'qwen2.5-0.5b-instruct-q4_k_m.gguf', 'qwen2.5-0.5b-instruct-q8_0.gguf'], 'primary GGUF order: q4_0, q4_k_m, q8_0');
+  assert.equal(wasmFallback.A.WASM_SOURCES.length, 6);
+  assert.deepEqual(Array.from(wasmFallback.A.PREFERRED), models, 'PREFERRED is the Qwen2.5 pair');
   const safariAdapter = await fixture({ rejectAdapterHint: true });
   await safariAdapter.A.chat(GENERATIVE, []);
   assert.equal(safariAdapter.stats.adapterCalls, 2, 'Safari adapter is retried without powerPreference');
@@ -403,11 +449,20 @@ const GENERATIVE = 'write a poem about rain';
   const migratedPreference = await fixture({ disabled: true });
   assert.equal(migratedPreference.A.status().aiEnabled, true);
   assert.equal(migratedPreference.storage.get('archiver.ai.enabled'), '1', 'legacy instant-only preference is migrated');
-  const failure = await fixture({ failOnce: true });
+  // A primary-only catalogue: with nothing to fall back to, a failed load stays failed.
+  const failure = await fixture({ failOnce: true, catalogue: models });
   await failure.A.chat(GENERATIVE, []); await failure.A.chat('write another', []);
   assert.equal(failure.stats.attempts, 1, 'failure does not cause a download loop');
   assert.equal(failure.A.status().aiState, 'error');
   await failure.A.retryAI(); assert.equal(failure.A.mode(), 'neural');
+  // With the full catalogue the same failure is absorbed: the primary model's
+  // load fails once, the Qwen3 fallback loads, and the turn still answers.
+  const failover = await fixture({ failOnce: true });
+  assert.equal(await failover.A.chat(GENERATIVE, []), 'A generated answer.');
+  assert.equal(failover.stats.attempts, 2, 'one failed primary attempt, one fallback attempt');
+  assert.equal(failover.stats.id, fallbackModels[0], 'the fallback is the Qwen3 pair, never a larger model');
+  assert.match(failover.A.trace().steps.join(' | '), /WebGPU load failed for Archiver 5\.3: simulated network failure — trying fallback\./);
+  assert.equal(failover.A.mode(), 'neural');
 
   const pending = await fixture({ pending: true });
   const cancel = new AbortController();
