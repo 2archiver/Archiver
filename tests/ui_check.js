@@ -17,7 +17,7 @@ ctx.fetch = (...args) => {
   return ctx.__fetch(...args);
 };
 vm.createContext(ctx);
-for (const f of ['archiver-knowledge.js', 'archiver-comprehension.js', 'archiver-engine.js']) {
+for (const f of ['archiver-knowledge.js', 'archiver-comprehension.js', 'archiver-sha256.js', 'archiver-prep.js', 'archiver-engine.js']) {
   vm.runInContext(fs.readFileSync(path.join(root, f), 'utf8'), ctx, { filename: f });
 }
 module.exports = ctx.Archiver;
