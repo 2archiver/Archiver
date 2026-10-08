@@ -138,9 +138,13 @@
     },
     {
       id: 'ww2-hitler-death',
-      q: ['how did hitler die', 'when did hitler die', 'hitler death', 'when did hitler kill himself'],
-      a: 'Adolf Hitler died by suicide in his bunker beneath Berlin on 30 April 1945, as Soviet forces took the city. He had been Führer of Germany since 1933. Germany surrendered eight days later.',
-      tags: ['ww2', 'dates', 'people']
+      q: ['how did hitler die', 'when did hitler die', 'hitler death', 'when did hitler kill himself',
+          'how did adolf hitler die', 'when did adolf hitler die'],
+      a: 'Adolf Hitler died by suicide in his Berlin bunker on 30 April 1945 as Soviet forces advanced through the city. He had become chancellor in 1933 and combined the presidency and chancellorship as Führer in 1934. Germany surrendered in May 1945.',
+      tags: ['ww2', 'dates', 'people'],
+      entityId: 'hitler', subtopic: 'death',
+      src: ['https://encyclopedia.ushmm.org/content/en/article/adolf-hitler',
+            'https://encyclopedia.ushmm.org/content/en/article/adolf-hitler-key-dates']
     },
     {
       id: 'ww2-casualties',
@@ -1349,7 +1353,7 @@
     
     { id: 'archiver-who', q: ['who is archiver', 'what is archiver', 'who is the archiver', 'tell me about archiver',
           'what is the archiver', 'who made archiver', 'what does archiver do', 'archiver assistant'],
-      a: 'I am Archiver 5.3: local knowledge and text tools, with automatically managed on-device language generation (powered by Qwen 2.5 0.5B on WebGPU or WebAssembly) and live WEB search. I do not have consciousness. Chats and memory can sync to the app server; taught cards are stored in the browser. Ask who are you for current runtime capabilities.',
+      a: 'I am Archiver 5.5: local knowledge and text tools, with automatically managed on-device language generation. The model that writes generated answers is an open Qwen model (Qwen 2.5 0.5B on WebGPU or WebAssembly); Archiver did not train it. Live WEB search is available when you ask. I do not have consciousness. Chats and memory can sync to the app server; taught cards are stored in the browser. Ask who are you for current runtime capabilities.',
       tags: ['archiver', 'self', 'identity'] },
     { id: 'archiver-compare-light', q: ['compare yourself to similar small models', 'compare archiver to tinyllama', 'compare archiver to phi-3', 'compare archiver to gemma', 'how do you compare to small models', 'small models on render free'], a: 'Archiver 5.3 uses instant retrieval and automatically managed browser-side model inference (Qwen 2.5 0.5B). Small local models have narrower capabilities than large hosted assistants. Fitting a model depends on actual available RAM, GPU memory and runtime overhead, not just its download size. Do not assume a model will fit a free hosting tier.', tags: ['render','archiver'] },
     { id: 'light-tinyllama', q: ['what is tinyllama', 'tinyllama 1.1b', 'tiny llama model'], a: 'TinyLlama 1.1B is a small language-model family. Quantization reduces weight storage, but runtime memory also includes working buffers and the context cache. Do not assume it fits a free web-service instance or that swap is available. Archiver instead keeps inference in the browser.', tags: ['model','render'] },
@@ -3459,10 +3463,67 @@ const MORE34 = [
     }
   ];
 
+  /* 5.5 — entity cards. Each carries an entityId (the person) and a subtopic
+     (what the question is about), so retrieval can answer \"Mishima\" with the
+     overview, \"Mishima books\" with the works, and \"when did Hitler die\" with the
+     death card. `aliases` are exact-match names; they also appear in q so the
+     fuzzy index still finds them. Sources are stored references, not live fetches. */
+  const MORE55 = [
+    {
+      id: 'lit-mishima-overview',
+      q: ['mishima', 'yukio mishima', 'mishima yukio', 'kimitake hiraoka', 'who was mishima',
+          'tell me about yukio mishima'],
+      aliases: ['mishima', 'yukio mishima', 'mishima yukio', 'kimitake hiraoka', 'who was mishima', 'tell me about yukio mishima'],
+      a: 'Yukio Mishima (1925–1970), born Kimitake Hiraoka, was a Japanese novelist, playwright and essayist. His works include Confessions of a Mask, The Temple of the Golden Pavilion and The Sea of Fertility tetralogy. He is a different author from Haruki Murakami.',
+      tags: ['literature', 'japan', 'people'],
+      entityId: 'yukio-mishima', subtopic: 'overview',
+      src: ['https://www.penguinrandomhouse.com/authors/20849/yukio-mishima/',
+            'https://libcat.weber.edu/cgi-bin/koha/opac-authoritiesdetail.pl?authid=496804']
+    },
+    {
+      id: 'lit-mishima-works',
+      q: ['mishima books', 'yukio mishima novels', 'what did mishima write', 'sea of fertility books'],
+      aliases: ['mishima books', 'yukio mishima novels', 'what did mishima write', 'sea of fertility books'],
+      a: 'Mishima\'s fiction includes Confessions of a Mask, The Temple of the Golden Pavilion and The Sailor Who Fell from Grace with the Sea. The Sea of Fertility comprises Spring Snow, Runaway Horses, The Temple of Dawn and The Decay of the Angel.',
+      tags: ['literature', 'japan'],
+      entityId: 'yukio-mishima', subtopic: 'works',
+      src: ['https://www.penguinrandomhouse.com/the-read-down/yukio-mishima-books/']
+    },
+    {
+      id: 'lit-mishima-dates',
+      q: ['when was mishima born', 'when did mishima die', 'mishima birth and death', 'mishima real name'],
+      aliases: ['when was mishima born', 'when did mishima die', 'mishima birth and death', 'mishima real name'],
+      a: 'Yukio Mishima was born on 14 January 1925 and died on 25 November 1970. His birth name was Kimitake Hiraoka; Yukio Mishima was his pen name.',
+      tags: ['literature', 'japan', 'dates'],
+      entityId: 'yukio-mishima', subtopic: 'dates',
+      src: ['https://libcat.weber.edu/cgi-bin/koha/opac-authoritiesdetail.pl?authid=496804']
+    },
+    {
+      id: 'lit-mishima-politics-1970',
+      q: ['mishima politics', 'tatenokai', 'shield society', 'mishima incident', 'why did mishima die'],
+      aliases: ['mishima politics', 'tatenokai', 'shield society', 'mishima incident', 'why did mishima die'],
+      a: 'Mishima advocated emperor-centred Japanese nationalism and founded the Tatenokai (Shield Society), a private militia, in 1968. On 25 November 1970, he and four members took a military commandant hostage in Tokyo and unsuccessfully tried to rally soldiers to their cause. Mishima then died by seppuku, a form of ritual suicide. Interpretations of his motives differ.',
+      tags: ['literature', 'japan', 'history'],
+      entityId: 'yukio-mishima', subtopic: 'politics',
+      src: ['https://en.wikipedia.org/wiki/Yukio_Mishima',
+            'https://www.penguinrandomhouse.com/authors/20849/yukio-mishima/']
+    },
+    {
+      id: 'hist-hitler-overview',
+      q: ['hitler', 'adolf hitler', 'who was hitler', 'tell me about hitler', 'hitler biography'],
+      aliases: ['hitler', 'adolf hitler', 'who was hitler', 'tell me about hitler', 'hitler biography'],
+      a: 'Adolf Hitler (1889–1945) was the Austrian-born leader of the Nazi Party and dictator of Germany. Appointed chancellor on 30 January 1933, he consolidated power and combined the presidency and chancellorship in 1934. His regime dismantled democracy, pursued territorial expansion and perpetrated the Holocaust, murdering six million Jews and millions of other victims. Germany\'s invasion of Poland in 1939 began the Second World War in Europe. Hitler died by suicide in Berlin on 30 April 1945.',
+      tags: ['ww2', 'people', 'history'],
+      entityId: 'hitler', subtopic: 'overview',
+      src: ['https://encyclopedia.ushmm.org/content/en/article/adolf-hitler',
+            'https://encyclopedia.ushmm.org/content/en/article/adolf-hitler-key-dates']
+    }
+  ];
+
   window.ARCHIVER_KB = {
-    version: '5.3',
-    generated: '2026-09-29',
-    cards: [...WW2, ...FIGURES, ...TECH, ...GENERAL, ...WORDS, ...SCIENCE, ...WORLD, ...LANGUAGE, ...EVERYDAY, ...MORE, ...MORE24, ...HIST25, ...LIGHT, ...OFFLINE31, ...MORE34, ...MORE43, ...SOPRANOS, ...MORE53],
+    version: '5.5',
+    generated: '2026-10-08',
+    cards: [...WW2, ...FIGURES, ...TECH, ...GENERAL, ...WORDS, ...SCIENCE, ...WORLD, ...LANGUAGE, ...EVERYDAY, ...MORE, ...MORE24, ...HIST25, ...LIGHT, ...OFFLINE31, ...MORE34, ...MORE43, ...SOPRANOS, ...MORE53, ...MORE55],
     note: 'Grounded offline corpus. Charges are not convictions; contested history is not a "side".'
   };
 })();

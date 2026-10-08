@@ -1,6 +1,6 @@
 """LLM providers for Archiver.
 
-Archiver 5.4 runs an open Qwen model in the visitor's browser (WebGPU / WebAssembly).
+Archiver 5.5 runs an open Qwen model in the visitor's browser (WebGPU / WebAssembly).
 Server-side `llm.py` supports:
   * mock    — offline echo provider used for tests and for demoing the
               memory pipeline without an API key.

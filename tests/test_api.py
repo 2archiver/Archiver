@@ -15,7 +15,7 @@ def client(tmp_path, monkeypatch):
 
 
 def test_release_assets(client):
-    assert client.get("/api/health").json()["version"] == "5.3"
+    assert client.get("/api/health").json()["version"] == "5.5"
     for asset in ("archiver-comprehension.js", "archiver-engine.js", "archiver-worker.js",
                   "archiver-viewport.js", "archiver-download.js"):
         assert client.get("/static/" + asset).status_code == 200
@@ -23,7 +23,10 @@ def test_release_assets(client):
     assert 'maximum-scale=1' not in page
     assert 'id="autoAI"' not in page
     assert 'id="retryModel"' in page
-    assert 'Archiver 5.3 is always enabled' in page
+    # 5.5: the page names the app and carries the identity disclosure hook the
+    # engine paints (no model is claimed until one is actually running).
+    assert 'Archiver 5.5' in page
+    assert 'id="disclosureModel"' in page
     # 5.1: settings apply as they change, so there is nothing to press.
     assert 'id="saveSettings"' not in page
     assert 'Apply settings' not in page
@@ -55,12 +58,15 @@ def test_both_inference_runtimes_are_shipped(client):
         assert gzipped.headers["vary"] == "Accept-Encoding"
         assert gzipped.headers.get("content-encoding") == "gzip", name
         assert len(gzipped.content) == len(plain.content), name
-    # The engine must point at exactly the assets this server ships — via
-    # ABS(), the host-agnostic resolver that rebases under a project-pages
-    # subpath and returns these same /static/… URLs from the app root.
+    # The engine must point at exactly the assets this server ships. The URLs
+    # live in the prep controller (archiver-prep.js), which the engine reads
+    # through ABS(), the host-agnostic resolver that rebases under a project-
+    # pages subpath and returns these same /static/… URLs from the app root.
     engine = client.get("/static/archiver-engine.js").text
+    prep = client.get("/static/archiver-prep.js").text
+    assert "ABS(Prep.RUNTIME.webllm.file)" in engine and "ABS(Prep.RUNTIME.wllama.file)" in engine
     for name in ("web-llm-0.2.80.js", "wllama-3.6.1.js", "wllama-3.6.1.wasm"):
-        assert f"ABS('static/vendor/{name}')" in engine, name
+        assert f"static/vendor/{name}" in prep, name
     assert client.get("/static/vendor/does-not-exist.js").status_code == 404
     # Licenses and notes in the same directory still come from the static mount.
     assert client.get("/static/vendor/README.md").status_code == 200
@@ -100,7 +106,7 @@ def test_default_migration_preserves_custom_persona(client):
     store.set_setting("model", "Archiver 2.5 (in-browser)", uid)
     store.set_setting("persona", "My custom persona", uid)
     main.apply_defaults(store, uid)
-    assert store.get_setting("model", user_id=uid) == "Archiver 5.3 (in-browser)"
+    assert store.get_setting("model", user_id=uid) == "Qwen 2.5 0.5B Instruct (in-browser)"
     assert store.get_setting("persona", user_id=uid) == "My custom persona"
     # 4.0 retired persona upgrades to 5.
     store.set_setting("persona", main.RETIRED_PERSONAS[0], uid)
@@ -119,7 +125,7 @@ def test_restore_defaults_replaces_custom_settings(client):
     assert body["has_api_key"] is False
     assert "api_key" not in main.app.state.store.settings(secret=True, user_id=client.cookies.get(main.COOKIE_NAME))
     # Default model in settings is now 5.
-    assert body["model"] == "Archiver 5.3 (in-browser)"
+    assert body["model"] == "Qwen 2.5 0.5B Instruct (in-browser)"
 
 
 def test_retry_removes_trailing_turn_for_replacement(client):
@@ -202,7 +208,7 @@ def test_health_performs_no_outbound_fetch(client, monkeypatch):
     response = client.get("/api/health")
     assert response.status_code == 200
     assert response.json()["ok"] is True
-    assert response.json()["version"] == "5.3"
+    assert response.json()["version"] == "5.5"
     assert calls == []
 
 
@@ -257,7 +263,8 @@ def test_free_render_deployment_has_no_model_server():
     engine = (root / "web/archiver-engine.js").read_text()
     worker = (root / "web/archiver-worker.js").read_text()
     assert "esm.run" not in engine + worker
-    assert "vendor/web-llm-0.2.80.js" in engine and "vendor/web-llm-0.2.80.js" in worker
+    prep = (root / "web/archiver-prep.js").read_text()
+    assert "vendor/web-llm-0.2.80.js" in prep and "vendor/web-llm-0.2.80.js" in worker
     # 4.1: client-side search timeout is 75 s, not 12 s.
     assert "SEARCH_TIMEOUT_MS = 75000" in engine
 
@@ -311,8 +318,8 @@ def test_persona_mentions_concurrent_search_and_unverified_fallback():
 def test_settings_default_mentions_local_provider_41(client):
     """Settings endpoint returns the Archiver 5 default model label and excludes anthropic."""
     body = client.get("/api/settings").json()
-    assert body["model"] == "Archiver 5.3 (in-browser)"
-    assert body["providers"]["local"]["default_model"] == "Archiver 5.3 (in-browser)"
+    assert body["model"] == "Qwen 2.5 0.5B Instruct (in-browser)"
+    assert body["providers"]["local"]["default_model"] == "Qwen 2.5 0.5B Instruct (in-browser)"
     assert "anthropic" not in body["providers"]
 
 
@@ -325,7 +332,7 @@ def test_docs_match_the_release():
     readme = (here / "README.md").read_text(encoding="utf-8")
     upgrade = (here / "docs" / "MODEL-UPGRADE.md").read_text(encoding="utf-8")
 
-    assert "version: '5.3'" in kb
+    assert "version: '5.5'" in kb
     # Cards are checked by id so a dropped card fails here rather than
     # silently shrinking the corpus. The total itself is asserted in
     # tests/smoke.js, which loads the corpus rather than grepping it.
@@ -337,13 +344,22 @@ def test_docs_match_the_release():
                     "space-jwst", "space-darkmatter", "climate-change", "climate-el-nino",
                     "tech-vectordb", "health-mrna", "econ-inflation", "hist-turing"):
         assert f"id: '{card_id}'" in kb, card_id
-    assert "...MORE53]" in kb, 'the new cards are in the shipped corpus'
+    assert "...MORE53" in kb, "the 5.3 cards are in the shipped corpus"
+    # The 5.5 expansion: Mishima and the corrected Hitler overview, same rule.
+    for card_id in ("lit-mishima-overview", "lit-mishima-works", "lit-mishima-dates",
+                    "lit-mishima-politics-1970", "hist-hitler-overview", "ww2-hitler-death"):
+        assert f"id: '{card_id}'" in kb, card_id
+    assert "...MORE55]" in kb, 'the 5.5 cards are in the shipped corpus'
 
     # The newest release must lead the version entries; a deployment section
     # (Pages) may sit above it, so "startswith" becomes "above 5.2".
-    assert "## 5.3 — 2026-09-29" in changelog.split("## 5.2 —", 1)[0], changelog[:40]
-    assert "1,556" in changelog
-    assert readme.startswith("# Archiver 5.3")
-    assert "Archiver 5.3 — our own model" in readme
-    assert "1,556 cards" in readme
-    assert "Archiver 5.3" in upgrade
+    assert "## 5.5 — 2026-10-08" in changelog, changelog[:40]
+    assert changelog.index("## 5.5 —") < changelog.index("## 5.3 —"), 'newest release leads'
+    assert "1,561" in changelog
+    assert readme.startswith("# Archiver 5.5")
+    # Current claims never say Archiver trained its own model. Historical
+    # entries keep their wording; the README is the current statement.
+    current = readme.split("## New in 5.3", 1)[0]
+    assert "our own model" not in current.lower(), "the current README section"
+    assert "1,561 cards" in readme
+    assert "Archiver 5.5" in upgrade

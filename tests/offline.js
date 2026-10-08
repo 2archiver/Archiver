@@ -4,8 +4,8 @@ const A = require('./ui_check');
 let checks = 0;
 function check(ok, message) { assert.ok(ok, message); checks++; }
 (async () => {
-  check(A.version === '5.4' && A.status().version === '5.4' && A.name === 'Archiver 5.4', 'runtime version');
-  check(A.__ctx.ARCHIVER_KB.version === '5.3', 'corpus version');
+  check(A.version === '5.5' && A.status().version === '5.5' && A.name === 'Archiver 5.5', 'runtime version');
+  check(A.__ctx.ARCHIVER_KB.version === '5.5', 'corpus version');
   for (const [query, expected] of [
     ['2 + 3 * 4', '14'], ['(2 + 3) * 4', '20'], ['2^3^2', '512'],
     ['-2^2', '-4'], ['(-2)^2', '4'], ['3 * -2', '-6'], ['2^-2', '0.25'],
@@ -36,7 +36,7 @@ function check(ok, message) { assert.ok(ok, message); checks++; }
   A.reply('what was the battle of stalingrad');
   A.reset(); check(!/stalingrad/i.test(A.reply('why did it happen').text), 'reset clears subject');
   check(/not consciousness|not.*conscious/.test(A.reply('are you self aware').text), 'honest awareness');
-  check(/not a running language model/.test(A.reply('who are you').text), 'honest unloaded status');
+  check(/No model is loaded/.test(A.reply('who are you').text) && !/Qwen 2\.5/.test(A.reply('who are you').text), 'honest unloaded status: no model is named as running');
   check(A.reply('cards').text.includes(String(A.count())), 'dynamic corpus count');
   check(/server/.test(A.reply('your memory').text), 'accurate storage disclosure');
 

@@ -1,4 +1,20 @@
-# Browser support matrix (Archiver 4.3)
+# Browser support matrix (Archiver 5.5)
+
+## 5.5 limits, stated plainly
+
+- **Model identity is per runtime.** The status line says which runtime is
+  running: `GPU (WebGPU)` or `CPU (WebAssembly)`. It names the model that is
+  actually loaded, and says `No model loaded.` before a model starts.
+- **The CPU runtime needs cross-origin isolation.** Without
+  `SharedArrayBuffer` (no COOP/COEP, or the Pages bootstrap has not run yet),
+  the CPU runtime is not started and the reason says so. The CPU path is not
+  claimed to work without isolation.
+- **Safari.** WebGPU availability varies by iOS and macOS version. The CPU path
+  depends on the same isolation rules. Neither was tested on a real iPhone in
+  5.5. The limits here are documented, not measured.
+- **Weight downloads.** The first generative request downloads the model. Real
+  weight downloads were not run in the 5.5 test environment.
+
 
 Archiver picks a runtime per device at the moment a request first needs the
 model. It does not start a model worker on page open in Safari. On other browsers,
