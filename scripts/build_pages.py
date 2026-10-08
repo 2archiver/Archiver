@@ -47,33 +47,51 @@ WEB = ROOT / "web"
 ROOT_FILES = ("index.html", "manifest.json", "favicon.svg", "apple-touch-icon.png")
 
 # Injected into <head> of the built index.html only. Kept deliberately small;
-# the worker it registers ships as web/archiver-coi-sw.js.
+# the worker it registers ships as web/archiver-coi-sw.js. Contract (tested by
+# tests/pages.js in a VM with fake navigator/sessionStorage/location):
+#   * an isolated page (or one that cannot be isolated) never registers or reloads;
+#   * the service worker is registered at the app scope, then control is awaited
+#     with a bounded timeout (controllerchange, or an existing controller);
+#   * at most ONE reload per tab, of the EXACT current URL (query and hash kept),
+#     guarded by sessionStorage written BEFORE the reload;
+#   * if sessionStorage is denied, nothing is reloaded and the state says so;
+#   * window.__archiverIsolation records what happened for the app's status line.
 COI_BOOTSTRAP = """<!-- pages-bootstrap: added by scripts/build_pages.py. GitHub Pages cannot send
-     COOP/COEP response headers, and the WebAssembly runtime needs a
-     cross-origin-isolated document. The service worker below synthesizes the
-     headers for documents and worker scripts; the one-time reload then lands
-     on an isolated page. sessionStorage makes the reload exactly-once, and a
-     page that is already isolated (or a browser that grants SharedArrayBuffer
-     on its own) never reloads. -->
+     COOP/COEP headers, and the WebAssembly runtime needs a cross-origin-isolated
+     document. The service worker synthesizes those headers; this script reloads
+     the current URL at most once per tab so the reload lands on an isolated page. -->
 <script>
 (function () {
+  var KEY = 'archiver-coi';
+  var WAIT_MS = 6000;
+  function set(state, reason) {
+    try { window.__archiverIsolation = { state: state, reason: reason }; } catch (_) {}
+  }
   try {
-    if (window.crossOriginIsolated || typeof SharedArrayBuffer !== 'undefined') return;
-    if (!('serviceWorker' in navigator)) return;
-    if (sessionStorage.getItem('archiver-coi') === 'reloaded') return;
-    sessionStorage.setItem('archiver-coi', 'reloaded');
+    if (window.crossOriginIsolated === true) { set('isolated', 'native'); return; }
+    if (!window.isSecureContext || !('serviceWorker' in navigator)) { set('unavailable', 'no-service-worker'); return; }
+    var store = null;
+    try { store = window.sessionStorage; store.getItem(KEY); } catch (_) { store = null; }
+    if (!store) { set('unavailable', 'storage-denied'); return; }
+    if (store.getItem(KEY) === 'reloaded') { set('unavailable', 'not-isolated-after-reload'); return; }
     var scope = new URL('.', document.baseURI);
-    navigator.serviceWorker
-      .register(new URL('archiver-coi-sw.js', scope).href, { scope: scope.pathname })
-      .then(function () {
-        return Promise.race([
-          navigator.serviceWorker.ready,
-          new Promise(function (res) { setTimeout(res, 2000); })
-        ]);
-      })
-      .then(function () { location.replace(scope.href); })
-      .catch(function () {});
-  } catch (_) {}
+    var swUrl = new URL('archiver-coi-sw.js', scope).href;
+    var reloaded = false;
+    var controlled = new Promise(function (resolve) {
+      if (navigator.serviceWorker.controller) { resolve(true); return; }
+      navigator.serviceWorker.addEventListener('controllerchange', function () { resolve(true); });
+    });
+    var bounded = new Promise(function (resolve) { setTimeout(function () { resolve(false); }, WAIT_MS); });
+    set('reloading', 'service-worker');
+    navigator.serviceWorker.register(swUrl, { scope: scope.pathname }).then(function () {
+      return Promise.race([controlled, bounded]);
+    }).then(function () {
+      if (reloaded) return;
+      reloaded = true;
+      try { store.setItem(KEY, 'reloaded'); } catch (_) { set('unavailable', 'storage-denied'); return; }
+      location.reload();
+    }, function () { set('unavailable', 'sw-register-failed'); });
+  } catch (_) { set('unavailable', 'bootstrap-error'); }
 })();
 </script>
 """
@@ -148,6 +166,8 @@ def main() -> int:
     if anchor not in idx:
         fail("index.html head anchor not found")
     idx = idx.replace(anchor, COI_BOOTSTRAP + anchor, 1)
+    if idx.count("pages-bootstrap:") != 1:
+        fail("the Pages bootstrap must be injected exactly once")
     idx_path.write_text(idx, encoding="utf-8")
 
     # ---- verification ----------------------------------------------------
@@ -162,13 +182,15 @@ def main() -> int:
             fail(f"refusing to publish {name} — the Pages site is the static frontend only")
 
     required = ["index.html", "manifest.json", "favicon.svg", "apple-touch-icon.png",
-                "archiver-coi-sw.js", "static/archiver-engine.js", "static/archiver-worker.js"]
+                "archiver-coi-sw.js", "static/archiver-engine.js", "static/archiver-worker.js",
+                "static/archiver-prep.js", "static/archiver-sha256.js", "static/archiver-hash-worker.js"]
     for name in required:
         if not (out / name).is_file():
             fail(f"missing {name} in built site")
 
     vendor = ["static/vendor/web-llm-0.2.80.js", "static/vendor/wllama-3.6.1.js",
-              "static/vendor/wllama-3.6.1.wasm"]
+              "static/vendor/wllama-3.6.1.wasm", "static/vendor/wllama-compat-3.6.1.js",
+              "static/vendor/wllama-compat-3.6.1.wasm"]
     for name in vendor:
         if not (out / name).is_file():
             if args.allow_absent:

@@ -116,31 +116,36 @@
     const w = wasmInfo();
     const st = await storageInfo();
     const engine = safe(() => window.Archiver && window.Archiver.status && window.Archiver.status(), null) || {};
-    let prev = null;
-    try { prev = JSON.parse(localStorage.getItem('archiver.engine.v1') || 'null'); } catch (_) {}
+    const prep = engine.prep || {};
     const rows = [];
     const add = (ok, label, detail) => rows.push({ ok, label, detail });
     add(true, 'Browser', b.name + (b.ios ? ' · iOS' : ''));
     add(navigator.onLine !== false, 'Connection', navigator.onLine === false ? 'Offline' : 'Online');
+    add(window.crossOriginIsolated === true ? true : false, 'Cross-origin isolation',
+      window.crossOriginIsolated === true ? 'On — shared memory is available to the CPU runtime'
+        : 'Off — the CPU runtime needs it; ' + ((window.__archiverIsolation && window.__archiverIsolation.reason) || 'reload once'));
     const ready = engine.aiState === 'ready';
-    add(ready ? true : (engine.aiReason ? false : null), 'Model',
-      ready ? 'Loaded and ready' : (engine.aiState === 'loading' ? (engine.progressText || 'Loading automatically') : (engine.aiReason || engine.progressText || 'Not loaded yet — loads automatically')));
-    add(gpu.available ? true : null, 'GPU (WebGPU)', gpu.available ? ((gpu.vendor || 'Available') + (gpu.shaderF16 ? ' · f16' : '')) : 'Not available — using CPU instead (normal on Safari)');
+    const failed = prep.phase === 'failed';
+    add(ready ? true : (failed ? false : null), 'On-device model',
+      ready ? 'Ready · ' + (engine.modelPretty || 'open model') + ' · ' + (engine.backend === 'wasm' ? 'CPU runtime' : 'GPU runtime')
+        : (prep.reason || (prep.error && prep.error.message) || ('Phase: ' + (prep.phase || 'idle'))));
+    add(gpu.available ? true : null, 'GPU (WebGPU)', gpu.available ? ((gpu.vendor || 'Available') + (gpu.shaderF16 ? ' · f16' : '')) : 'Not available — the CPU runtime is used instead (normal on Safari)');
     add(w.available && w.compiles ? true : false, 'CPU runtime (WebAssembly)', w.available ? ('SIMD ' + (w.simd ? 'yes' : 'no') + ' · threads ' + (w.threads ? 'yes' : 'no')) : 'Missing');
-    add(st.caches.length || st.opfs.length ? true : null, 'Model cache', st.caches.length || st.opfs.length ? ('Cached · ' + st.usage + ' used of ' + st.quota) : 'Empty — first load downloads ~300–400 MB');
-    add(prev ? true : null, 'Last runtime', prev ? (prev.backend === 'wasm' ? 'CPU' : 'GPU') + ' · ' + new Date(prev.ts).toLocaleString() : 'None yet');
-    add(server ? true : null, 'Server', server ? ('Reachable' + (lastReset ? ' · storage reset recently (your browser copy is safe)' : '')) : 'Not checked yet');
+    add(prep.cachedAt ? true : null, 'Model files',
+      prep.cachedAt ? ('Stored · verified: ' + (prep.verified || 'size')) : 'Not stored yet. The model downloads once when it is prepared, and its size is shown when that starts.');
+    add(prep.durable === false ? false : null, 'Browser storage',
+      prep.durable === false ? 'Not durable here: the model lasts for this page session only'
+        : 'Durable · persistence ' + (prep.persist || 'unknown') + (prep.persist === 'denied' ? ' (the browser may clear it when space is low)' : ''));
+    add(server ? true : null, 'Server', server ? ('Reachable' + (lastReset ? ' · storage reset recently (your browser copy is safe)' : '')) : 'Not reachable from this copy of the site');
     return rows;
   }
 
   async function report() {
     const b = browserName();
     const engine = safe(() => window.Archiver && window.Archiver.status && window.Archiver.status(), null);
-    let persisted = null;
-    try { persisted = JSON.parse(localStorage.getItem('archiver.engine.v1') || 'null'); } catch (_) {}
     const lines = [];
     const push = (k, v) => lines.push(k + ': ' + (typeof v === 'object' ? JSON.stringify(v) : v));
-    push('Archiver', (window.Archiver && window.Archiver.version) || '5');
+    push('Archiver', (window.Archiver && window.Archiver.version) || 'unknown');
     push('Browser', b.name + (b.ios ? ' (iOS/iPadOS WebKit)' : ''));
     push('User agent', b.ua);
     push('Secure context', window.isSecureContext);
@@ -151,20 +156,43 @@
     push('WebGPU', await gpuInfo());
     push('WebAssembly', wasmInfo());
     push('Storage', await storageInfo());
-    push('Last runtime used', persisted || 'none yet');
+    /* The genuine identity of what runs: pinned runtime versions, the model and its
+       revision, and the preparation state that the controller reports. */
+    let info = null;
+    try { info = window.Archiver && window.Archiver.diagnostics ? await window.Archiver.diagnostics() : null; } catch (_) {}
+    if (info) {
+      push('Runtime', info.runtime);
+      push('Preparation', info.preparation);
+      push('Model files', (info.storage && info.storage.entries) || []);
+      push('Manifest', (info.storage && info.storage.manifest) || {});
+    }
     if (engine) push('Engine', engine);
     if (lastReset) push('Server storage reset seen', lastReset);
     return lines.join('\n');
   }
 
-  async function clearModels() {
+  /* Two separate actions, deliberately. Model files are a cache: removing them costs a
+     download later and nothing else. Chats are the reader's own: they are removed only
+     by this explicit action, and never as a side effect of clearing the model. The
+     settings are not touched by either. */
+  async function clearModelFiles() {
+    if (window.Archiver && typeof window.Archiver.clearModelFiles === 'function') {
+      await window.Archiver.clearModelFiles();
+      return true;
+    }
+    return false;
+  }
+
+  function clearLocalChats() {
     let removed = 0;
-    try { for (const n of await caches.keys()) { await caches.delete(n); removed++; } } catch (_) {}
     try {
-      const root = await navigator.storage.getDirectory();
-      for await (const [name] of root.entries()) { await root.removeEntry(name, { recursive: true }); removed++; }
+      for (const key of Object.keys(localStorage)) {
+        if (/^archiver_(sessions_v3|msgs_v3_.+|active_sid_v3)$/.test(key)) {
+          localStorage.removeItem(key);
+          removed++;
+        }
+      }
     } catch (_) {}
-    try { localStorage.removeItem('archiver.engine.v1'); } catch (_) {}
     return removed;
   }
 
@@ -195,9 +223,10 @@
       'font-family:var(--mono,monospace);line-height:1.6';
     const row = el('div'); row.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap';
     const copy = el('button', { type: 'button', class: 'btn sm' }, 'Copy report');
-    const clear = el('button', { type: 'button', class: 'btn sm' }, 'Clear cached model weights');
+    const clear = el('button', { type: 'button', class: 'btn sm' }, 'Remove model files');
+    const forget = el('button', { type: 'button', class: 'btn sm' }, 'Forget chats in this browser');
     const close = el('button', { type: 'button', class: 'btn sm' }, 'Close');
-    row.append(copy, clear, close);
+    row.append(copy, clear, forget, close);
     const list = el('div', { role: 'list' });
     list.style.cssText = 'display:grid;gap:6px';
     const det = el('details');
@@ -226,9 +255,16 @@
     panel.addEventListener('keydown', (e) => { if (e.key === 'Escape') done(); });
     copy.onclick = async () => { try { await navigator.clipboard.writeText(pre.textContent); copy.textContent = 'Copied'; } catch (_) { copy.textContent = 'Select the text and copy'; } };
     clear.onclick = async () => {
-      if (!confirm('Delete downloaded model weights from this browser? They will download again next time.')) return;
-      const n = await clearModels();
-      clear.textContent = 'Cleared ' + n + ' store' + (n === 1 ? '' : 's');
+      if (!confirm('Remove the downloaded model files from this browser? Chats and settings are kept. The model downloads again when it is needed.')) return;
+      const ok = await clearModelFiles();
+      clear.textContent = ok ? 'Model files removed' : 'Nothing to remove';
+      pre.textContent = await report();
+      paint();
+    };
+    forget.onclick = async () => {
+      if (!confirm('Delete the chats saved in this browser? Chats synced to the Archiver server are not affected. Settings are kept.')) return;
+      const n = clearLocalChats();
+      forget.textContent = 'Forgot ' + n + ' item' + (n === 1 ? '' : 's');
       pre.textContent = await report();
       paint();
     };
@@ -279,6 +315,6 @@
     setTimeout(checkServerReset, 1500);
   }
 
-  window.ArchiverDiag = { open, report, clearModels };
+  window.ArchiverDiag = { open, report, clearModelFiles, clearLocalChats };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wire); else wire();
 })();

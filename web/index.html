@@ -19,7 +19,7 @@ try {
 <meta name="apple-mobile-web-app-title" content="Archiver">
 <meta name="format-detection" content="telephone=no">
 <meta name="mobile-web-app-capable" content="yes">
-<title>Archiver 5.3 — Your everyday assistant</title>
+<title>Archiver 5.4 — Your everyday assistant</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
@@ -1140,6 +1140,14 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
 .composer-count { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); margin-left: auto; margin-right: 8px; }
 .composer-count.warn { color: var(--warn); font-weight: 600; }
 .engine-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.engine-facts { margin: 8px 0 0; display: grid; gap: 4px; font-size: 12px; }
+.engine-facts div { display: grid; grid-template-columns: 72px 1fr; gap: 8px; }
+.engine-facts dt { color: var(--ink-3); }
+.engine-facts dd { margin: 0; color: var(--ink-2); min-width: 0; overflow-wrap: anywhere; }
+.engine-toggle { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-2); margin-top: 8px; }
+.update-banner { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; padding: 8px 10px; border-radius: 8px; background: var(--surface-3); font-size: 12.5px; }
+.update-banner[hidden] { display: none; }
+.ai-confirmation.warn { border-color: var(--warn, var(--accent)); }
 </style>
 </head>
 <body>
@@ -1168,7 +1176,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
           </svg>
         </span>
       </span>
-      <span class="side-label">Archiver <span class="version-tag">5.3</span></span>
+      <span class="side-label">Archiver <span class="version-tag">5.4</span></span>
       <button class="side-x" id="sideClose" aria-label="Close menu" title="Close">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
@@ -1225,7 +1233,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
               <circle cx="32" cy="32" r="4" fill="#FFFFFF"/>
             </svg>
           </span>
-          <span class="model-name" id="modelLabel">Archiver <span class="version-tag">5.3</span></span>
+          <span class="model-name" id="modelLabel">Archiver <span class="version-tag">5.4</span></span>
           <div class="status-pill" id="topStatusPill" style="display:none !important;"><span class="dot"></span><span id="modelText">ready</span></div>
         </div>
       </div>
@@ -1246,10 +1254,10 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
         </div>
         <div class="start-greeting">Make sense of anything.</div>
         <div class="start-sub">A quiet place to ask, explore, and keep what matters.</div>
-        <p class="ai-disclosure">Private browser-based answers powered by <b>Archiver 5.3</b> — our own on-device model. Zero third-party cloud AI providers. Live web search is optional; chats may sync to this app’s server. Runs on WebGPU or a Safari-optimised CPU runtime.</p>
+        <p class="ai-disclosure">Private answers from an open model, <b>Qwen 2.5 0.5B Instruct</b>, running in this browser. Archiver did not train that model. No third-party AI provider receives your prompts. Web search and chat sync need the Archiver server; the static GitHub Pages copy cannot run them. Runs on WebGPU, or on the CPU through WebAssembly.</p>
         <div class="start-features">
           <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> No model-provider key</span>
-          <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="12 2 21 7 21 17 12 22 3 17 3 7"/></svg> Archiver 5.3 — our own model</span>
+          <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="12 2 21 7 21 17 12 22 3 17 3 7"/></svg> Open model, in your browser</span>
           <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Live web when you want it</span>
           <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg> Optimised for Safari</span>
         </div>
@@ -1297,25 +1305,36 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     </header>
     <div class="settings-body">
       <fieldset>
-        <legend>Archiver 5.3 — our own model</legend>
+        <legend>On-device model</legend>
         <div class="engine-box">
           <div class="engine-line">
             <span class="dot on" id="engineDot"></span>
-            <b id="engineMode">Browser model loads when needed</b>
+            <b id="engineMode">Prepares after the page opens</b>
             <span class="mtag" id="engineModel"></span>
           </div>
-          <p id="engineBlurb">Archiver 5.3 — our own compact on-device model (0.5B class), running privately in your browser with zero external AI providers.</p>
+          <p id="engineBlurb">Qwen 2.5 0.5B Instruct — an open model published by Qwen. Archiver did not train it.</p>
           <div class="ai-confirmation" id="aiConfirmation" role="status" aria-live="polite">
             <span class="mark" aria-hidden="true">✓</span>
-            <span><strong id="aiConfirmationTitle">Archiver 5.3 is always enabled</strong><small id="aiConfirmationDetail">It prepares in the background the moment you open this page.</small></span>
+            <span><strong id="aiConfirmationTitle">On-device model</strong><small id="aiConfirmationDetail">It prepares in the background when your connection and settings allow.</small></span>
           </div>
-          <p class="desc">Downloads once, then loads from cache automatically. Uses WebGPU, or our Safari-optimised WebAssembly engine.</p>
+          <dl class="engine-facts">
+            <div><dt>Size</dt><dd id="engineSize">Shown when the download starts</dd></div>
+            <div><dt>Storage</dt><dd id="engineStorage">Checking…</dd></div>
+            <div><dt>Runtime</dt><dd id="engineRuntime">—</dd></div>
+          </dl>
           <div class="engine-actions">
-            <button class="btn" id="warmModelBtn" type="button" hidden>Load model now</button>
-            <button class="btn" id="retryModel" type="button" hidden>Retry Archiver 5.3</button>
+            <button class="btn" id="warmModelBtn" type="button">Prepare now</button>
+            <button class="btn" id="pauseModelBtn" type="button" hidden>Pause</button>
+            <button class="btn" id="cancelModelBtn" type="button" hidden>Cancel</button>
+            <button class="btn" id="retryModel" type="button" hidden>Retry</button>
           </div>
-          <div class="engine-bar" id="engineBar" style="display:none"><span id="engineBarFill"></span></div>
-          <div class="engine-progress" id="engineProgress" style="display:none"></div>
+          <label class="engine-toggle"><input type="checkbox" id="autoPrepToggle" checked> Prepare automatically after the page opens</label>
+          <div class="engine-bar" id="engineBar" style="display:none" role="progressbar" aria-label="Model preparation"><span id="engineBarFill"></span></div>
+          <div class="engine-progress" id="engineProgress" aria-live="polite" style="display:none"></div>
+          <div class="update-banner" id="updateBanner" role="status" hidden>
+            <span>A newer Archiver is available.</span>
+            <button class="btn" id="updateNow" type="button">Update now</button>
+          </div>
         </div>
       </fieldset>
 
@@ -1402,8 +1421,8 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
         <legend>Updates</legend>
         <div class="update-row">
           <div class="update-meta">
-            <b>5.3</b><span>2026-09-29 · latest</span>
-            <p>Archiver 5.3 — lighter Qwen2.5-0.5B default model (Qwen3-0.6B as fallback), a bigger knowledge base, no persistent memory, a refresh-free tab lifecycle, and a redesigned interface.</p>
+            <b>5.4</b><span>2026-10-08 · latest</span>
+            <p>Archiver 5.4 — one model-preparation controller, verified caches, bounded and resumable-safe downloads, Safari-ready CPU runtime with a local compatibility build, and an offline app shell on GitHub Pages.</p>
           </div>
           <button class="btn sm" id="openChangelog" style="white-space:nowrap; flex-shrink:0;">View changelog →</button>
         </div>
@@ -1467,6 +1486,19 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     <div class="changelog-body">
       <div class="changelog-timeline">
         <div class="cl-entry" style="border-color:var(--accent);">
+          <div class="cl-head"><span class="cl-ver">5.4</span><span class="cl-date">2026-10-08</span></div>
+          <div class="cl-title">5.4 — stable preparation, verified storage, Safari and offline</div>
+          <div class="cl-body">
+            <ul>
+              <li><b>One preparation controller.</b> Downloads, checks, storage and start-up for the on-device model now go through a single state machine. Automatic preparation starts after the page is visible and only when Data Saver and slow links allow it; “Prepare now” is the explicit override, and a question joins whatever is already running.</li>
+              <li><b>Verified, not assumed.</b> A stored model counts as ready only when its files are complete and its format is checked. Published checksums are compared, and only the bytes of one bad model are removed; chats and settings are never touched.</li>
+              <li><b>Safari and iPhone.</b> The CPU runtime ships with its own compatibility build for Safari and Firefox, served from this site; there is no run-time request to a CDN, and no browser flag is needed. Shared memory still requires a cross-origin-isolated page, on every browser.</li>
+              <li><b>Clear failures.</b> Storage, network, source and runtime problems each say what happened and what to do. Retries are bounded. Cancel stops everything for this page.</li>
+              <li><b>GitHub Pages works offline.</b> The app shell and runtimes are cached after a first visit, so the app opens, and cached models answer, without a connection. The app reloads once, at most, to isolate itself; an update waits for your click.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="cl-entry">
           <div class="cl-head"><span class="cl-ver">5.3</span><span class="cl-date">2026-09-29</span></div>
           <div class="cl-title">5.3 — lighter default model, no persistent memory, refresh-free tab, redesigned interface</div>
           <div class="cl-body">
@@ -1602,6 +1634,8 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
 <script src="static/archiver-knowledge.js" defer></script>
 <script src="static/archiver-comprehension.js" defer></script>
 <script src="static/archiver-viewport.js" defer></script>
+<script src="static/archiver-sha256.js" defer></script>
+<script src="static/archiver-prep.js" defer></script>
 <script src="static/archiver-engine.js" defer></script>
 <script src="static/archiver-download.js" defer></script>
 <script src="static/archiver-diag.js" defer></script>
@@ -2367,75 +2401,86 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
   }
 
   /* ---------- stats / settings / engine ---------- */
+  /* One compact status for the on-device model. It reads the controller's
+     snapshot (the single source of preparation state) and never guesses. */
   function paintEngine() {
     const A = window.Archiver;
     if (!A) return;
     const st = A.status();
-    /* Say which runtime is actually serving generation. "active" on a GPU
-       browser and "active" on Safari's CPU path are very different experiences
-       and the reader is entitled to know which one they got. */
-    const backendWord = st.backend === 'wasm' ? 'on this device’s CPU'
-      : st.backend === 'webgpu' ? 'on this device’s GPU' : '';
-    const fromCache = typeof A.wasReadyBefore === 'function' && A.wasReadyBefore();
-    const labels = {
-      ready: 'Archiver 5 · active' + (backendWord ? ' ' + backendWord : ''),
-      loading: fromCache ? 'Archiver 5 · loading from browser cache…' : 'Archiver 5 · preparing…',
-      error: 'Archiver 5 unavailable · instant tools ready',
-      paused: 'Archiver 5 · waiting for support or connection',
-      idle: fromCache ? 'Archiver 5 · cached in browser (loads on demand)' : 'Browser model loads when needed'
-    };
-    const label = labels[st.aiState] || labels.idle;
-    const candidates = (st.backendCandidates || []).slice();
-    const planWord = candidates.indexOf('webgpu') === 0 ? 'WebGPU'
-      : candidates.length ? 'WebAssembly (CPU)' : 'none';
+    const p = st.prep || {};
+    const phase = p.phase || 'idle';
+    const ready = st.aiState === 'ready';
+    const busy = ['checking', 'downloading', 'verifying', 'initializing'].includes(phase);
+    const backendWord = st.backend === 'wasm' ? 'CPU runtime' : st.backend === 'webgpu' ? 'GPU runtime' : '';
+    const chip = ready ? 'Ready'
+      : phase === 'downloading' ? 'Download' + (p.pct ? ' · ' + p.pct + '%' : '')
+        : phase === 'verifying' ? 'Verifying'
+          : phase === 'cached' ? 'Cached'
+            : phase === 'initializing' ? 'Starting'
+              : phase === 'checking' ? 'Checking'
+                : phase === 'paused' ? 'Paused'
+                  : phase === 'failed' ? 'Needs attention'
+                    : 'Not started';
+    const isolation = window.__archiverIsolation || {};
     const confirm = $('#aiConfirmation');
-    const confirmTitle = $('#aiConfirmationTitle');
-    const confirmDetail = $('#aiConfirmationDetail');
-    const retry = $('#retryModel');
-    const warmBtn = $('#warmModelBtn');
+    const warn = phase === 'failed' || phase === 'paused';
     $('#idxMeter').textContent = st.cards;
-    $('#engineDot').className = 'dot ' + (st.aiState === 'error' || st.aiState === 'paused' ? 'warn' : 'on');
-    $('#engineMode').textContent = label;
+    $('#engineDot').className = 'dot ' + (warn ? 'warn' : (ready || phase === 'cached') ? 'on' : 'on');
+    $('#engineMode').textContent = chip;
     $('#engineModel').textContent = st.modelPretty
-      ? st.modelPretty + (st.backend === 'wasm' ? ' · WASM' : st.backend === 'webgpu' ? ' · WebGPU' : '')
-      : '';
-    $('#aiRuntimeStatus').textContent = label;
-    $('#aiRuntimeStatus').title = st.aiReason || 'Archiver 5 handles open-ended writing, explanations, coding and plans; instant tools cover the rest.';
+      ? st.modelPretty + (backendWord ? ' · ' + backendWord : '')
+      : (p.model ? p.model : '');
+    $('#aiRuntimeStatus').textContent = chip + (backendWord && ready ? ' · ' + backendWord : '');
+    $('#aiRuntimeStatus').title = st.aiReason || 'Archiver answers open-ended questions with an on-device open model; instant tools cover the rest.';
     if (confirm) {
-      const active = st.aiState === 'ready' || (st.aiEnabled && st.aiState === 'idle');
-      confirm.className = 'ai-confirmation ' + (st.aiState === 'error' || st.aiState === 'paused' ? 'warn' : active ? 'active' : '');
-      confirmTitle.textContent = st.aiState === 'ready'
-        ? 'Archiver 5 is active in this browser'
-        : st.aiState === 'loading'
-          ? 'Archiver 5 is preparing'
-          : st.aiState === 'error' || st.aiState === 'paused'
-            ? 'Archiver 5 is currently unavailable'
-            : 'Archiver 5 is always enabled';
-      confirmDetail.textContent = st.aiState === 'ready'
-        ? (st.backend === 'wasm'
-          ? 'Running the Safari-optimised WebAssembly runtime on this device’s CPU because WebGPU is not available here. Writing and explanations work; expect slower output than a GPU browser. Lookup and note tools remain instant.'
-          : 'Writing and explanations can now run on-device through WebGPU; lookup and note tools remain instant.')
-        : st.aiState === 'idle'
-          ? (fromCache
-            ? 'Weights are cached in this browser and will load on your first open-ended question (or tap Load model now below). Uses ' + planWord + '.'
-            : 'It prepares automatically when needed. This browser will use ' + planWord + '; no manual download or settings change is needed.')
-          : (st.aiReason || 'It prepares in the background from the moment this page opens.');
+      confirm.className = 'ai-confirmation ' + (warn ? 'warn' : (ready || phase === 'cached') ? 'active' : '');
+      $('#aiConfirmationTitle').textContent = ready
+        ? 'On-device model is ready'
+        : phase === 'cached' ? 'Stored on this device'
+          : busy ? 'Preparing the on-device model'
+            : phase === 'failed' ? 'The on-device model needs attention'
+              : phase === 'paused' ? 'Preparation is paused'
+                : 'On-device model';
+      $('#aiConfirmationDetail').textContent = st.aiReason
+        || (ready ? (st.backend === 'wasm'
+          ? 'Running on this device’s CPU through WebAssembly. Answers are slower than a GPU browser; lookup and note tools stay instant.'
+          : 'Running on this device’s GPU through WebGPU. Lookup and note tools stay instant.')
+          : 'It prepares in the background when your connection and settings allow, and starts with your first question.');
     }
-    /* Keep Retry available for a failed load or a temporary offline/WebGPU
-       limitation. It is disabled only while an attempt is actually running. */
-    const retryablePause = st.aiState === 'paused' && st.aiEnabled && /offline|Data Saver|WebGPU|WebAssembly/i.test(st.aiReason || '');
-    retry.hidden = !(st.aiState === 'error' || retryablePause);
-    retry.disabled = st.loading;
-    if (warmBtn) {
-      warmBtn.hidden = st.aiState !== 'idle';
-      warmBtn.disabled = st.loading;
-      warmBtn.textContent = fromCache ? 'Load cached model now' : 'Load model now';
+    $('#engineBlurb').textContent = 'Qwen 2.5 0.5B Instruct — an open model published by Qwen. Archiver did not train it; it runs privately in this browser and no third-party AI provider sees your prompts.';
+    const size = p.bytesTotal ? (p.bytesTotal >= 1073741824 ? (p.bytesTotal / 1073741824).toFixed(1) + ' GB' : Math.round(p.bytesTotal / 1048576) + ' MB') : 'Shown when the download starts';
+    if ($('#engineSize')) $('#engineSize').textContent = size;
+    if ($('#engineStorage')) {
+      $('#engineStorage').textContent = p.durable === false
+        ? 'This session only: this browser would not keep it'
+        : p.persist === 'granted' ? 'Kept by the browser until you clear it'
+          : p.persist === 'denied' ? 'Browser may clear it when space is low'
+            : p.persist === 'unsupported' ? 'Stored in this browser (no persistence control here)'
+              : 'Stored in this browser';
     }
-    $('#engineProgress').style.display = st.loading || st.aiReason ? 'block' : 'none';
-    $('#engineProgress').textContent = st.aiReason || st.progressText || '';
-    $('#engineBar').style.display = st.loading ? 'block' : 'none';
-    $('#engineBarFill').style.width = st.progress + '%';
-    $('#healthDot').className = 'dot ' + (st.aiState === 'error' || st.aiState === 'paused' ? 'warn' : 'on');
+    if ($('#engineRuntime')) {
+      $('#engineRuntime').textContent = st.backend
+        ? (st.backend === 'wasm' ? 'CPU (WebAssembly) · wllama 3.6.1' : 'GPU (WebGPU) · WebLLM 0.2.80')
+        : (st.backendCandidates || []).indexOf('webgpu') === 0 ? 'GPU (WebGPU) when started'
+          : (st.backendCandidates || []).length ? 'CPU (WebAssembly) when started' : 'No runtime available here';
+    }
+    const prepareBtn = $('#warmModelBtn');
+    prepareBtn.hidden = ready;
+    prepareBtn.disabled = busy || st.loading;
+    prepareBtn.textContent = phase === 'cached' ? 'Start model now' : 'Prepare now';
+    $('#cancelModelBtn').hidden = !busy;
+    $('#pauseModelBtn').hidden = phase !== 'downloading';
+    const retry = $('#retryModel');
+    retry.hidden = !(phase === 'failed');
+    retry.disabled = busy;
+    if ($('#autoPrepToggle')) $('#autoPrepToggle').checked = p.auto !== false;
+    $('#engineProgress').style.display = (busy || phase === 'paused' || phase === 'failed') ? 'block' : 'none';
+    $('#engineProgress').textContent = isolation.state === 'reloading' && !ready
+      ? 'Finishing the one-time setup for this site; the model starts after it reloads.'
+      : (st.aiReason || p.reason || st.progressText || '');
+    $('#engineBar').style.display = busy ? 'block' : 'none';
+    $('#engineBarFill').style.width = (p.pct || 0) + '%';
+    $('#healthDot').className = 'dot ' + (warn ? 'warn' : 'on');
     $('#healthText').textContent = st.engine === 'neural' ? 'generation active' : 'instant tools';
     $('#modelText').textContent = st.engine === 'neural' ? 'generation active' : 'instant tools';
   }
@@ -2627,57 +2672,39 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     const shell = $('#shell');
 
     $('#retryModel').onclick = async () => {
-      if (state.streaming || $('#retryModel').disabled) return;
+      if (state.streaming) return;
       $('#retryModel').disabled = true;
-      $('#composerStatus').textContent = 'Retrying Archiver 5…';
       paintEngine();
-      $('#retryModel').disabled = true;
       try {
         await window.Archiver.retryAI();
-        toast('Archiver 5 is ready', 'ok');
+        toast('The on-device model is ready', 'ok');
       } catch (err) {
-        const st = window.Archiver.status();
-        toast(st.aiReason || st.progressText || err.message || 'Archiver 5 could not start', 'err');
+        toast(err.message || 'The on-device model could not start', 'err');
       } finally {
-        $('#composerStatus').textContent = '';
         paintEngine();
       }
     };
-    if ($('#warmModelBtn')) {
-      $('#warmModelBtn').onclick = async () => {
-        if (state.streaming || $('#warmModelBtn').disabled) return;
-        $('#warmModelBtn').disabled = true;
-        $('#composerStatus').textContent = 'Preparing Archiver 5…';
+    $('#warmModelBtn').onclick = async () => {
+      if (state.streaming) return;
+      paintEngine();
+      try {
+        await window.Archiver.load();
+        toast('The on-device model is ready', 'ok');
+      } catch (err) {
+        toast(err.message || 'The on-device model could not start', 'err');
+      } finally {
         paintEngine();
-        try {
-          await window.Archiver.load();
-          toast('Archiver 5 is ready', 'ok');
-        } catch (err) {
-          const st = window.Archiver.status();
-          toast(st.aiReason || st.progressText || err.message || 'Archiver 5 could not start', 'err');
-        } finally {
-          $('#composerStatus').textContent = '';
-          paintEngine();
-        }
-      };
-    }
+      }
+    };
+    $('#pauseModelBtn').onclick = () => { window.Archiver.pausePreparation(); paintEngine(); };
+    $('#cancelModelBtn').onclick = () => { window.Archiver.cancelLoad(); paintEngine(); };
+    $('#autoPrepToggle').onchange = (e) => { window.Archiver.setAutoPreparation(e.target.checked); paintEngine(); };
     $('#sendBtn').onclick = () => {
       if (state.streaming) { if (state.abort) state.abort.abort(); }
       else send();
     };
     $('#cbStop').onclick = () => { if (state.abort) state.abort.abort(); };
-    $('#chatInput').addEventListener('input', e => {
-      grow();
-      /* iPhone: the page-load warm-up is deferred there on purpose, so the
-         first open-ended question would otherwise pay the whole load while the
-         reader waits. Start it now, from what is being typed, and only when the
-         weights are already cached in this browser — nothing new is
-         downloaded, and by the time Send is pressed the model is usually up. */
-      const A = window.Archiver;
-      if (A && typeof A.prepare === 'function' && !state.streaming) {
-        try { A.prepare(e.target.value); } catch (_) {}
-      }
-    });
+    $('#chatInput').addEventListener('input', () => { grow(); });
     $('#chatInput').addEventListener('keydown', e => {
       if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
         e.preventDefault();
@@ -2869,6 +2896,28 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     updateSideToggle();
   }
 
+  /* ---------- update ----------
+     On GitHub Pages a new service worker waits until the reader asks for it. The
+     page is reloaded only after that click, never underneath a running chat. */
+  function initUpdateBanner() {
+    if (!('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.getRegistration().then((reg) => {
+      if (!reg) return;
+      const show = () => { const b = $('#updateBanner'); if (b && reg.waiting) b.hidden = false; };
+      show();
+      reg.addEventListener('updatefound', () => {
+        const installing = reg.installing;
+        if (installing) installing.addEventListener('statechange', () => { if (installing.state === 'installed') show(); });
+      });
+      const now = $('#updateNow');
+      if (now) now.onclick = () => {
+        if (!reg.waiting) return;
+        navigator.serviceWorker.addEventListener('controllerchange', () => location.reload(), { once: true });
+        reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+      };
+    }).catch(() => {});
+  }
+
   /* ---------- boot ---------- */
   async function boot() {
     bind();
@@ -2903,15 +2952,11 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
 
     paintEngine();
 
-    /* Warm a previously cached model after first paint, so a
-       short delay lets first paint win. New downloads happen on demand. */
-    if (window.Archiver && typeof window.Archiver.warm === 'function' &&
-        typeof window.Archiver.wasReadyBefore === 'function' && window.Archiver.wasReadyBefore() &&
-        document.visibilityState === 'visible' &&
-        !/iPad|iPhone|iPod|Safari\//.test(navigator.userAgent)) {
-      // Only restore a previously cached model. First-time downloads wait for a request.
-      setTimeout(() => { window.Archiver.warm(); }, 1200);
-    }
+    /* After first paint, while the page is visible, the controller decides whether
+       to prepare (idle callback, Data Saver and slow links respected). Nothing else
+       starts a download or a model at boot. */
+    if (window.Archiver && typeof window.Archiver.scheduleAuto === 'function') window.Archiver.scheduleAuto();
+    initUpdateBanner();
 
     // Check last active session from LocalStore
     const lastActive = LocalStore.getActiveSessionId();

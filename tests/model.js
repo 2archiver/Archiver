@@ -1,136 +1,168 @@
-/* Lifecycle tests for both on-device backends, using stub runtimes rather than
-   real weights. These verify integration — backend choice, cancellation, retry,
-   timeouts, prompt assembly, streaming integrity and the per-turn audit trail —
-   not live GPU/CPU performance or answer quality.
+/* The on-device engine (web/archiver-engine.js) on top of the controller
+   (web/archiver-prep.js), in a simulated browser (tests/harness.js).
+
+   The answer behaviour, planning line, output shaping and audit trail are the
+   engine's own. What is simulated: the WebGPU runtime (WebLLM) and the CPU runtime
+   (wllama's inference worker). Storage, download, verification and the controller
+   are the real modules, as in tests/prep.js.
 
    node --experimental-vm-modules tests/model.js */
+'use strict';
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
-const vm = require('node:vm');
+const { createBrowser, createOrigin, fakeGGUF, sha256Hex } = require('./harness.js');
 
 const GPU_RUNTIME = '/static/vendor/web-llm-0.2.80.js';
 const WASM_RUNTIME = '/static/vendor/wllama-3.6.1.js';
 const WASM_BINARY = '/static/vendor/wllama-3.6.1.wasm';
+const COMPAT_JS = '/static/vendor/wllama-compat-3.6.1.js';
+const COMPAT_WASM = '/static/vendor/wllama-compat-3.6.1.wasm';
 /* Qwen2.5-0.5B-Instruct is the primary model on both runtimes; Qwen3-0.6B is
    only an automatic fallback. The stub catalogue carries both, like the real one. */
 const models = ['Qwen2.5-0.5B-Instruct-q4f16_1-MLC', 'Qwen2.5-0.5B-Instruct-q4f32_1-MLC'];
 const fallbackModels = ['Qwen3-0.6B-q4f16_1-MLC', 'Qwen3-0.6B-q4f32_1-MLC'];
+const Q4_0 = 'https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_0.gguf';
+const Q4_K_M = 'https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf';
+const WASM_SOURCES_PRIMARY = [Q4_0, Q4_K_M, 'https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q8_0.gguf'];
 
-async function fixture(options = {}) {
-  const stats = {
-    attempts: 0, imports: [], terminated: 0, interrupted: 0, payload: null,
-    events: {}, adapterCalls: 0, wasm: { attempts: 0, urls: [], exited: 0 }
-  };
-  const chunks = options.chunks || ['A generated ', 'answer.'];
-  /* A queue of chunk sets: each inference call takes the next one, so a test can
-     make the first pass blank and the retry succeed (5.2's recovery path). */
-  const nextChunks = () => {
-    if (options.chunkQueue && options.chunkQueue.length) {
-      return options.chunkQueue.length > 1 ? options.chunkQueue.shift() : options.chunkQueue[0];
+const normalise = (spec) => String(spec).replace(/^https?:\/\/[^/]+/, '');
+
+/* A CPU runtime stand-in: records what the engine asked of it. Each instance is one
+   attempt; loadModel() reads the stored model the way the real runtime does. */
+function makeWllamaStub(opts, log) {
+  return class WllamaStub {
+    constructor(pathConfig, config) {
+      this.pathConfig = pathConfig;
+      this.config = config;
+      this.compat = null;
+      this.exited = false;
+      this.id = log.instances.length;
+      log.instances.push(this);
+      log.events.push('new:' + this.id);
     }
+    setCompat(compat, mode) { this.compat = compat; this.compatMode = mode; log.compat.push({ compat, mode }); }
+    async loadModel(input, params) {
+      this.params = params;
+      this.input = input;
+      log.loads.push({ id: this.id, input, params });
+      log.events.push('load:' + this.id);
+      if (opts.wllamaFailLoad && log.loads.length <= opts.wllamaFailLoad) {
+        throw new Error('invalid model: unexpected end of file');
+      }
+      if (opts.wllamaHang) return new Promise(() => {});
+      this.loaded = true;
+    }
+    async createChatCompletion(req) {
+      log.payloads.push(req);
+      const set = opts.nextChunks ? opts.nextChunks() : ['A generated answer.'];
+      for (const c of set) req.onData({ choices: [{ delta: { content: c }, finish_reason: null }] });
+    }
+    async exit() { this.exited = true; log.events.push('exit:' + this.id); }
+  };
+}
+
+async function fixture(options) {
+  const opts = Object.assign({}, options || {});
+  const origin = createOrigin();
+  const chunks = opts.chunks || ['A generated ', 'answer.'];
+  const queue = opts.chunkQueue ? opts.chunkQueue.slice() : null;
+  opts.nextChunks = () => {
+    if (queue && queue.length) return queue.length > 1 ? queue.shift() : queue[0];
     return chunks;
   };
-  const model = {
-    interruptGenerate() { stats.interrupted++; },
-    chat: { completions: { create: async args => {
-      stats.payload = args;
-      const set = nextChunks();
-      return (async function* () { for (const c of set) yield { choices: [{ delta: { content: c } }] }; })();
-    } } }
-  };
-  class WllamaStub {
-    constructor(pathConfig, config) { stats.wasm.pathConfig = pathConfig; stats.wasm.config = config; }
-    async loadModelFromUrl(url, params) {
-      stats.wasm.attempts++; stats.wasm.urls.push(url); stats.wasm.params = params;
-      if (options.wasmFailFirst && stats.wasm.attempts === 1) throw Error('404 from the model host');
-      if (options.wasmFail && options.wasmFail.test(url)) throw Error('404 from the model host');
-      if (options.wasmPending) return new Promise(resolve => { stats.wasm.resolveLoad = resolve; });
-      if (params.progressCallback) params.progressCallback({ loaded: 10, total: 20 });
-      if (params.progressCallback) params.progressCallback({ loaded: 20, total: 20 });
-      stats.wasm.loaded = url;
-    }
-    async createChatCompletion(opts) {
-      stats.wasm.payload = opts;
-      for (const c of nextChunks()) opts.onData({ choices: [{ delta: { content: c }, finish_reason: null }] });
-    }
-    async exit() { stats.wasm.exited++; }
+  // Hub: the publisher serves the GGUF files (for the CPU runtime path).
+  for (const url of WASM_SOURCES_PRIMARY) {
+    const bytes = fakeGGUF(64 * 1024, url.length);
+    origin.hub.set(url, { bytes, sha256: sha256Hex(bytes) });
   }
-  const storage = new Map(options.disabled ? [['archiver.ai.enabled', '0']] : []);
-  if (options.cached) storage.set('archiver.engine.v1', JSON.stringify({ backend: 'wasm', model: 'cached.gguf', ts: Date.now() }));
-  const ctx = {
-    console, clearTimeout, URL, AbortController, DOMException,
-    document: { visibilityState: options.hidden ? 'hidden' : 'visible' },
-    addEventListener: (name, fn) => { stats.events[name] = fn; },
-    setTimeout: (fn, ms) => setTimeout(fn, options.timeout && ms >= 8 * 60 * 1000 ? 15 : ms),
-    // Present unless the test says this browser has no WebAssembly at all.
-    // 4.3: the engine validates a minimal module (4.2's Edge-strict-mode guard),
-    // so the stub must implement validate as well as instantiate.
-    WebAssembly: options.noWasm ? undefined : { instantiate: async () => ({}), validate: () => true },
-    navigator: {
-      onLine: options.offline ? false : true,
-      userAgent: options.ua || 'Mozilla/5.0 Chrome/130.0 Safari/537.36',
-      hardwareConcurrency: 8,
-      connection: { saveData: !!options.saveData },
-      gpu: options.noGPU ? undefined : { requestAdapter: async hint => {
-        stats.adapterCalls++;
-        if (options.rejectAdapterHint && hint) throw Error('unsupported power preference');
-        if (options.noAdapter) return null;
-        // 4.3: the engine's capability check needs realistic limits (4.2) and a
-        // working 64 MiB canary allocation, or it routes to WASM by design.
-        const mib = options.tinyLimits ? 64 : 256;
-        return {
-          features: new Set(options.f32 ? [] : ['shader-f16']),
-          limits: { maxStorageBufferBindingSize: mib * 1024 * 1024, maxBufferSize: mib * 1024 * 1024 },
-          requestDevice: async () => ({
-            pushErrorScope() {}, popErrorScope: async () => null,
-            createBuffer: () => ({ destroy() {} }), destroy() {}
-          })
-        };
-      } }
-    },
-    localStorage: { getItem: key => storage.get(key) || null, setItem: (key, value) => storage.set(key, value), removeItem: key => storage.delete(key) },
-    Worker: class { terminate() { stats.terminated++; } },
-    // Throws unless a test installs a search stub on stats.fetch.
-    fetch: (...args) => { if (stats.fetch) return stats.fetch(...args); throw Error('unexpected fetch'); }
-  };
-  ctx.window = ctx;
-  vm.createContext(ctx);
-  const gpuStub = new vm.SyntheticModule(['prebuiltAppConfig', 'CreateWebWorkerMLCEngine'], function () {
-    this.setExport('prebuiltAppConfig', { model_list: (options.catalogue || [...models, ...fallbackModels]).map(model_id => ({ model_id })) });
-    this.setExport('CreateWebWorkerMLCEngine', async (worker, id, config) => {
-      stats.attempts++; stats.id = id; stats.config = config;
-      if (options.failOnce && stats.attempts === 1) throw Error('simulated network failure');
-      if (options.pending || options.timeout) return new Promise(resolve => { stats.resolveLoad = () => resolve(model); });
-      config.initProgressCallback({ progress: 1, text: 'Loaded stub' });
-      return model;
-    });
-  }, { context: ctx });
-  const wasmStub = new vm.SyntheticModule(['Wllama', 'LoggerWithoutDebug'], function () {
-    this.setExport('Wllama', WllamaStub);
-    this.setExport('LoggerWithoutDebug', { debug() {}, log() {}, warn() {}, error() {} });
-  }, { context: ctx });
-  for (const stub of [gpuStub, wasmStub]) { await stub.link(() => {}); await stub.evaluate(); }
-  for (const file of ['archiver-knowledge.js', 'archiver-comprehension.js', 'archiver-engine.js']) {
-    new vm.Script(fs.readFileSync(path.join(__dirname, '..', 'web', file), 'utf8'), {
-      filename: file, importModuleDynamically: async specifier => {
-        stats.imports.push(specifier);
-        if (specifier === GPU_RUNTIME) return gpuStub;
-        if (specifier === WASM_RUNTIME) return wasmStub;
-        throw new Error('runtime import must come from the website, got: ' + specifier);
+  if (opts.disabled) origin.local.set('archiver.ai.enabled', '0');
+  if (opts.offline) origin.network.offline = true;
+  const gpuNavigator = opts.noGPU ? { gpu: undefined } : { gpu: {
+    requestAdapter: async (hint) => {
+      if (opts.rejectAdapterHint && hint) throw new Error('unsupported power preference');
+      if (opts.noAdapter) return null;
+      const mib = opts.tinyLimits ? 64 : 256;
+      return {
+        features: new Set(opts.f32 ? [] : ['shader-f16']),
+        limits: { maxStorageBufferBindingSize: mib * 1048576, maxBufferSize: mib * 1048576 },
+        requestDevice: async () => ({
+          pushErrorScope() {}, popErrorScope: async () => null,
+          createBuffer: () => ({ destroy() {} }), destroy() {}
+        })
+      };
+    }
+  } };
+  const navigatorOpts = Object.assign({
+    onLine: !opts.offline,
+    connection: { saveData: !!opts.saveData, effectiveType: '4g', downlink: 20 }
+  }, gpuNavigator, opts.ua ? { userAgent: opts.ua } : {});
+  const wllamaLog = { instances: [], compat: [], loads: [], payloads: [], events: [] };
+  const b = await createBrowser({
+    origin,
+    baseURI: 'http://localhost/',
+    navigator: navigatorOpts,
+    visibility: opts.hidden ? 'hidden' : 'visible',
+    wllamaStub: makeWllamaStub(opts, wllamaLog),
+    gpuPlan: opts.gpuPlan || (opts.failOnce ? [{ match: /.*/, error: 'simulated network failure', once: true }] : null)
+      || (opts.pending ? [{ match: /.*/, hang: true }] : null),
+    plan: opts.plan || null,
+    crossOriginIsolated: opts.noIsolation ? false : undefined,
+    sharedArrayBuffer: opts.noIsolation ? false : undefined,
+    noWasm: !!opts.noWasm,
+    timeouts: opts.timeouts,
+    nextChunks: opts.nextChunks
+  });
+  const stats = {
+    get attempts() { return origin.webllm.ids.length; },
+    get imports() { return b.imports.map(normalise); },
+    get id() { return origin.webllm.ids[origin.webllm.ids.length - 1]; },
+    get config() { return origin.webllm.configs[origin.webllm.configs.length - 1]; },
+    get payload() { return origin.webllm.payloads[origin.webllm.payloads.length - 1]; },
+    get interrupted() { return origin.webllm.interrupts; },
+    get terminated() { return origin.workers.filter(w => w.terminated).length; },
+    fetch: null,
+    wasm: {
+      get attempts() { return wllamaLog.instances.length; },
+      get urls() { return wllamaLog.loads.map(l => l.input && (l.input.url || (l.input.files && l.input.files[0] && l.input.files[0].metadata && l.input.files[0].metadata.originalURL))); },
+      get params() { return wllamaLog.loads.length ? wllamaLog.loads[wllamaLog.loads.length - 1].params : undefined; },
+      get pathConfig() {
+        const last = wllamaLog.instances.length ? wllamaLog.instances[wllamaLog.instances.length - 1].pathConfig : undefined;
+        return last ? { default: normalise(last.default) } : undefined;
       },
-    }).runInContext(ctx);
-  }
-  return { A: ctx.Archiver, stats, storage };
+      get payload() { return wllamaLog.payloads[wllamaLog.payloads.length - 1]; },
+      get exited() { return wllamaLog.instances.filter(i => i.exited).length; },
+      log: wllamaLog
+    }
+  };
+  // Search (2.6) reads through the page's fetch; a test may replace it.
+  const realFetch = b.ctx.fetch;
+  b.ctx.fetch = (...args) => (stats.fetch ? stats.fetch(...args) : realFetch(...args));
+  const storage = {
+    get: (k) => origin.local.get(k),
+    set: (k, v) => origin.local.set(k, String(v)),
+    has: (k) => origin.local.has(k),
+    delete: (k) => origin.local.delete(k)
+  };
+  return { A: b.Archiver, stats, storage, origin, b, Prep: b.Prep, ctx: b.ctx };
 }
+
 const tick = () => new Promise(resolve => setImmediate(resolve));
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 const GENERATIVE = 'write a poem about rain';
+let passed = 0;
+let failed = 0;
+async function check(name, fn) {
+  try { await fn(); passed++; console.log('  ok    ' + name); } catch (err) {
+    failed++;
+    console.log('  FAIL  ' + name + '\n        ' + String((err && err.stack) || err).split('\n').slice(0, 5).join('\n        '));
+  }
+}
 
 (async () => {
+  console.log('On-device engine (tests/model.js)');
   /* ---------------- WebGPU backend (unchanged fast path) ---------------- */
   const { A, stats, storage } = await fixture();
-  assert.equal(A.version, '5.3');
-  assert.equal(A.name, 'Archiver 5.3');
+  assert.equal(A.version, '5.4');
+  assert.equal(A.name, 'Archiver 5.4');
   assert.equal(Array.from(A.status().backendCandidates).join(','), 'webgpu,wasm', 'both runtimes are available here');
   for (const q of ['hello', '2+2', 'compare Python and JavaScript', 'summarize: One. Two.']) await A.chat(q, []);
   assert.equal(stats.imports.length, 0, 'instant tasks do not download a model');
@@ -314,25 +346,26 @@ const GENERATIVE = 'write a poem about rain';
   assert.match(genTrace.steps.join(' | '), /tokens\/second/);
   assert.match(genTrace.steps.join(' | '), /Built the prompt: 1 system block/);
 
-  /* ---------------- WASM backend: what Safari actually gets ---------------- */
+
+  /* ---------------- CPU runtime: what Safari gets, through wllama ---------------- */
   for (const config of [{ noGPU: true }, { noAdapter: true }, { rejectAdapterHint: true, noAdapter: true }]) {
     const w = await fixture(config);
     let wd = '';
     const out = await w.A.chat(GENERATIVE, [], { onDelta: d => { wd += d; } });
     assert.equal(out, 'A generated answer.', `generation still works for ${JSON.stringify(config)}`);
     assert.equal(wd, out);
-    assert.deepEqual(w.stats.imports, [WASM_RUNTIME], 'only the WASM runtime is fetched');
-    assert.equal(w.stats.attempts, 0, 'the GPU runtime is never imported on this device');
+    assert.ok(w.stats.imports.includes(WASM_RUNTIME), 'the CPU runtime is loaded from this origin');
+    assert.equal(w.stats.attempts, 0, 'the GPU runtime is never started on this device');
     assert.equal(w.A.mode(), 'neural');
     assert.equal(w.A.status().backend, 'wasm');
     assert.equal(w.A.status().contextBudget, 2048, 'a phone-sized context, not a pretend-unlimited one');
     assert.equal(w.stats.wasm.pathConfig.default, WASM_BINARY, 'the WASM binary is same-origin');
     assert.equal(w.stats.wasm.params.n_gpu_layers, 0, 'CPU-only: no WebGPU shim on the fallback path');
-    assert.ok(w.stats.wasm.params.n_ctx === 2048);
-    assert.ok([512, 1024].includes(w.stats.wasm.params.n_batch), 'Safari WASM batch size tuned for faster prefill (5.2: 512 desktop / 1024 mobile)');
+    assert.equal(w.stats.wasm.params.n_ctx, 2048);
+    assert.ok([512, 1024].includes(w.stats.wasm.params.n_batch), 'batch sizes unchanged from 5.3 (512 desktop / 1024 Apple mobile)');
     assert.ok(w.stats.wasm.params.n_threads >= 1 && w.stats.wasm.params.n_threads <= 4);
-    assert.equal(w.stats.wasm.urls[0], w.A.WASM_SOURCES[0], 'weights come from the publisher, automatically');
-    assert.match(w.A.WASM_SOURCES[0], /qwen2\.5-0\.5b-instruct-q4_0\.gguf/, 'Qwen2.5 Q4_0 prioritized first for fast Safari CPU SIMD decoding');
+    assert.equal(w.stats.wasm.params.kv_unified, true);
+    assert.equal(w.stats.wasm.params.cache_type_k, 'q8_0');
     assert.ok(!/no_think/.test(w.stats.wasm.payload.messages[0].content), 'Qwen 2.5 is not sent a Qwen 3-only /no_think token');
     assert.equal(w.stats.wasm.payload.chat_template_kwargs, undefined, 'and no Qwen 3 template switch');
     assert.match(w.A.reply('who are you').text, /WebAssembly/);
@@ -343,357 +376,193 @@ const GENERATIVE = 'write a poem about rain';
     assert.equal(w.stats.wasm.payload.max_tokens <= 1024, true);
   }
 
-  /* A missing artifact must not disable the fallback. */
-  const retrySource = await fixture({ noGPU: true, wasmFailFirst: true });
-  const retried = await retrySource.A.chat(GENERATIVE, []);
-  assert.equal(retried, 'A generated answer.');
-  assert.equal(retrySource.stats.wasm.urls.length, 2, 'the next published source is tried');
-  assert.equal(retrySource.stats.wasm.urls[1], retrySource.A.WASM_SOURCES[1]);
-  assert.match(retrySource.A.trace().steps.join(' | '), /Model source unavailable/);
+  await check('the CPU runtime is offered both builds from this origin and never a CDN', async () => {
+    const w = await fixture({ noGPU: true });
+    await w.A.chat(GENERATIVE, []);
+    const compat = w.stats.wasm.log.compat;
+    assert.equal(compat.length, 1, 'setCompat is set per instance');
+    assert.equal(compat[0].mode, 'firefox_safari');
+    assert.equal(normalise(compat[0].compat.worker), COMPAT_JS);
+    assert.equal(normalise(compat[0].compat.wasm), COMPAT_WASM);
+    assert.ok(w.origin.fetchLog.every(f => !/jsdelivr|unpkg/.test(f.url)), 'no request to a CDN');
+    const input = w.stats.wasm.log.loads[0].input;
+    assert.equal(typeof input.open, 'function', 'the stored Model object is loaded, not a bare URL');
+    assert.equal(input.url, Q4_0, 'and it is the first listed artifact');
+  });
 
-  /* Safari cache recovery: if a cached WASM model fails on first open (e.g.
-     corrupted OPFS entry), it clears the stale cache and retries the same URL
-     with useCache: false before moving on. A persisted warm start is trusted
-     only for the primary model: a leftover Qwen3 entry (a pre-downgrade build,
-     or a fallback load) is invalidated, so the page never claims a cache hit
-     for weights the browser does not hold. */
-  const staleCache = await fixture({ noGPU: true });
-  staleCache.storage.set('archiver.engine.v1', JSON.stringify({
-    model: 'Qwen3-0.6B-q4f16_1-MLC', backend: 'wasm', f16: false, ts: Date.now()
-  }));
-  assert.equal(staleCache.A.wasReadyBefore(), false, 'obsolete Qwen3 cache entry is invalidated');
-  assert.equal(staleCache.storage.has('archiver.engine.v1'), false, 'stale entry removed from localStorage');
-  const staleWasm = await fixture({ noGPU: true });
-  staleWasm.storage.set('archiver.engine.v1', JSON.stringify({
-    model: staleWasm.A.WASM_SOURCES[staleWasm.A.WASM_SOURCES.length - 1], backend: 'wasm', f16: false, ts: Date.now()
-  }));
-  assert.equal(staleWasm.A.wasReadyBefore(), false, 'a persisted Qwen3 GGUF warm start is invalidated too');
-  const currentCache = await fixture({ noGPU: true });
-  currentCache.storage.set('archiver.engine.v1', JSON.stringify({
-    model: currentCache.A.WASM_SOURCES[0], backend: 'wasm', f16: false, ts: Date.now()
-  }));
-  assert.equal(currentCache.A.wasReadyBefore(), true, 'a persisted Qwen2.5 warm start is kept');
-  const corruptedCache = await fixture({ noGPU: true, cached: true, wasmFailFirst: true });
-  assert.equal(corruptedCache.A.wasReadyBefore(), true);
-  assert.equal(await corruptedCache.A.chat(GENERATIVE, []), 'A generated answer.');
-  assert.equal(corruptedCache.stats.wasm.urls[0], corruptedCache.A.WASM_SOURCES[0]);
-  assert.equal(corruptedCache.stats.wasm.urls[1], corruptedCache.A.WASM_SOURCES[0], 'same URL retried with useCache:false after cache error');
-  assert.equal(corruptedCache.stats.wasm.params.useCache, false, 'useCache:false passed on recovery retry');
+  await check('a failed CPU start is followed by a fresh instance, and the old one is released', async () => {
+    const w = await fixture({ noGPU: true, wllamaFailLoad: 1 });
+    await w.A.chat(GENERATIVE, []);            // the first start fails; instant tools answer
+    assert.equal(w.A.mode(), 'grounded');
+    await w.A.retryAI();                        // a fresh instance, the failed one released
+    assert.equal(w.stats.wasm.attempts, 2, 'the failed attempt and a fresh one');
+    assert.equal(w.stats.wasm.exited, 1, 'the failed instance was released before the retry');
+    assert.equal(w.A.mode(), 'neural');
+  });
 
-  /* Cancellation and timeout on the WASM path. */
-  const wasmCancel = await fixture({ noGPU: true, wasmPending: true });
-  const cancelCtl = new AbortController();
-  const waiting = wasmCancel.A.chat(GENERATIVE, [], { signal: cancelCtl.signal });
-  while (!wasmCancel.stats.wasm.resolveLoad) await tick();
-  cancelCtl.abort();
-  await assert.rejects(waiting, { name: 'AbortError' });
-  assert.equal(wasmCancel.A.status().loading, false);
-  assert.equal(wasmCancel.A.mode(), 'grounded');
-  wasmCancel.stats.wasm.resolveLoad(); await tick();
-  assert.equal(wasmCancel.A.mode(), 'grounded', 'a late WASM load cannot activate a cancelled backend');
-  assert.equal(await wasmCancel.A.chat('2+2', []), "That's 4.", 'instant tools survive a cancelled load');
+  await check('a source that is not published falls through to the next quantization on a fresh start', async () => {
+    const w = await fixture({ noGPU: true });
+    w.origin.hub.delete(Q4_0);
+    const out = await w.A.chat(GENERATIVE, []);
+    assert.equal(out, 'A generated answer.');
+    assert.equal(w.stats.wasm.log.loads.length, 1);
+    assert.equal(w.stats.wasm.log.loads[0].input.files[0].metadata.originalURL, Q4_K_M, 'the next published artifact');
+    assert.match(w.A.trace().steps.join(' | '), /Q4_K_M|Q4_0|artifact|source/i);
+  });
 
-  const wasmRetry = await fixture({ noGPU: true, wasmFailFirst: true });
-  await wasmRetry.A.chat(GENERATIVE, []);
-  await wasmRetry.A.retryAI();
-  assert.equal(wasmRetry.A.mode(), 'neural', 'retry re-probes the device and reloads');
-  assert.ok(wasmRetry.stats.wasm.exited > 0, 'the abandoned runtime is released');
+  await check('without shared memory the CPU runtime is not started and the reason says why', async () => {
+    const w = await fixture({ noGPU: true, noIsolation: true });
+    const out = await w.A.chat(GENERATIVE, []);
+    assert.ok(out.length > 0, 'instant tools still answer');
+    assert.equal(w.stats.wasm.attempts, 0, 'no WebAssembly instance is created');
+    assert.match(w.A.status().aiReason, /cross-origin isolated|isolation/i, 'the reason names isolation, not a generic failure');
+    assert.equal(w.origin.fetchLog.filter(f => f.url.endsWith('.gguf')).length, 0, 'nothing is downloaded either');
+  });
 
-  /* ---------------- things that must never download ---------------- */
+  await check('a model the CPU runtime cannot read is not retained, and the reader is told why', async () => {
+    const w = await fixture({ noGPU: true, wllamaFailLoad: 99 });
+    const out = await w.A.chat(GENERATIVE, []);
+    assert.ok(out.length > 0);
+    assert.equal(w.A.mode(), 'grounded');
+    const status = w.A.status();
+    assert.match(status.aiReason, /CPU runtime could not start|invalid model/i);
+  });
+
+  /* ---------------- GPU: one controlled transition, and no others ---------------- */
+
+  await check('a GPU device lost during use moves to the CPU runtime once, stopping the GPU first', async () => {
+    const g = await fixture({ chunks: ['Hello from the GPU.'] });
+    await g.A.chat(GENERATIVE, []);
+    assert.equal(g.A.status().backend, 'webgpu');
+    const worker = g.origin.workers.find(w => !w.terminated && /archiver-worker\.js/.test(w.url));
+    assert.ok(worker, 'the WebGPU worker exists');
+    worker._emit('error', { message: 'WebGPU device was lost' });
+    await until(() => g.A.status().backend === 'wasm' || g.A.status().aiState === 'error', 3000);
+    assert.equal(g.A.status().backend, 'wasm', 'the answer now comes from the CPU runtime');
+    const events = g.stats.wasm.log.events;
+    assert.ok(g.origin.webllm.engines[0] && g.origin.webllm.unloads >= 1, 'the old GPU engine was unloaded first');
+    assert.ok(g.origin.workers.find(w => /archiver-worker\.js/.test(w.url) && w.terminated), 'and its worker terminated');
+    assert.equal(events[0], 'new:0', 'the transition begins with a new CPU instance only after the GPU stopped');
+    assert.equal(g.A.mode(), 'neural');
+  });
+
+  await check('a GPU fault at start-up transitions to the CPU runtime without trying another GPU model', async () => {
+    const g = await fixture({ gpuPlan: [{ match: /Qwen2\.5-0\.5B-Instruct-q4f16_1/, error: 'WebGPU device was lost during initialization', once: true }] });
+    const answer = await g.A.chat(GENERATIVE, []);
+    assert.ok(answer.length > 0);
+    assert.equal(g.A.status().backend, 'wasm');
+    assert.equal(g.origin.webllm.ids.filter(id => /Qwen3/.test(id)).length, 0, 'no Qwen3 attempt on the GPU for a GPU fault');
+  });
+
+  await check('a network failure while starting WebGPU tries the fallback model, not the CPU transition', async () => {
+    const g = await fixture({ gpuPlan: [{ match: /Qwen2\.5-0\.5B-Instruct-q4f16_1/, error: 'Failed to fetch' }] });
+    await g.A.chat(GENERATIVE, []);
+    assert.equal(g.A.status().backend, 'webgpu', 'still on the GPU');
+    assert.equal(g.origin.webllm.ids[1], fallbackModels[0], 'the fallback model was tried next');
+    assert.equal(g.stats.wasm.attempts, 0, 'no CPU runtime was started');
+  });
+
+  await check('cancel during WebGPU start-up stops it, with no transition and no fallback', async () => {
+    const g = await fixture({ pending: true });
+    const ctl = new AbortController();
+    const waiting = g.A.chat(GENERATIVE, [], { signal: ctl.signal });
+    await until(() => g.origin.webllm.ids.length >= 1, 2000);
+    g.A.cancelLoad();
+    const answer = await waiting;
+    assert.equal(typeof answer, 'string', 'the question still gets an answer from instant tools');
+    assert.equal(g.origin.webllm.ids.length, 1, 'no second model attempt');
+    assert.equal(g.stats.wasm.attempts, 0, 'no CPU transition after a cancel');
+    assert.equal(g.A.mode(), 'grounded');
+  });
+
+  /* ---------------- stale completions never write into a newer answer ---------------- */
+
+  await check('an answer that finishes after it was stopped is discarded, not returned', async () => {
+    let release;
+    const gate = new Promise(r => { release = r; });
+    const g = await fixture({ chunks: ['Stale ', 'answer.'] });
+    await g.A.chat('hi', []);     // starts nothing: instant route
+    const first = g.A.chat(GENERATIVE, []);     // starts the WebGPU engine
+    await until(() => g.origin.webllm.engines.length >= 1, 3000);
+    const eng = g.origin.webllm.engines[0];
+    const realCreate = eng.chat.completions.create;
+    eng.chat.completions.create = async (args) => {
+      g.origin.webllm.payloads.push(args);
+      await gate;
+      return (async function* () { yield { choices: [{ delta: { content: 'Late text.' } }] }; })();
+    };
+    const pending = g.A.chat('write another poem about snow', []);
+    await sleep(20);
+    g.A.unload();                 // a stop: the generation counter moves on
+    release();
+    const result = await pending.then(v => ({ v }), e => ({ e }));
+    const stoppedOrClean = (result.e && result.e.name === 'AbortError') || (result.v !== undefined && !/Late text/.test(result.v));
+    assert.ok(stoppedOrClean, 'the late completion is not returned');
+    eng.chat.completions.create = realCreate;
+    await first.catch(() => {});
+  });
+
+  await check('a question after a stop gets a fresh answer, not the stopped one', async () => {
+    const g = await fixture({ chunkQueue: [['Second ', 'answer.']] });
+    await g.A.chat(GENERATIVE, []);
+    g.A.unload();
+    const next = await g.A.chat('write a fresh poem about the sea', []);
+    assert.equal(next, 'Second answer.');
+  });
+
+  /* ---------------- gates: nothing downloads when it should not ---------------- */
   for (const config of [{ offline: true }, { saveData: true }, { noGPU: true, noWasm: true }]) {
     const f = await fixture(config);
     const response = await f.A.chat(GENERATIVE, []);
-    assert.equal(f.stats.imports.length, 0, `no download for ${JSON.stringify(config)}`);
-    assert.ok(response.length); assert.equal(f.A.mode(), 'grounded');
+    assert.equal(f.stats.attempts, 0, `no GPU start for ${JSON.stringify(config)}`);
+    assert.equal(f.origin.fetchLog.filter(x => x.url.endsWith('.gguf') && x.method === 'GET').length, 0, `no model download for ${JSON.stringify(config)}`);
+    assert.ok(response.length);
+    assert.equal(f.A.mode(), 'grounded');
     assert.ok(f.A.status().aiReason, `the reason is reported for ${JSON.stringify(config)}`);
   }
   const saver = await fixture({ saveData: true });
+  await saver.A.chat(GENERATIVE, []);
   assert.match(saver.A.status().aiReason, /Data Saver/);
 
   const f32 = await fixture({ f32: true });
-  await f32.A.chat(GENERATIVE, []); assert.equal(f32.stats.id, models[1]);
+  await f32.A.chat(GENERATIVE, []);
+  assert.equal(f32.stats.id, models[1], 'without shader-f16 the q4f32 artifact is used');
 
   /* ---------------- Qwen3-0.6B is a fallback, never the default ---------------- */
-  // WebGPU: only when the Qwen2.5 MLC artifacts are unavailable does Qwen3 load.
-  const gpuFallback = await fixture({ catalogue: fallbackModels });
+  const gpuFallback = await fixture({ gpuPlan: [{ match: /Qwen2\.5-0\.5B-Instruct-q4f16_1/, error: 'Failed to fetch' }, { match: /Qwen2\.5-0\.5B-Instruct-q4f32_1/, error: 'Failed to fetch' }] });
   assert.equal(await gpuFallback.A.chat(GENERATIVE, []), 'A generated answer.');
-  assert.equal(gpuFallback.stats.id, fallbackModels[0], 'Qwen3 loads when the Qwen2.5 artifacts are unavailable');
-  assert.equal(gpuFallback.stats.config.appConfig.model_list.length, 1, 'still no catalogue-wide fallback');
-  assert.match(gpuFallback.A.trace().steps.join(' | '), /fallback model \(Qwen3-0\.6B\)/, 'the trail says the fallback was used');
-  assert.equal(gpuFallback.stats.payload.extra_body && gpuFallback.stats.payload.extra_body.enable_thinking, false,
-    '5.2 fix kept for the fallback: Qwen 3\'s hidden thinking pass cannot eat the budget and return a blank answer');
-  const gpuFallbackThinks = await fixture({ catalogue: fallbackModels });
-  await gpuFallbackThinks.A.chat(GENERATIVE, [], { thinking: true });
-  assert.equal(gpuFallbackThinks.stats.payload.extra_body.enable_thinking, true, 'thinking:true still reaches the Qwen 3 fallback');
-  const gpuFallback32 = await fixture({ catalogue: fallbackModels, f32: true });
-  await gpuFallback32.A.chat(GENERATIVE, []); assert.equal(gpuFallback32.stats.id, fallbackModels[1]);
-  const gpuFallbackCache = gpuFallback.A.wasReadyBefore();
-  assert.equal(gpuFallbackCache, false, 'a fallback load does not leave a warm-start entry that would claim a cache hit');
-  // WebAssembly: three Qwen2.5 GGUFs are tried before the first Qwen3 one.
-  const wasmFallback = await fixture({ noGPU: true, wasmFail: /qwen2\.5/i });
-  assert.equal(await wasmFallback.A.chat(GENERATIVE, []), 'A generated answer.');
-  assert.equal(wasmFallback.stats.wasm.urls.length, 4, 'every Qwen2.5 source is tried before any Qwen3 source');
-  assert.ok(wasmFallback.stats.wasm.urls.slice(0, 3).every(u => /qwen2\.5/i.test(u)));
-  assert.match(wasmFallback.stats.wasm.loaded, /Qwen3-0\.6B-Q4_0\.gguf/, 'Qwen3 Q4_0 is the first fallback source');
-  assert.match(wasmFallback.stats.wasm.payload.messages[0].content, /\/no_think/, 'the Qwen 3 fallback keeps /no_think on the CPU path');
-  assert.equal(wasmFallback.stats.wasm.payload.chat_template_kwargs.enable_thinking, false, 'and its template switch');
-  assert.deepEqual(Array.from(wasmFallback.A.WASM_SOURCES.slice(0, 3)).map(u => u.split('/').pop()),
-    ['qwen2.5-0.5b-instruct-q4_0.gguf', 'qwen2.5-0.5b-instruct-q4_k_m.gguf', 'qwen2.5-0.5b-instruct-q8_0.gguf'], 'primary GGUF order: q4_0, q4_k_m, q8_0');
-  assert.equal(wasmFallback.A.WASM_SOURCES.length, 6);
-  assert.deepEqual(Array.from(wasmFallback.A.PREFERRED), models, 'PREFERRED is the Qwen2.5 pair');
-  const safariAdapter = await fixture({ rejectAdapterHint: true });
-  await safariAdapter.A.chat(GENERATIVE, []);
-  assert.equal(safariAdapter.stats.adapterCalls, 2, 'Safari adapter is retried without powerPreference');
-  assert.equal(safariAdapter.A.mode(), 'neural');
-  assert.equal(safariAdapter.A.status().backend, 'webgpu');
-  const migratedPreference = await fixture({ disabled: true });
-  assert.equal(migratedPreference.A.status().aiEnabled, true);
-  assert.equal(migratedPreference.storage.get('archiver.ai.enabled'), '1', 'legacy instant-only preference is migrated');
-  // A primary-only catalogue: with nothing to fall back to, a failed load stays failed.
-  const failure = await fixture({ failOnce: true, catalogue: models });
-  await failure.A.chat(GENERATIVE, []); await failure.A.chat('write another', []);
-  assert.equal(failure.stats.attempts, 1, 'failure does not cause a download loop');
-  assert.equal(failure.A.status().aiState, 'error');
-  await failure.A.retryAI(); assert.equal(failure.A.mode(), 'neural');
-  // With the full catalogue the same failure is absorbed: the primary model's
-  // load fails once, the Qwen3 fallback loads, and the turn still answers.
-  const failover = await fixture({ failOnce: true });
-  assert.equal(await failover.A.chat(GENERATIVE, []), 'A generated answer.');
-  assert.equal(failover.stats.attempts, 2, 'one failed primary attempt, one fallback attempt');
-  assert.equal(failover.stats.id, fallbackModels[0], 'the fallback is the Qwen3 pair, never a larger model');
-  assert.match(failover.A.trace().steps.join(' | '), /WebGPU load failed for Archiver 5\.3: simulated network failure — trying fallback\./);
-  assert.equal(failover.A.mode(), 'neural');
+  assert.equal(gpuFallback.stats.id, fallbackModels[0], 'Qwen3 loads only when the Qwen2.5 artifacts cannot start');
+  assert.match(gpuFallback.A.status().modelPretty, /Qwen 3/);
 
-  const pending = await fixture({ pending: true });
-  const cancel = new AbortController();
-  const pendingWait = pending.A.chat(GENERATIVE, [], { signal: cancel.signal });
-  while (!pending.stats.resolveLoad) await tick();
-  cancel.abort(); await assert.rejects(pendingWait, { name: 'AbortError' });
-  assert.equal(pending.A.status().loading, false); assert.ok(pending.stats.terminated > 0);
-  pending.stats.resolveLoad(); await tick();
-  assert.equal(pending.A.mode(), 'grounded', 'late completion cannot activate cancelled engine');
-  assert.equal(await pending.A.chat('2+2', []), "That's 4.");
+  /* The default is Qwen2.5 on the GPU runtime, and the labels never claim the model is ours. */
+  const label = (await fixture()).A.pretty;
+  assert.equal(label('Qwen2.5-0.5B-Instruct-q4f16_1-MLC'), 'Qwen 2.5 0.5B Instruct');
+  assert.equal(label('Qwen3-0.6B-q4f16_1-MLC'), 'Qwen 3 0.6B');
+  const persona = (await fixture()).A.PERSONA;
+  assert.ok(!/Archiver\u2019s own|our own model/i.test(persona), 'the persona makes no ownership claim about the model');
+  assert.match(persona, /open Qwen model/);
 
-  const togglePending = await fixture({ pending: true });
-  const firstToggle = togglePending.A.chat(GENERATIVE, []);
-  while (!togglePending.stats.resolveLoad) await tick();
-  togglePending.A.setAIEnabled(false);
-  assert.equal(togglePending.A.status().aiEnabled, true, 'generation remains enabled during initialization');
-  togglePending.stats.resolveLoad();
-  await firstToggle;
-  assert.equal(togglePending.A.status().aiState, 'ready');
-  assert.equal(togglePending.stats.attempts, 1, 'no disable/reload cycle');
+  /* ---------------- the status surface ---------------- */
+  const idle = await fixture();
+  const st = idle.A.status();
+  assert.equal(st.version, '5.4');
+  assert.ok(st.prep && st.prep.phase === 'idle', 'the controller state is reported');
+  assert.equal(idle.stats.imports.length, 0, 'opening the page starts no runtime');
+  const diag = await idle.A.diagnostics();
+  assert.equal(diag.runtime.webgpuRuntime, 'WebLLM 0.2.80');
+  assert.equal(diag.runtime.cpuRuntime, 'wllama 3.6.1 (llama.cpp WebAssembly)');
+  assert.match(diag.runtime.models.primary, /not trained by Archiver/);
+  assert.ok(diag.storage && Array.isArray(diag.storage.entries));
 
-  const timeout = await fixture({ timeout: true });
-  const fallback = await timeout.A.chat(GENERATIVE, []);
-  assert.match(fallback, /timed out/); assert.equal(timeout.A.status().loading, false);
-  assert.ok(timeout.stats.terminated > 0);
+  console.log('\n' + passed + ' sections passed, ' + failed + ' failed');
+  if (failed) process.exit(1);
+})().catch((err) => {
+  console.error('model suite crashed', err);
+  process.exit(1);
+});
 
-  /* 5.2 Safari: first-visit defers, cached warms on load. On-demand works in both. */
-  for (const ua of [
-    'Mozilla/5.0 (Macintosh) Version/18.0 Safari/605.1.15',
-    'Mozilla/5.0 (iPhone) AppleWebKit/605.1.15 CriOS/130 Mobile Safari/604.1',
-    'Mozilla/5.0 (iPad) AppleWebKit/605.1.15 FxiOS/130 Mobile Safari/605.1.15'
-  ]) {
-    // First visit: no warm
-    const safariCold = await fixture({ ua, cached: false, noGPU: true });
-    assert.equal(await safariCold.A.warm(), false, 'first-visit Safari must not warm during navigation');
-    assert.equal(safariCold.stats.imports.length, 0, 'opening Safari cold must not load blob workers/weights');
-    await safariCold.A.chat(GENERATIVE, []);
-    assert.equal(safariCold.A.mode(), 'neural', 'on-demand generation remains enabled');
-    safariCold.stats.events.pagehide();
-    assert.equal(safariCold.A.mode(), 'grounded', 'do not restore detached runtimes from bfcache');
-    assert.ok(safariCold.stats.wasm.exited > 0);
-    await safariCold.A.chat(GENERATIVE, []);
-    assert.equal(safariCold.A.mode(), 'neural', 'restored page can initialize fresh workers');
-
-    // Cached visit: 5.2 warms on load
-    const safariCached = await fixture({ ua, cached: true, noGPU: true });
-    assert.equal(await safariCached.A.warm(), true, 'cached Safari should warm on page load in 5.2');
-    assert.ok(safariCached.stats.imports.length > 0, 'cached Safari loads from cache');
-    safariCached.stats.events.pagehide();
-    assert.equal(safariCached.A.mode(), 'grounded', 'do not restore detached runtimes from bfcache');
-    assert.ok(safariCached.stats.wasm.exited > 0);
-    await safariCached.A.chat(GENERATIVE, []);
-    assert.equal(safariCached.A.mode(), 'neural', 'restored page can initialize fresh workers');
-  }
-  /* 5.2 — iPhone warms on intent and also on load when cached. */
-  const IPHONE_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 '
-    + '(KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1';
-  const iphone = await fixture({ ua: IPHONE_UA, cached: true, noGPU: true });
-  assert.equal(await iphone.A.warm(), true, 'cached Safari tab warms on load in 5.2');
-  assert.ok(iphone.stats.imports.length > 0, 'and fetches from cache');
-
-  const iphonePrepare = await fixture({ ua: IPHONE_UA, cached: true, noGPU: true });
-  assert.equal(await iphonePrepare.A.prepare('2+2'), false, 'a calculation needs no model');
-  assert.equal(await iphonePrepare.A.prepare('hi'), false, 'a greeting needs no model');
-  assert.equal(iphonePrepare.stats.imports.length, 0, 'still nothing fetched for instant tasks');
-  assert.equal(await iphonePrepare.A.prepare('Compare the causes of the first world war in detail'), true,
-    'an open-ended question starts the already-cached load');
-  assert.ok(iphonePrepare.stats.imports.length > 0, 'the runtime comes from our own origin');
-  assert.equal(iphonePrepare.A.mode(), 'neural', 'and the model ends up serving');
-  /* A first visit on the same device still waits: no surprise download. */
-  const firstVisit = await fixture({ ua: IPHONE_UA, noGPU: true });
-  assert.equal(await firstVisit.A.prepare('Compare the causes of the first world war in detail'), false,
-    'a first visit does not download on a metered connection');
-  assert.equal(firstVisit.stats.imports.length, 0);
-  const hidden = await fixture({ hidden: true });
-  assert.equal(await hidden.A.warm(), false);
-  assert.equal(hidden.stats.imports.length, 0);
-  const chromeWarm = await fixture();
-  assert.equal(await chromeWarm.A.warm(), true);
-  const abandoned = await fixture({ noGPU: true, wasmPending: true });
-  const abandonedLoad = abandoned.A.load();
-  while (!abandoned.stats.wasm.resolveLoad) await tick();
-  abandoned.stats.events.pagehide();
-  await assert.rejects(abandonedLoad, { name: 'AbortError' });
-  assert.ok(abandoned.stats.wasm.exited > 0, 'release the pending instance, not only global wasm');
-  abandoned.stats.wasm.resolveLoad(); await tick();
-  assert.equal(abandoned.A.mode(), 'grounded');
-
-  /* Evidence failures must not turn into generated guesses, with/without AI ready.
-     4.3: since 4.1 only time-sensitive/source-requested questions fail closed;
-     ordinary questions degrade to labelled-unverified or local answers. */
-  const source = { title: 'Reference', url: 'https://example.org/reference', source: 'Example', extract: 'The object has two moons.' };
-  for (const loaded of [false, true]) {
-    for (const results of [[], [{ ...source, url: 'javascript:alert(1)' }], [{ ...source, extract: '' }]]) {
-      const empty = await fixture();
-      if (loaded) await empty.A.load();
-      empty.stats.fetch = async () => ({ ok: true, json: async () => ({ results }) });
-      let visible = '';
-      const answer = await empty.A.chat('search the latest lunar discovery', [], { onDelta: d => visible += d });
-      assert.match(answer, /cannot verify/);
-      assert.equal(visible, answer);
-      assert.equal(empty.stats.payload, null, 'no inference after an empty/invalid search');
-      assert.equal(empty.A.trace().route, 'insufficient-evidence');
-    }
-  }
-  /* Ordinary explicit searches degrade instead of refusing: a loaded model
-     generates with the unverified flag in its prompt; without a model the
-     local corpus answers. Neither path guesses dressed as verified. */
-  for (const loaded of [false, true]) {
-    const empty = await fixture();
-    if (loaded) await empty.A.load();
-    empty.stats.fetch = async () => ({ ok: true, json: async () => ({ results: [] }) });
-    const answer = await empty.A.chat('search for the object', []);
-    if (loaded) {
-      assert.match(empty.stats.payload.messages[0].content, /UNVERIFIED ANSWER/,
-        'empty search still generates, but flagged unverified in the prompt');
-    } else {
-      assert.ok(!/cannot verify/.test(answer), 'stable questions fall back to local knowledge, not a refusal');
-      assert.equal(empty.stats.payload, null);
-    }
-  }
-  const outage = await fixture();
-  await outage.A.load();
-  outage.stats.fetch = async () => { throw Error('offline'); };
-  assert.match(await outage.A.chat('search the latest lunar discovery', []), /cannot verify/);
-  assert.equal(outage.stats.payload, null);
-  for (const q of ['What is the current population of Zedland?', 'Cite sources for the population of Zedland']) {
-    const fresh = await fixture();
-    await fresh.A.load();
-    assert.match(await fresh.A.chat(q, []), /Turn on WEB/);
-    assert.equal(fresh.stats.payload, null);
-  }
-
-  /* Withhold fabricated IDs/URLs before ANY generated answer text is emitted. */
-  for (const chunks of [
-    ['There are two moons according to [', '9].'],
-    ['Read https://invented.example/', 'fake-study for proof.'],
-    ['The result is in [C99].']
-  ]) {
-    const bad = await fixture({ chunks });
-    await bad.A.load();
-    bad.stats.fetch = async () => ({ ok: true, json: async () => ({ results: [source] }) });
-    let visible = '';
-    const answer = await bad.A.chat('Explain the object', [], { search: true, onDelta: d => visible += d });
-    assert.match(answer, /withheld/);
-    assert.equal(visible, answer);
-    assert.ok(!visible.includes('invented.example'));
-    assert.equal(bad.A.trace().route, 'citation-rejected');
-  }
-  const good = await fixture({ chunks: ['There are two moons [1].'] });
-  await good.A.load();
-  good.stats.fetch = async () => ({ ok: true, json: async () => ({ results: [source] }) });
-  assert.equal(await good.A.chat('Explain the object', [], { search: true }), 'There are two moons [1].');
-  assert.match(good.stats.payload.messages[0].content, /\[1\] Reference/);
-  assert.equal(good.stats.payload.temperature, 0.15);
-  assert.equal(good.A.trace().citationCheck, 'passed-membership-only');
-  const fabricatedOffline = await fixture({ chunks: ['A study confirms this [1].'] });
-  await fabricatedOffline.A.load();
-  assert.match(await fabricatedOffline.A.chat('Explain the object', []), /withheld/);
-  /* 5.2 — an empty model reply is recovered, never rendered as a blank bubble. */
-  for (const chunks of [['   '], ['\n\n\n'], ['…'], []]) {
-    const blank = await fixture({ chunks });
-    await blank.A.load();
-    let visible = '';
-    const answer = await blank.A.chat(GENERATIVE, [], { onDelta: d => visible += d });
-    assert.ok(answer.trim().length > 20, 'an empty model reply still produces text');
-    assert.match(answer, /returned no text/);
-    assert.equal(visible, answer, 'and the reader is shown exactly that text');
-    assert.equal(blank.A.trace().route, 'generated');
-  }
-  /* …and when a retry recovers, the recovered text is the answer. */
-  const recovers = await fixture({ chunkQueue: [['   '], ['A real answer about rain.']] });
-  await recovers.A.load();
-  let recoveredVisible = '';
-  const recovered = await recovers.A.chat(GENERATIVE, [], { onDelta: d => recoveredVisible += d });
-  assert.equal(recovered, 'A real answer about rain.', 'the compact retry produced the answer');
-  assert.equal(recoveredVisible, recovered);
-  assert.match(recovers.A.trace().steps.join(' '), /Retrying once with a compact direct-answer prompt/,
-    'and the trail says the first pass was empty and a retry ran');
-
-  /* 5.2 — the answer cache serves a repeat without running the model again. */
-  const cache = await fixture({ chunks: ['Rain falls softly on the window and the day holds still for a moment.'] });
-  await cache.A.load();
-  const first = await cache.A.chat('write a short line about rain', [], { onDelta: () => {} });
-  const callsBefore = cache.stats.attempts;
-  const payloadsBefore = cache.stats.payload;
-  let cachedVisible = '';
-  const secondAnswer = await cache.A.chat('Write a short line about rain.', [], { onDelta: d => cachedVisible += d });
-  assert.equal(secondAnswer, first, 'the same question returns the stored answer');
-  assert.equal(cachedVisible, secondAnswer, 'and streams it to the reader');
-  assert.equal(cache.stats.payload, payloadsBefore, 'no inference ran on the cache hit');
-  assert.equal(cache.A.trace().route, 'generated-cache');
-  assert.match(cache.A.trace().runtime, /cache/);
-  assert.equal(cache.A.status().cachedAnswers, 1, 'one entry is stored');
-  assert.equal(callsBefore, cache.stats.attempts, 'the model load was not repeated either');
-  /* A different persona is a different answer, so it must miss and re-run —
-     the stub always returns the same text, so the observable difference is that
-     inference ran again and a second entry was stored. */
-  const personaPayloadBefore = cache.stats.payload;
-  const withPersona = await cache.A.chat('write a short line about rain', [], { system: 'Answer like a pirate.' });
-  assert.notEqual(cache.stats.payload, personaPayloadBefore, 'a changed persona invalidates the cached answer');
-  assert.match(String(cache.stats.payload.messages[0].content), /Answer like a pirate/, 'and the new persona reached the model');
-  assert.equal(cache.A.status().cachedAnswers, 2, 'and is stored under its own key');
-  /* A differently worded question is also a miss: the key is the prompt. */
-  const other = await cache.A.chat('write a long line about snow', [], {});
-  assert.notEqual(cache.A.status().cachedAnswers, 2, 'a different question is stored separately');
-  void other;
-  assert.equal(cache.A.clearAnswerCache(), true);
-  assert.equal(cache.A.status().cachedAnswers, 0, 'clearing empties the cache');
-
-  /* 5.2 — answers that could go stale are never cached or replayed. */
-  const live = await fixture({ chunks: ['The answer is live.'] });
-  await live.A.load();
-  live.stats.fetch = async () => ({ ok: true, json: async () => ({ results: [source] }) });
-  await live.A.chat('search the current price of oil', [], { search: true });
-  assert.equal(live.A.status().cachedAnswers, 0, 'a web-grounded answer is not stored');
-
-  const codeExample = await fixture({ chunks: ['Use `items[9]` or:\n```js\nfetch("https://example.org/api");\n```'] });
-  await codeExample.A.load();
-  assert.match(await codeExample.A.chat('Write code to read a list', []), /items\[9\]/);
-
-  /* Phone-size contexts retain evidence instead of silently dropping it. */
-  const compact = await fixture({ noGPU: true, chunks: ['There are two moons [1].'] });
-  await compact.A.load();
-  compact.stats.fetch = async () => ({ ok: true, json: async () => ({ results: [source] }) });
-  assert.equal(await compact.A.chat('Explain the object', [], { search: true, system: 'preference '.repeat(400) }), 'There are two moons [1].');
-  assert.match(compact.stats.wasm.payload.messages[0].content, /two moons/);
-  assert.match(compact.A.trace().steps.join(' '), /compact evidence-first/);
-  compact.stats.wasm.payload = null;
-  assert.match(await compact.A.chat('Explain ' + 'object '.repeat(1300), [], { search: true }), /do not fit/);
-  assert.equal(compact.stats.wasm.payload, null, 'never run after evidence is dropped');
-
-  console.log('Browser-generation checks passed: same-origin GPU and WASM runtimes, automatic backend choice, Safari CPU fallback, source retry, cache config, small model, enabled-by-default behavior, retry, timeout, cancellation, late results, prompt-specific instructions, a plan line on every prompt, grounded read in prompt and answer, output shaping, per-turn audit trails, roles, and streaming (stub inference).');
-})().catch(e => { console.error(e); process.exit(1); });
+async function until(predicate, ms) {
+  const end = Date.now() + (ms || 3000);
+  while (Date.now() < end) { if (await predicate()) return true; await sleep(5); }
+  throw new Error('timed out');
+}
