@@ -156,7 +156,7 @@ def test_app_shell_is_gzipped_but_vendor_and_streams_are_untouched(client):
     # Explicit refusal is respected.
     plain = client.get("/", headers={"Accept-Encoding": "gzip;q=0"})
     assert plain.headers.get("content-encoding") != "gzip"
-    assert "Archiver 5.3" in plain.text
+    assert "Archiver 5.5" in plain.text
     # The vendor routes keep their own single Vary header.
     vendor = client.get("/static/vendor/wllama-3.6.1.js", headers={"Accept-Encoding": "gzip"})
     assert vendor.headers["vary"] == "Accept-Encoding"

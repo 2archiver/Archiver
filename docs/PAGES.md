@@ -1,5 +1,25 @@
 # Archiver on GitHub Pages — the public site
 
+## What 5.5 changed for Pages
+
+- **Scope is `/Archiver/`.** Every URL the page or service worker uses is
+  relative to the project-pages root, and `tests/pages.js` asserts there are no
+  root-absolute `/static` or `/api` references in the page, engine or
+  controller.
+- **No root `/api/` calls.** Server calls go through the page's `api()` helper,
+  which rebases through `ABS()` and is disabled when the server is not
+  reachable. On Pages the server is unreachable by design, so no call is made.
+- **Shell cache `archiver-shell-v5.5.0`.** The service worker deletes only its
+  own older `archiver-shell-*` caches. Other origins' caches and the model
+  cache are not touched.
+- **Answer cache is tied to the grounding policy** (`grounding-5.5`). An answer
+  stored under an older policy is regenerated, not replayed.
+- **Cross-origin isolation bootstrap is kept.** The one-time service-worker
+  bootstrap still supplies the COOP/COEP headers that Pages cannot send.
+- **Not verified in this release:** a reload-loop test. The bootstrap is
+  unchanged, but no test was added for it in 5.5.
+
+
 **Public site:** <https://2archiver.github.io/Archiver/>
 **Workflow:** `.github/workflows/pages.yml` → `scripts/build_pages.py` → `actions/deploy-pages`
 

@@ -33,7 +33,7 @@
 'use strict';
 
 var CACHE_PREFIX = 'archiver-shell-';
-var CACHE_VERSION = '5.4.0';
+var CACHE_VERSION = '5.5.0';
 var SHELL_CACHE = CACHE_PREFIX + 'v' + CACHE_VERSION;
 var NETWORK_WAIT_MS = 4000;
 var ISOLATION = [

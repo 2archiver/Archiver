@@ -22,6 +22,9 @@ test:
 	node tests/offline.js
 	node tests/viewport.js
 	node tests/download.js
+	node tests/grounding.js
+	node tests/sw.js
+	node --experimental-vm-modules tests/prep.js
 	node --experimental-vm-modules tests/model.js
 	$(PYTHON) -m pytest tests/ -q
 

@@ -145,7 +145,7 @@ async function cachedText(worker, cacheName, url) {
 
 (async () => {
   console.log('Pages service worker (tests/sw.js)');
-  const SHELL = 'archiver-shell-v5.4.0';
+  const SHELL = 'archiver-shell-v5.5.0';
 
   await test('first install stores the shell and the app files it names, not the runtimes', async () => {
     const w = makeWorker();
@@ -177,12 +177,12 @@ async function cachedText(worker, cacheName, url) {
 
   await test('activation claims open pages and deletes only its own old caches', async () => {
     const w = makeWorker();
-    w.caches.set('archiver-shell-v5.3.0', new Map([[SCOPE + 'index.html', { status: 200, headers: [], body: new Uint8Array(1) }]]));
+    w.caches.set('archiver-shell-v5.4.0', new Map([[SCOPE + 'index.html', { status: 200, headers: [], body: new Uint8Array(1) }]]));
     w.caches.set('webllm/model', new Map([['https://huggingface.co/x/tensor-cache.json', { status: 200, headers: [], body: new Uint8Array(2) }]]));
     w.caches.set(SHELL, new Map());
     await dispatch(w, 'activate');
     assert.equal(w.sent.claimed, 1);
-    assert.ok(!w.caches.has('archiver-shell-v5.3.0'), 'the superseded shell is deleted');
+    assert.ok(!w.caches.has('archiver-shell-v5.4.0'), 'the superseded shell is deleted');
     assert.ok(w.caches.has(SHELL), 'the current shell is kept');
     assert.ok(w.caches.has('webllm/model'), 'the runtime’s model cache is never touched');
   });

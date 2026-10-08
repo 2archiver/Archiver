@@ -1,6 +1,6 @@
-# Archiver 5.3
+# Archiver 5.5
 
-**An everyday assistant with instant local tools, open-ended answers from Archiver 5.3 — our own model — and live web search when you ask.**
+**An everyday assistant with instant local tools, open-ended answers from an open Qwen model that runs in your browser (Archiver did not train it), and live web search when you ask.**
 
 No account or model-provider API key. Two inference runtimes are bundled with the website — WebGPU where a browser offers it, WebAssembly where it does not — and model assets are fetched and cached automatically in the browser. No model server, deployment-time npm step, or model weights in Git.
 
@@ -16,7 +16,7 @@ For static hosting the default model is **Qwen2.5-0.5B-Instruct** again, on both
 runtimes — about a third less GPU memory than Qwen3-0.6B in WebLLM's catalogue
 (~945 MB against ~1.4 GB at q4f16_1). **Qwen3-0.6B** stays as an automatic
 fallback, tried only when every Qwen2.5 artifact is missing or blocked. The name
-(Archiver 5.3), persona and everything else are unchanged. The CPU/WebAssembly
+is now Archiver 5.5 (see CHANGELOG.md); the persona was updated for 5.5. The CPU/WebAssembly
 download is the same size either way (~429 MB at Q4_0), so the saving is on the
 GPU path. Details: [docs/MODEL-UPGRADE.md](docs/MODEL-UPGRADE.md).
 
@@ -260,7 +260,7 @@ constraint it serves.
 | `forget: question` | Removes a taught card (not a memory-bank entry) |
 | `help` | Lists commands |
 
-The bundled corpus has 1,556 cards across history, science, language, technology, Australia and everyday topics. `cards` reports the actual count, including taught cards. Coverage and depth vary. Weak matches are labeled; open-ended requests prepare browser generation when supported, rather than substituting an unrelated card. If browser generation cannot start, the response explains the limitation.
+The bundled corpus has 1,561 cards across history, science, language, technology, Australia and everyday topics. `cards` reports the actual count, including taught cards. Coverage and depth vary. Weak matches are labeled; open-ended requests prepare browser generation when supported, rather than substituting an unrelated card. If browser generation cannot start, the response explains the limitation.
 
 **WEB** enables live search. An explicit request such as `search …` also enables search for that turn. Greetings, exact tools, and pasted-text extraction do not need a search request. Search failures fall back to local knowledge. Citations are evidence to inspect, not guarantees of truth.
 

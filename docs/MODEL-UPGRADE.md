@@ -1,6 +1,6 @@
 # Archiver 5 Model Architecture & Safari Optimisation (September 2026)
 
-Current production baseline: **Archiver 5.3** — Archiver's own compact on-device model built on `Qwen2.5-0.5B-Instruct`, running WebLLM 0.2.80 (`Qwen2.5-0.5B-Instruct-q4f16_1-MLC` / `Qwen2.5-0.5B-Instruct-q4f32_1-MLC`) on WebGPU and `Qwen2.5-0.5B-Instruct` GGUF (`qwen2.5-0.5b-instruct-q4_0.gguf` / `-q4_k_m.gguf` / `-q8_0.gguf`) on wllama 3.6.1 for Safari/CPU. `Qwen3-0.6B` (`Qwen3-0.6B-q4f16_1-MLC` / `-q4f32_1-MLC`, and the `Qwen3-0.6B` Q4_0 / Q4_K_M / Q8_0 GGUFs) remains as an automatic fallback. Zero third-party cloud AI providers are used for in-browser generation.
+Current production baseline: **Archiver 5.5** — the Archiver application running `Qwen2.5-0.5B-Instruct`, an open model published by Qwen that Archiver did not train, running WebLLM 0.2.80 (`Qwen2.5-0.5B-Instruct-q4f16_1-MLC` / `Qwen2.5-0.5B-Instruct-q4f32_1-MLC`) on WebGPU and `Qwen2.5-0.5B-Instruct` GGUF (`qwen2.5-0.5b-instruct-q4_0.gguf` / `-q4_k_m.gguf` / `-q8_0.gguf`) on wllama 3.6.1 for Safari/CPU. `Qwen3-0.6B` (`Qwen3-0.6B-q4f16_1-MLC` / `-q4f32_1-MLC`, and the `Qwen3-0.6B` Q4_0 / Q4_K_M / Q8_0 GGUFs) remains as an automatic fallback. Zero third-party cloud AI providers are used for in-browser generation.
 
 ## Qwen2.5 is the default again (October 2026)
 
@@ -17,7 +17,7 @@ Current production baseline: **Archiver 5.3** — Archiver's own compact on-devi
 - **Selection.** WebGPU tries `PREFERRED` (Qwen2.5, f16 or f32 by adapter capability) and falls back to the matching `FALLBACK_MODELS` (Qwen3) entry only when the first cannot load. WebAssembly walks `WASM_SOURCES`: Qwen2.5 Q4_0, Q4_K_M, Q8_0, then Qwen3 Q4_0, Q4_K_M, Q8_0. Neither path ever picks a larger catalogue model.
 - **Qwen3-only switches are gated.** `hasThinkingMode(id)` is true only for Qwen3 ids/URLs. `extra_body.enable_thinking` (WebGPU), `chat_template_kwargs` and the `/no_think` prompt token (CPU) are sent only then. WebLLM 0.2.80 appends a literal empty `<think></think>` block to the assistant turn whenever `enable_thinking` is `false`, for any model — harmless to Qwen3, noise in Qwen2.5's prompt.
 - **Warm start.** `VALID_MODELS` holds only the primary model, so a persisted Qwen3 entry (from an earlier 5.x build or from a fallback load) is dropped and the primary is tried first on the next session; the page never claims a cache hit for weights the browser doesn't hold.
-- **Branding.** Unchanged: both families render as `Archiver 5.3`.
+- **Branding.** The app is `Archiver 5.5`. The status line names the running model (for example `Archiver 5.5 · Qwen 2.5 0.5B Instruct · GPU (WebGPU)`). Nothing is labelled as a model Archiver trained. Qwen 3 is named as `Qwen 3 0.6B` when it is the fallback that is running.
 - **Not benchmarked here.** Real weights and WebGPU generation were not run in the CI/sandbox environment; automated tests stub inference (see `tests/model.js`).
 
 ## 5.3 — Qwen3 with a legacy fallback, refresh-free tab, no memories (September 2026)

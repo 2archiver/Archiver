@@ -19,7 +19,7 @@ try {
 <meta name="apple-mobile-web-app-title" content="Archiver">
 <meta name="format-detection" content="telephone=no">
 <meta name="mobile-web-app-capable" content="yes">
-<title>Archiver 5.4 — Your everyday assistant</title>
+<title>Archiver 5.5 — Your everyday assistant</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
@@ -1176,7 +1176,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
           </svg>
         </span>
       </span>
-      <span class="side-label">Archiver <span class="version-tag">5.4</span></span>
+      <span class="side-label">Archiver <span class="version-tag">5.5</span></span>
       <button class="side-x" id="sideClose" aria-label="Close menu" title="Close">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
@@ -1233,7 +1233,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
               <circle cx="32" cy="32" r="4" fill="#FFFFFF"/>
             </svg>
           </span>
-          <span class="model-name" id="modelLabel">Archiver <span class="version-tag">5.4</span></span>
+          <span class="model-name" id="modelLabel">Archiver <span class="version-tag">5.5</span></span>
           <div class="status-pill" id="topStatusPill" style="display:none !important;"><span class="dot"></span><span id="modelText">ready</span></div>
         </div>
       </div>
@@ -1250,11 +1250,11 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     <div class="chat-container grid-bg" id="chatContainer">
       <div id="startState" class="start-page">
         <div class="start-hero-row">
-          <div class="start-badge">OUR OWN MODEL. IN YOUR BROWSER.</div>
+          <div class="start-badge">AN OPEN MODEL. IN YOUR BROWSER.</div>
         </div>
         <div class="start-greeting">Make sense of anything.</div>
         <div class="start-sub">A quiet place to ask, explore, and keep what matters.</div>
-        <p class="ai-disclosure">Private answers from an open model, <b>Qwen 2.5 0.5B Instruct</b>, running in this browser. Archiver did not train that model. No third-party AI provider receives your prompts. Web search and chat sync need the Archiver server; the static GitHub Pages copy cannot run them. Runs on WebGPU, or on the CPU through WebAssembly.</p>
+        <p class="ai-disclosure">Private answers from an open model, <b id="disclosureModel">an open Qwen model</b>, running in this browser. Archiver did not train that model. No third-party AI provider receives your prompts. Web search and chat sync need the Archiver server; the static GitHub Pages copy cannot run them. Runs on WebGPU, or on the CPU through WebAssembly.</p>
         <div class="start-features">
           <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> No model-provider key</span>
           <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="12 2 21 7 21 17 12 22 3 17 3 7"/></svg> Open model, in your browser</span>
@@ -1312,7 +1312,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
             <b id="engineMode">Prepares after the page opens</b>
             <span class="mtag" id="engineModel"></span>
           </div>
-          <p id="engineBlurb">Qwen 2.5 0.5B Instruct — an open model published by Qwen. Archiver did not train it.</p>
+          <p id="engineBlurb">An open model published by Qwen. Archiver did not train it.</p>
           <div class="ai-confirmation" id="aiConfirmation" role="status" aria-live="polite">
             <span class="mark" aria-hidden="true">✓</span>
             <span><strong id="aiConfirmationTitle">On-device model</strong><small id="aiConfirmationDetail">It prepares in the background when your connection and settings allow.</small></span>
@@ -1421,8 +1421,8 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
         <legend>Updates</legend>
         <div class="update-row">
           <div class="update-meta">
-            <b>5.4</b><span>2026-10-08 · latest</span>
-            <p>Archiver 5.4 — one model-preparation controller, verified caches, bounded and resumable-safe downloads, Safari-ready CPU runtime with a local compatibility build, and an offline app shell on GitHub Pages.</p>
+            <b>5.5</b><span>2026-10-08 · latest</span>
+            <p>Archiver 5.5 — the app and the model are named separately, factual questions are answered from curated cards or not at all, and answers cached before the grounding rules changed are no longer served.</p>
           </div>
           <button class="btn sm" id="openChangelog" style="white-space:nowrap; flex-shrink:0;">View changelog →</button>
         </div>
@@ -1486,6 +1486,18 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     <div class="changelog-body">
       <div class="changelog-timeline">
         <div class="cl-entry" style="border-color:var(--accent);">
+          <div class="cl-head"><span class="cl-ver">5.5</span><span class="cl-date">2026-10-08</span></div>
+          <div class="cl-title">5.5 — consistent identity, grounded answers, Mishima cards, corrected Hitler cards</div>
+          <div class="cl-body">
+            <ul>
+              <li><b>One identity.</b> Archiver 5.5 is the app. Qwen is the open model it runs, named only when it is actually loaded: GPU or CPU, primary or fallback. Nothing is shown as running while it is still being prepared. Archiver did not train the model.</li>
+              <li><b>Facts from cards, or not at all.</b> A strong curated card answers directly, with no model. A factual question with no covering card, source or fetched passage gets a plain statement of the gap instead of an invented biography.</li>
+              <li><b>Entities.</b> Mishima now has an overview, works, dates and politics card. Bare “Hitler” gets an overview; “when did Hitler die” gets the death card, corrected to say he became chancellor in 1933 and Führer in 1934.</li>
+              <li><b>Cache.</b> Generated answers from before this release are not served again, so old answers made under the previous rules cannot resurface. Chats, downloaded models and taught cards are kept.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="cl-entry">
           <div class="cl-head"><span class="cl-ver">5.4</span><span class="cl-date">2026-10-08</span></div>
           <div class="cl-title">5.4 — stable preparation, verified storage, Safari and offline</div>
           <div class="cl-body">
@@ -1542,7 +1554,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
         </div>
         <div class="cl-entry">
           <div class="cl-head"><span class="cl-ver">5.0</span><span class="cl-date">2026-09-29</span></div>
-          <div class="cl-title">5.0 — our own model Qwen3-0.6B, WebGPU + WASM, 1,526 cards</div>
+          <div class="cl-title">5.0 — an Archiver build of the open Qwen3-0.6B model, WebGPU + WASM, 1,526 cards</div>
           <div class="cl-body">
             <ul>
               <li>Branded Archiver 5.0 — Qwen3-0.6B q4f16/q4f32 on WebGPU, Q4_0/Q4_K_M/Q8_0 GGUF on WASM.</li>
@@ -2429,7 +2441,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     $('#engineMode').textContent = chip;
     $('#engineModel').textContent = st.modelPretty
       ? st.modelPretty + (backendWord ? ' · ' + backendWord : '')
-      : (p.model ? p.model : '');
+      : (st.identity && st.identity.selectedModelLabel ? 'Preparing ' + st.identity.selectedModelLabel : 'No model loaded');
     $('#aiRuntimeStatus').textContent = chip + (backendWord && ready ? ' · ' + backendWord : '');
     $('#aiRuntimeStatus').title = st.aiReason || 'Archiver answers open-ended questions with an on-device open model; instant tools cover the rest.';
     if (confirm) {
@@ -2447,7 +2459,20 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
           : 'Running on this device’s GPU through WebGPU. Lookup and note tools stay instant.')
           : 'It prepares in the background when your connection and settings allow, and starts with your first question.');
     }
-    $('#engineBlurb').textContent = 'Qwen 2.5 0.5B Instruct — an open model published by Qwen. Archiver did not train it; it runs privately in this browser and no third-party AI provider sees your prompts.';
+    /* The model named here is the one that is actually loaded, or the one being
+       prepared. With no model loaded, no model name is shown as active. */
+    const idn = st.identity || {};
+    const named = idn.active ? idn.activeModelLabel : (idn.selectedModelLabel || '');
+    const disclose = named ? named + ' — an open model published by Qwen' : 'an open model published by Qwen';
+    if ($('#disclosureModel')) $('#disclosureModel').textContent = named || 'an open Qwen model';
+    $('#engineBlurb').textContent = disclose + '. Archiver did not train it; it runs privately in this browser and no third-party AI provider sees your prompts.';
+    if ($('#modelLabel')) {
+      const tail = idn.active ? ' · ' + idn.activeModelLabel + ' · ' + idn.backendLabel
+        : ' · No model loaded.';
+      const plain = (x) => String(x == null ? '' : x).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+      $('#modelLabel').innerHTML = 'Archiver <span class="version-tag">' + plain(st.appVersion || '5.5') + '</span>' + plain(tail);
+    }
+
     const size = p.bytesTotal ? (p.bytesTotal >= 1073741824 ? (p.bytesTotal / 1073741824).toFixed(1) + ' GB' : Math.round(p.bytesTotal / 1048576) + ' MB') : 'Shown when the download starts';
     if ($('#engineSize')) $('#engineSize').textContent = size;
     if ($('#engineStorage')) {

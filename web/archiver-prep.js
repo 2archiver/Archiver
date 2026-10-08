@@ -1,4 +1,4 @@
-/* Archiver 5.4 — one controller for every path that puts a model into this browser.
+/* Archiver 5.5 — one controller for every path that puts a model into this browser.
 
    Before 5.4, five functions (warm, warmNow, prepare, load, retryAI) each decided
    for themselves when to download, and the boot path had its own user-agent
@@ -37,7 +37,7 @@
 (function (root) {
   'use strict';
 
-  var VERSION = '5.4';
+  var VERSION = '5.5';
   var MB = 1024 * 1024;
 
   /* Pinned runtimes. Files are versioned and served by app/main.py (VENDOR_ASSETS)
