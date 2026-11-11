@@ -1,4 +1,4 @@
-/* Archiver 5.5: an app that runs an open Qwen model in your browser, plus instant
+/* Archiver 5.6: an app that runs an open Qwen model in your browser, plus instant
    retrieval and text tools — on WebGPU where it exists and on a Safari-optimised
    WebAssembly runtime where it does not. Archiver did not train that model.
 
@@ -20,7 +20,7 @@
 
   /* One definition of the version, so the label in the sidebar, the persona, the
      self-description, the API and the tests cannot disagree with each other. */
-  const VERSION = '5.5';
+  const VERSION = '5.6';
   const NAME = 'Archiver ' + VERSION;
   /* Bump when the rules that decide whether a generated answer may be reused change.
      Cached answers carry the policy they were made under; any other policy is bypassed. */
@@ -1678,7 +1678,7 @@ const HELP = [
   /* ---- what the page shows ------------------------------------------------- */
 
   /* ---- identity -----------------------------------------------------------
-     Two different things, kept apart. The APP is Archiver 5.5. The MODEL is the
+     Two different things, kept apart. The APP is Archiver 5.6. The MODEL is the
      upstream open model the runtime loaded (Qwen). The preparation controller
      owns candidate state (what is being prepared or cached). Only a runtime
      that has started successfully owns active identity, and it is published

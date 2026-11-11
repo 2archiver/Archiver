@@ -145,7 +145,7 @@ async function cachedText(worker, cacheName, url) {
 
 (async () => {
   console.log('Pages service worker (tests/sw.js)');
-  const SHELL = 'archiver-shell-v5.5.0';
+  const SHELL = 'archiver-shell-v5.6.0';
 
   await test('first install stores the shell and the app files it names, not the runtimes', async () => {
     const w = makeWorker();

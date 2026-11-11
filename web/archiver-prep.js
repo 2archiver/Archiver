@@ -1,4 +1,4 @@
-/* Archiver 5.5 — one controller for every path that puts a model into this browser.
+/* Archiver 5.6 — one controller for every path that puts a model into this browser.
 
    Before 5.4, five functions (warm, warmNow, prepare, load, retryAI) each decided
    for themselves when to download, and the boot path had its own user-agent
@@ -37,7 +37,7 @@
 (function (root) {
   'use strict';
 
-  var VERSION = '5.5';
+  var VERSION = '5.6';
   var MB = 1024 * 1024;
 
   /* Pinned runtimes. Files are versioned and served by app/main.py (VENDOR_ASSETS)
@@ -1154,8 +1154,8 @@
     if (autoScheduled) return;
     autoScheduled = true;
     var run1 = function () { autoScheduled = false; maybeAuto('auto'); };
-    if (typeof root.requestIdleCallback === 'function') root.requestIdleCallback(run1, { timeout: 2000 });
-    else setTimeout(run1, 1200);
+    if (typeof root.requestIdleCallback === 'function') root.requestIdleCallback(run1, { timeout: 800 });
+    else setTimeout(run1, 400);
   }
 
   function maybeAuto(source) {
@@ -1172,15 +1172,15 @@
     var g = gates();
     if (g.paused) {
       // Stored weights may still start (no network); a missing model waits and says why.
-      return ensure({ source: 'auto', allowDownload: false, allowInit: !isTouchFirst(), pausedReason: g.reason });
+      return ensure({ source: 'auto', allowDownload: false, allowInit: true, pausedReason: g.reason });
     }
     if (S.durable === false && source === 'auto') {
       setPhase('paused', { reason: 'Browser storage is unavailable, so the model is not downloaded in the background. It loads for this session when you ask a question.' });
       return Promise.resolve(false);
     }
     if (isTouchFirst()) {
-      // Phones and tablets: store the file now, start the runtime on the first question.
-      return ensure({ source: 'auto', allowDownload: true, allowInit: false });
+      // 5.6: phones/tablets also init on open so github.io visitors get a ready model.
+      return ensure({ source: 'auto', allowDownload: true, allowInit: true });
     }
     return ensure({ source: 'auto', allowDownload: true, allowInit: true });
   }

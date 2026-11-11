@@ -1,6 +1,6 @@
 ## 5.6 — 2026-11-11
 
-Cleanup release focused on the public GitHub Pages experience.
+Cleanup release focused on the public GitHub Pages experience. Engine, prep, and shell are **Archiver 5.6**.
 
 ### Browser search on github.io
 - WEB no longer depends on the Render backend. When `/api/search` is missing
@@ -26,7 +26,7 @@ Cleanup release focused on the public GitHub Pages experience.
   `max-height` with `100dvh`, `-webkit-overflow-scrolling: touch`).
 
 ### Pages
-- Shell cache bumped to `archiver-shell-v5.6.0`.
+- Shell cache `archiver-shell-v5.6.0` (aligned with engine 5.6).
 
 ## 5.5 — 2026-10-08
 

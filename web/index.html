@@ -712,124 +712,8 @@ a:hover { text-decoration-color: var(--ink); }
 }
 
 
-/* ---------- Discord — unintrusive floating invite (like Chatwave) ---------- */
-.discord-widget{
-  position:fixed; right:16px; bottom:88px; z-index:42;
-  display:flex; flex-direction:column; align-items:flex-end; gap:10px;
-  pointer-events:none;
-  font-family:var(--sans);
-  /* sits just above the composer — never covers chat or input */
-}
-.discord-card{
-  pointer-events:auto;
-  width:312px; max-width:calc(100vw - 24px);
-  background:var(--surface); border:1px solid var(--line-strong); border-radius:14px;
-  box-shadow: var(--shadow-2);
-  padding:14px 14px 12px;
-  transform-origin: bottom right;
-  animation: discordIn 220ms var(--ease);
-  position:relative;
-}
-.discord-card[hidden]{ display:none !important; }
-@keyframes discordIn{ from{ opacity:0; transform: translateY(8px) scale(.98);} to{opacity:1; transform: translateY(0) scale(1);} }
-.discord-x{
-  position:absolute; top:8px; right:8px;
-  width:26px; height:26px; display:grid; place-items:center;
-  border:1px solid var(--line); border-radius:999px;
-  background:var(--surface-2); color:var(--ink-2);
-  font-size:14px; line-height:1; cursor:pointer;
-  transition: all 140ms var(--ease);
-}
-.discord-x:hover{ color:var(--ink); border-color:var(--line-strong); background:var(--surface); }
-.discord-card-top{
-  display:flex; align-items:center; gap:8px; margin-bottom:10px; padding-right:28px;
-}
-.discord-badge{
-  display:inline-flex; align-items:center; gap:6px;
-  font-family:var(--mono); font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
-  color:#5865F2; background:#EEF0FF; border:1px solid #D9DDFF;
-  padding:3px 8px; border-radius:999px;
-}
-@media(prefers-color-scheme:dark){
-  .discord-badge{ background:#1E2440; border-color:#2C3566; color:#8EA1FF; }
-}
-.discord-live{
-  display:inline-flex; align-items:center; gap:6px;
-  font-family:var(--mono); font-size:11px; font-weight:600; letter-spacing:.04em;
-  color:var(--ink-2);
-}
-.discord-live .dot{ width:6px; height:6px; border-radius:50%; background:var(--good); box-shadow:0 0 0 3px rgba(46,125,91,.18); }
-.discord-card-title{
-  font-family:var(--serif); font-size:16px; font-weight:750; letter-spacing:-.02em; line-height:1.25; color:var(--ink);
-  margin:0 0 6px;
-}
-.discord-card-copy{
-  margin:0 0 12px; font-size:13px; line-height:1.55; color:var(--ink-2);
-}
-.discord-join-btn{
-  display:inline-flex; align-items:center; justify-content:center; gap:8px;
-  width:100%; padding:10px 14px; border-radius:10px;
-  background:#5865F2; color:#fff; border:1px solid #4752C4;
-  font-size:13.5px; font-weight:700; letter-spacing:-.01em; text-decoration:none;
-  transition: all 140ms var(--ease);
-  box-shadow: 0 2px 10px rgba(88,101,242,.28);
-}
-.discord-join-btn:hover{ background:#4752C4; border-color:#3B45A0; transform: translateY(-1px); box-shadow:0 6px 18px rgba(88,101,242,.32); }
-.discord-join-btn:active{ transform:none; box-shadow: 0 2px 10px rgba(88,101,242,.24); }
-.discord-join-btn svg{ width:16px; height:16px; flex-shrink:0; }
-.discord-card-foot{
-  margin-top:8px; text-align:center;
-  font-family:var(--mono); font-size:10.5px; color:var(--ink-3); letter-spacing:.02em;
-}
-.discord-fab{
-  pointer-events:auto;
-  display:inline-flex; align-items:center; gap:8px;
-  height:36px; padding:0 12px 0 8px;
-  background:var(--surface); border:1px solid var(--line); border-radius:999px;
-  box-shadow: var(--shadow-1);
-  color:var(--ink); font-size:12.5px; font-weight:600; letter-spacing:-.01em;
-  cursor:pointer; position:relative;
-  transition: all 140ms var(--ease);
-  opacity:.96;
-}
-.discord-fab:hover{ border-color: var(--line-strong); background: var(--surface-2); transform: translateY(-1px); box-shadow: var(--shadow-2); }
-.discord-fab:active{ transform:none; }
-.discord-fab-icon{
-  width:24px; height:24px; border-radius:999px; display:grid; place-items:center;
-  background:#5865F2; color:#fff; flex-shrink:0;
-}
-.discord-fab-icon svg{ width:14px; height:14px; display:block; }
-.discord-fab-pulse{
-  position:absolute; left:8px; top:50%; transform:translateY(-50%);
-  width:24px; height:24px; border-radius:999px;
-  border:1.25px solid #5865F2; opacity:0;
-  animation: discordPulse 2.8s ease-out infinite;
-  pointer-events:none;
-  display:none; /* hidden by default — less intrusive; shown only when explicitly enabled */
-}
-.discord-fab.show-pulse .discord-fab-pulse{ display:block; }
-@keyframes discordPulse{
-  0%{ transform: translateY(-50%) scale(.92); opacity:.40; }
-  100%{ transform: translateY(-50%) scale(1.55); opacity:0; }
-}
-.discord-fab-label{ font-family:var(--mono); font-size:11.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-2); }
-.discord-fab-dot{
-  width:7px; height:7px; border-radius:50%; background:var(--good);
-  border:1.5px solid var(--surface); margin-left:2px;
-}
-@media(max-width:768px){
-  .discord-widget{ right:12px; bottom:88px; }
-  .discord-card{ width: min(312px, calc(100vw - 20px)); }
-}
-@media(max-width:420px){
-  .discord-widget{ right:10px; bottom:92px; }
-  .discord-fab{ height:34px; padding-right:10px; }
-  .discord-fab-label{ display:none; }
-  .discord-fab{ width:38px; justify-content:center; padding-left:0; padding-right:0; border-radius:999px; }
-  .discord-fab .discord-fab-dot{ display:none; }
-}
-
-
+/* 5.6 discord removed */
+.discord-widget,.discord-fab,.discord-card,.discord-embed,.btn-discord{display:none!important}
 /* Community card in Settings — banner + one line + invite, nothing else */
 .discord-embed{
   border:1px solid var(--line-strong); border-radius:var(--radius-md); overflow:hidden;
@@ -1233,7 +1117,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
               <circle cx="32" cy="32" r="4" fill="#FFFFFF"/>
             </svg>
           </span>
-          <span class="model-name" id="modelLabel">Archiver <span class="version-tag">5.5</span></span>
+          <span class="model-name" id="modelLabel">Archiver <span class="version-tag">5.6</span></span>
           <div class="status-pill" id="topStatusPill" style="display:none !important;"><span class="dot"></span><span id="modelText">ready</span></div>
         </div>
       </div>
@@ -1254,7 +1138,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
         </div>
         <div class="start-greeting">Make sense of anything.</div>
         <div class="start-sub">A quiet place to ask, explore, and keep what matters.</div>
-        <p class="ai-disclosure">Private answers from an open model, <b id="disclosureModel">an open Qwen model</b>, running in this browser. Archiver did not train that model. No third-party AI provider receives your prompts. Web search and chat sync need the Archiver server; the static GitHub Pages copy cannot run them. Runs on WebGPU, or on the CPU through WebAssembly.</p>
+        <p class="ai-disclosure">Private answers from an open model running in this browser. No third-party AI provider receives your prompts. On the static GitHub Pages copy, web search runs in the browser. Runs on WebGPU, or on the CPU through WebAssembly. <span id="disclosureModel" style="font-size:11px;color:var(--ink-3)"></span></p>
         <div class="start-features">
           <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> No model-provider key</span>
           <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="12 2 21 7 21 17 12 22 3 17 3 7"/></svg> Open model, in your browser</span>
@@ -1375,16 +1259,6 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
       </fieldset>
 
       <fieldset>
-        <legend>Generation</legend>
-        <details>
-          <summary style="cursor:pointer; font-size:12.5px; color:var(--ink-2);">Show tuning</summary>
-          <div style="margin-top:12px; display:grid; gap:12px;">
-            <div class="field"><label for="setContextTokens">Context token budget</label><input id="setContextTokens" type="number" min="500" max="16000" placeholder="6000"></div>
-          </div>
-        </details>
-      </fieldset>
-
-      <fieldset>
         <legend>Data & Backup</legend>
         <div class="mem-add-row" style="margin-top:0">
           <button class="btn sm" id="exportArchive">Export archive (JSON)</button>
@@ -1392,22 +1266,6 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
         </div>
         <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">
           <button class="btn sm" id="clearAllHistoryModalBtn" style="color:var(--bad);border-color:rgba(239,68,68,0.3)">Delete all chat history</button>
-        </div>
-      </fieldset>
-
-      <fieldset>
-        <legend>Community</legend>
-        <div class="discord-embed">
-          <img class="discord-embed-banner" src="static/discord-banner.jpg" alt="" loading="lazy">
-          <div class="discord-embed-head">
-            <span class="community-icon" aria-hidden="true">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.369A19.79 19.79 0 0 0 15.56 2.5a14.08 14.08 0 0 0-.66 1.36 18.44 18.44 0 0 0-5.8 0A13.15 13.15 0 0 0 8.44 2.5 19.76 19.76 0 0 0 3.677 4.37a19.9 19.9 0 0 0-2.416 12.02 19.82 19.82 0 0 0 6.06 3.06 14.66 14.66 0 0 0 1.26-2.06 13.06 13.06 0 0 1-1.997-.95l.48-.38a15.15 15.15 0 0 0 8.66 0l.48.38a13.06 13.06 0 0 1-2 1l.01.01c.42.7.83 1.38 1.26 2.06a19.8 19.8 0 0 0 6.06-3.06 19.86 19.86 0 0 0-2.416-12.02Zm-11.29 9.92c-1.07 0-1.95-.99-1.95-2.2s.86-2.2 1.95-2.2c1.08 0 1.96.99 1.96 2.2s-.88 2.2-1.96 2.2Zm7.945 0c-1.07 0-1.95-.99-1.95-2.2s.86-2.2 1.95-2.2 1.96.99 1.96 2.2-.88 2.2-1.96 2.2Z"/></svg>
-            </span>
-            <b>Archiver Discord</b>
-          </div>
-          <p class="discord-embed-copy">Get help &amp; shape what we build next.</p>
-          <a class="btn-discord" href="https://discord.gg/n9nBWJWu2a" target="_blank" rel="noopener noreferrer" id="settingsDiscordJoin">Join →</a>
-          <div class="discord-embed-foot">discord.gg/n9nBWJWu2a · opens in new tab</div>
         </div>
       </fieldset>
 
@@ -1440,35 +1298,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
 
 
 <!-- Discord — unintrusive floating invite (like Chatwave) -->
-<div class="discord-widget" id="discordWidget" aria-live="polite">
-  <div class="discord-card" id="discordCard" role="dialog" aria-modal="false" aria-label="Join our Discord community" hidden>
-    <button class="discord-x" id="discordCardClose" aria-label="Dismiss — don't show for a week">×</button>
-    <img src="static/discord-banner.jpg" alt="" style="display:block; width:100%; height:64px; object-fit:cover; border-radius:8px; margin-bottom:10px;" loading="lazy">
-    <div class="discord-card-top">
-      <span class="discord-badge">
-        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="width:14px;height:14px"><path d="M20.317 4.369A19.79 19.79 0 0 0 15.56 2.5a14.08 14.08 0 0 0-.66 1.36 18.44 18.44 0 0 0-5.8 0A13.15 13.15 0 0 0 8.44 2.5 19.76 19.76 0 0 0 3.677 4.37a19.9 19.9 0 0 0-2.416 12.02 19.82 19.82 0 0 0 6.06 3.06 14.66 14.66 0 0 0 1.26-2.06 13.06 13.06 0 0 1-1.997-.95l.48-.38a15.15 15.15 0 0 0 8.66 0l.48.38a13.06 13.06 0 0 1-2 1l.01.01c.42.7.83 1.38 1.26 2.06a19.8 19.8 0 0 0 6.06-3.06 19.86 19.86 0 0 0-2.416-12.02Zm-11.29 9.92c-1.07 0-1.95-.99-1.95-2.2s.86-2.2 1.95-2.2c1.08 0 1.96.99 1.96 2.2s-.88 2.2-1.96 2.2Zm7.945 0c-1.07 0-1.95-.99-1.95-2.2s.86-2.2 1.95-2.2 1.96.99 1.96 2.2-.88 2.2-1.96 2.2Z"/></svg>
-        Discord
-      </span>
-      <span class="discord-live"><span class="dot" aria-hidden="true"></span>Live community</span>
-    </div>
-    <div class="discord-card-title">Archiver Discord</div>
-    <p class="discord-card-copy">Get help &amp; shape what we build next.</p>
-    <a id="discordJoinBtn" class="discord-join-btn" href="https://discord.gg/n9nBWJWu2a" target="_blank" rel="noopener noreferrer">
-      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.317 4.369A19.79 19.79 0 0 0 15.56 2.5a14.08 14.08 0 0 0-.66 1.36 18.44 18.44 0 0 0-5.8 0A13.15 13.15 0 0 0 8.44 2.5 19.76 19.76 0 0 0 3.677 4.37a19.9 19.9 0 0 0-2.416 12.02 19.82 19.82 0 0 0 6.06 3.06 14.66 14.66 0 0 0 1.26-2.06 13.06 13.06 0 0 1-1.997-.95l.48-.38a15.15 15.15 0 0 0 8.66 0l.48.38a13.06 13.06 0 0 1-2 1l.01.01c.42.7.83 1.38 1.26 2.06a19.8 19.8 0 0 0 6.06-3.06 19.86 19.86 0 0 0-2.416-12.02Zm-11.29 9.92c-1.07 0-1.95-.99-1.95-2.2s.86-2.2 1.95-2.2c1.08 0 1.96.99 1.96 2.2s-.88 2.2-1.96 2.2Zm7.945 0c-1.07 0-1.95-.99-1.95-2.2s.86-2.2 1.95-2.2 1.96.99 1.96 2.2-.88 2.2-1.96 2.2Z"/></svg>
-      Join Discord
-    </a>
-    <div class="discord-card-foot">discord.gg/n9nBWJWu2a · opens in new tab</div>
-  </div>
 
-  <button class="discord-fab" id="discordFab" aria-label="Join our Discord — opens invite" aria-expanded="false" aria-controls="discordCard" title="Join our Discord">
-    <span class="discord-fab-pulse" aria-hidden="true"></span>
-    <span class="discord-fab-icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.369A19.79 19.79 0 0 0 15.56 2.5a14.08 14.08 0 0 0-.66 1.36 18.44 18.44 0 0 0-5.8 0A13.15 13.15 0 0 0 8.44 2.5 19.76 19.76 0 0 0 3.677 4.37a19.9 19.9 0 0 0-2.416 12.02 19.82 19.82 0 0 0 6.06 3.06 14.66 14.66 0 0 0 1.26-2.06 13.06 13.06 0 0 1-1.997-.95l.48-.38a15.15 15.15 0 0 0 8.66 0l.48.38a13.06 13.06 0 0 1-2 1l.01.01c.42.7.83 1.38 1.26 2.06a19.8 19.8 0 0 0 6.06-3.06 19.86 19.86 0 0 0-2.416-12.02Zm-11.29 9.92c-1.07 0-1.95-.99-1.95-2.2s.86-2.2 1.95-2.2c1.08 0 1.96.99 1.96 2.2s-.88 2.2-1.96 2.2Zm7.945 0c-1.07 0-1.95-.99-1.95-2.2s.86-2.2 1.95-2.2 1.96.99 1.96 2.2-.88 2.2-1.96 2.2Z"/></svg>
-    </span>
-    <span class="discord-fab-label">Join Discord</span>
-    <span class="discord-fab-dot" aria-hidden="true"></span>
-  </button>
-</div>
 
 
 <!-- Changelog — full history (from first commit) -->
@@ -1486,6 +1316,8 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     <div class="changelog-body">
       <div class="changelog-timeline">
         <div class="cl-entry" style="border-color:var(--accent);">
+          <div class="cl-head"><span class="cl-ver">5.6</span><span class="cl-date">2026-11-11</span></div>
+          <div class="cl-title">5.6 — github.io browser search, cleanup, auto model on open</div>
           <div class="cl-head"><span class="cl-ver">5.5</span><span class="cl-date">2026-10-08</span></div>
           <div class="cl-title">5.5 — consistent identity, grounded answers, Mishima cards, corrected Hitler cards</div>
           <div class="cl-body">
@@ -2464,13 +2296,13 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     const idn = st.identity || {};
     const named = idn.active ? idn.activeModelLabel : (idn.selectedModelLabel || '');
     const disclose = named ? named + ' — an open model published by Qwen' : 'an open model published by Qwen';
-    if ($('#disclosureModel')) $('#disclosureModel').textContent = named || 'an open Qwen model';
+    if ($('#disclosureModel')) $('#disclosureModel').textContent = named ? ('Model: ' + named) : '';
     $('#engineBlurb').textContent = disclose + '. Archiver did not train it; it runs privately in this browser and no third-party AI provider sees your prompts.';
     if ($('#modelLabel')) {
       const tail = idn.active ? ' · ' + idn.activeModelLabel + ' · ' + idn.backendLabel
         : ' · No model loaded.';
       const plain = (x) => String(x == null ? '' : x).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-      $('#modelLabel').innerHTML = 'Archiver <span class="version-tag">' + plain(st.appVersion || '5.5') + '</span>' + plain(tail);
+      $('#modelLabel').innerHTML = 'Archiver <span class="version-tag">' + plain(st.appVersion || '5.6') + '</span>' + plain(tail);
     }
 
     const size = p.bytesTotal ? (p.bytesTotal >= 1073741824 ? (p.bytesTotal / 1073741824).toFixed(1) + ' GB' : Math.round(p.bytesTotal / 1048576) + ' MB') : 'Shown when the download starts';

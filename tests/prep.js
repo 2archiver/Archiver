@@ -322,17 +322,16 @@ function hubFile(origin, url, bytes, extra) {
     assert.equal(log.length, 1);
   });
 
-  await test('on a touch-first device auto-prep stores the file and waits for the first question', async () => {
+  await test('on a touch-first device auto-prep stores the file and starts the runtime on open', async () => {
     const origin = createOrigin();
     hubFile(origin, Q4_0, bytes);
     const log = [];
     const b = await createBrowser({ origin, touch: true });
     b.Prep.configure(runtimeHooks(log));
     await b.Prep.maybeAuto();
-    assert.equal(b.Prep.snapshot().phase, 'cached');
-    assert.equal(log.length, 0, 'not started before a question');
-    assert.equal(await b.Prep.ensureReady({ source: 'send', allowDownload: true, allowInit: true }), true);
-    assert.equal(log.length, 1);
+    await until(() => b.Prep.snapshot().phase === 'ready', 4000, 'ready on touch');
+    assert.equal(b.Prep.snapshot().phase, 'ready');
+    assert.equal(log.length, 1, 'runtime started on open (5.6)');
   });
 
   await test('automatic preparation can be turned off, and the choice survives a reload', async () => {
