@@ -1,0 +1,42 @@
+name: Apply Archiver 5.6 full fix
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'scripts/apply_56_full.py'
+      - '.github/workflows/run-apply-56.yml'
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Apply 5.6 patches
+        run: python3 scripts/apply_56_full.py
+      - name: Verify
+        run: |
+          set -e
+          grep -q "VERSION = '5.6'" web/archiver-engine.js
+          grep -q "VERSION = '5.6'" web/archiver-prep.js
+          grep -q "CACHE_VERSION = '5.6.0'" web/archiver-coi-sw.js
+          grep -q 'version-tag">5.6' web/index.html
+          ! grep -q 'Show tuning' web/index.html
+          ! grep -q 'id="discordWidget"' web/index.html
+          echo OK
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git status
+          git diff --cached --stat
+          if git diff --cached --quiet; then
+            echo "nothing to commit"
+          else
+            git commit -m "Archiver 5.6: engine 5.6, Discord/tuning cleanup, auto-init on open, browser search ready"
+            git push origin HEAD:main
+          fi
