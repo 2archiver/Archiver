@@ -530,9 +530,15 @@
   function withLease(signal, fn) {
     var locks = root.navigator && root.navigator.locks;
     if (locks && typeof locks.request === 'function') {
-      return locks.request(LOCK_NAME, function () {
-        if (signal && signal.aborted) throw abortError();
-        return fn();
+      return locks.request(LOCK_NAME, { ifAvailable: true }, function (lock) {
+        if (lock) {
+          if (signal && signal.aborted) throw abortError();
+          return fn(false);
+        }
+        return locks.request(LOCK_NAME, function () {
+          if (signal && signal.aborted) throw abortError();
+          return fn(true);
+        });
       });
     }
     return withExpiringLease(signal, fn);
@@ -543,6 +549,7 @@
   var LEASE_TTL_MS = 20000;
   var LEASE_RENEW_MS = 5000;
   async function withExpiringLease(signal, fn) {
+    var waited = false;
     for (;;) {
       if (signal && signal.aborted) throw abortError();
       var current = readJSON(KEYS.lease, null);
@@ -550,13 +557,14 @@
         kv.set(KEYS.lease, JSON.stringify({ tab: TAB_ID, until: now() + LEASE_TTL_MS }));
         if (readJSON(KEYS.lease, null) && readJSON(KEYS.lease, null).tab === TAB_ID) break;
       }
+      waited = true;
       await sleep(1500, signal);
     }
     var renew = setInterval(function () {
       kv.set(KEYS.lease, JSON.stringify({ tab: TAB_ID, until: now() + LEASE_TTL_MS }));
     }, LEASE_RENEW_MS);
     try {
-      return await fn();
+      return await fn(waited);
     } finally {
       clearInterval(renew);
       var mine = readJSON(KEYS.lease, null);
@@ -714,13 +722,13 @@
     var attempts = 0;
     for (;;) {
       try {
-        return await withLease(op.signal, async function () {
+        return await withLease(op.signal, async function (waitedForOtherTab) {
           // Another tab may have finished this download while we waited for the lock.
           var existing = await findValidWasm(artifact);
           // OPFS metadata can become visible just after the cross-tab lock is
           // released (notably on mobile browsers). Give the completed transfer
           // a short window to appear before starting a duplicate download.
-          for (var visibilityWait = 0; !existing && visibilityWait < 5; visibilityWait++) {
+          for (var visibilityWait = 0; waitedForOtherTab && !existing && visibilityWait < 5; visibilityWait++) {
             await sleep(100, op.signal);
             existing = await findValidWasm(artifact);
           }
