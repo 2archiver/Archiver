@@ -23,10 +23,10 @@ def test_release_assets(client):
     assert 'maximum-scale=1' not in page
     assert 'id="autoAI"' not in page
     assert 'id="retryModel"' in page
-    # 5.5: the page names the app and carries the identity disclosure hook the
-    # engine paints (no model is claimed until one is actually running).
-    assert 'Archiver 5.5' in page
-    assert 'id="disclosureModel"' in page
+    # 5.6: the visible shell and browser search adapter match the engine release.
+    assert '<title>Archiver 5.6' in page
+    assert 'src="static/archiver-browser-search.js"' in page
+    assert 'id="disclosureModel"' not in page
     # 5.1: settings apply as they change, so there is nothing to press.
     assert 'id="saveSettings"' not in page
     assert 'Apply settings' not in page
@@ -356,7 +356,7 @@ def test_docs_match_the_release():
     assert "## 5.5 — 2026-10-08" in changelog, changelog[:40]
     assert changelog.index("## 5.5 —") < changelog.index("## 5.3 —"), 'newest release leads'
     assert "1,561" in changelog
-    assert readme.startswith("# Archiver 5.5")
+    assert readme.startswith("# Archiver 5.6")
     # Current claims never say Archiver trained its own model. Historical
     # entries keep their wording; the README is the current statement.
     current = readme.split("## New in 5.3", 1)[0]

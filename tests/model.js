@@ -169,8 +169,8 @@ async function check(name, fn) {
   console.log('On-device engine (tests/model.js)');
   /* ---------------- WebGPU backend (unchanged fast path) ---------------- */
   const { A, stats, storage } = await fixture();
-  assert.equal(A.version, '5.5');
-  assert.equal(A.name, 'Archiver 5.5');
+  assert.equal(A.version, '5.6');
+  assert.equal(A.name, 'Archiver 5.6');
   assert.equal(Array.from(A.status().backendCandidates).join(','), 'webgpu,wasm', 'both runtimes are available here');
   for (const q of ['hello', '2+2', 'compare Python and JavaScript', 'summarize: One. Two.']) await A.chat(q, []);
   assert.equal(stats.imports.length, 0, 'instant tasks do not download a model');
@@ -554,7 +554,7 @@ async function check(name, fn) {
   /* ---------------- the status surface ---------------- */
   const idle = await fixture();
   const st = idle.A.status();
-  assert.equal(st.version, '5.5');
+  assert.equal(st.version, '5.6');
   assert.ok(st.prep && st.prep.phase === 'idle', 'the controller state is reported');
   assert.equal(idle.stats.imports.length, 0, 'opening the page starts no runtime');
   const diag = await idle.A.diagnostics();
@@ -568,7 +568,7 @@ async function check(name, fn) {
   await check('identity: nothing loaded says so and names no model as running', async () => {
     const f = await fixture();
     const id = f.A.status().identity;
-    assert.equal(id.line, 'Archiver 5.5 · No model loaded.');
+    assert.equal(id.line, 'Archiver 5.6 · No model loaded.');
     assert.equal(id.active, false);
     assert.equal(f.A.status().modelPretty, null, 'no model label without a running model');
     const text = f.A.reply('what model are you').text;
@@ -582,7 +582,7 @@ async function check(name, fn) {
     const f = await fixture();
     await f.A.chat(GENERATIVE, []);
     const id = f.A.status().identity;
-    assert.equal(id.line, 'Archiver 5.5 · Qwen 2.5 0.5B Instruct · GPU (WebGPU)');
+    assert.equal(id.line, 'Archiver 5.6 · Qwen 2.5 0.5B Instruct · GPU (WebGPU)');
     assert.equal(id.quantization, 'q4f16_1');
     assert.equal(id.runtimeName, 'WebLLM');
     assert.equal(id.runtimeVersion, '0.2.80');
@@ -602,7 +602,7 @@ async function check(name, fn) {
     const f = await fixture({ noGPU: true });
     await f.A.chat(GENERATIVE, []);
     const id = f.A.status().identity;
-    assert.equal(id.line, 'Archiver 5.5 · Qwen 2.5 0.5B Instruct · CPU (WebAssembly)');
+    assert.equal(id.line, 'Archiver 5.6 · Qwen 2.5 0.5B Instruct · CPU (WebAssembly)');
     assert.equal(id.quantization, 'Q4_0');
     assert.equal(id.runtimeName, 'wllama (llama.cpp WebAssembly)');
     assert.match(f.stats.wasm.payload.messages[0].content, /CPU \(WebAssembly\)/, 'the compact CPU prompt carries it too');
@@ -613,7 +613,7 @@ async function check(name, fn) {
     for (const url of WASM_SOURCES_PRIMARY) f.origin.hub.delete(url);   // Qwen 2.5 cannot be published: the fallback is the next choice
     await f.A.chat(GENERATIVE, []);
     const id = f.A.status().identity;
-    assert.equal(id.line, 'Archiver 5.5 · Qwen 3 0.6B · CPU (WebAssembly)');
+    assert.equal(id.line, 'Archiver 5.6 · Qwen 3 0.6B · CPU (WebAssembly)');
     assert.equal(id.activeModelId, 'Qwen3-0.6B');
     assert.equal(id.quantization, 'Q4_0');
     assert.match(f.A.reply('what version are you').text, /Qwen 3 0\.6B/);
@@ -626,7 +626,7 @@ async function check(name, fn) {
     await f.A.chat(GENERATIVE, []);
     await f.A.unload();
     assert.equal(f.A.status().identity.active, false);
-    assert.equal(f.A.status().identity.line, 'Archiver 5.5 · No model loaded.');
+    assert.equal(f.A.status().identity.line, 'Archiver 5.6 · No model loaded.');
     assert.match(f.A.reply('who are you').text, /No model is loaded/);
   });
 
@@ -638,7 +638,7 @@ async function check(name, fn) {
     assert.equal(st.identity.active, false, 'a candidate is not an active model');
     assert.equal(st.modelPretty, null, 'modelPretty describes only the running model');
     assert.equal(st.identity.selectedModelLabel, 'Qwen 2.5 0.5B Instruct');
-    assert.equal(st.identity.line, 'Archiver 5.5 · No model loaded.');
+    assert.equal(st.identity.line, 'Archiver 5.6 · No model loaded.');
     f.A.cancelLoad();
     await pending;
     assert.equal(f.A.status().identity.active, false, 'a cancelled preparation publishes no identity');
