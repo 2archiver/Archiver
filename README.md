@@ -1,22 +1,22 @@
-# Archiver 5.5
+# Archiver 5.6
 
-**An everyday assistant with instant local tools, open-ended answers from an open Qwen model that runs in your browser (Archiver did not train it), and live web search when you ask.**
+**An everyday assistant with instant local tools, private on-device answers, and browser-side search on GitHub Pages.**
 
 No account or model-provider API key. Two inference runtimes are bundled with the website — WebGPU where a browser offers it, WebAssembly where it does not — and model assets are fetched and cached automatically in the browser. No model server, deployment-time npm step, or model weights in Git.
 
 ## Public site — GitHub Pages
 
-**The public app is [https://2archiver.github.io/Archiver/](https://2archiver.github.io/Archiver/).** It is a static, local-first deployment published by GitHub Actions from this repository. Local tools, the knowledge corpus, the on-device model (WebGPU or WebAssembly), and browser-stored chats work there. Live web search and cross-device sync need the optional server-backed deployment; the app no longer blocks first launch with a warning when those features are absent.
+**The public app is [https://2archiver.github.io/Archiver/](https://2archiver.github.io/Archiver/).** It is a static, local-first deployment published by GitHub Actions from this repository. Local tools, the knowledge corpus, the on-device model (WebGPU or WebAssembly), browser-stored chats, and browser-side search work there. Search uses Wikipedia and Hacker News as browser-accessible sources; the optional server-backed deployment provides broader multi-provider search and cross-device sync.
 
-The Render deployment remains available for server-backed search and sync. GitHub Pages is the public front door, not a replacement for the optional backend. A `scripts/build_pages.py` safety gate keeps databases, Python and secrets out of the public artifact, and a one-time service-worker bootstrap supplies the cross-origin-isolation headers Pages cannot send. The workflow asserts the **GitHub Actions** Pages source before deployment, waits out any built-in branch build queued for the same commit, then fetches the published URL and fails if it is not the app — a branch-sourced or replaced deployment goes red instead of 404ing; see [docs/PAGES.md](docs/PAGES.md).
+Archiver 5.6 cleans up the page, prepares the model automatically when conditions allow, moves model details to Settings, and fixes iPhone Diagnostics scrolling. The Render deployment remains available for broader server-backed search and sync. GitHub Pages is the public front door, not a replacement for the optional backend. A `scripts/build_pages.py` safety gate keeps databases, Python and secrets out of the public artifact, and a one-time service-worker bootstrap supplies the cross-origin-isolation headers Pages cannot send. The workflow asserts the **GitHub Actions** Pages source before deployment, waits out any built-in branch build queued for the same commit, then fetches the published URL and fails if it is not the app — a branch-sourced or replaced deployment goes red instead of 404ing; see [docs/PAGES.md](docs/PAGES.md).
 
 ## Default model — lighter Qwen2.5-0.5B (October 2026)
 
 For static hosting the default model is **Qwen2.5-0.5B-Instruct** again, on both
 runtimes — about a third less GPU memory than Qwen3-0.6B in WebLLM's catalogue
 (~945 MB against ~1.4 GB at q4f16_1). **Qwen3-0.6B** stays as an automatic
-fallback, tried only when every Qwen2.5 artifact is missing or blocked. The name
-is now Archiver 5.5 (see CHANGELOG.md); the persona was updated for 5.5. The CPU/WebAssembly
+fallback, tried only when every Qwen2.5 artifact is missing or blocked. The app
+is now Archiver 5.6 (see CHANGELOG.md); Qwen remains the upstream model. The CPU/WebAssembly
 download is the same size either way (~429 MB at Q4_0), so the saving is on the
 GPU path. Details: [docs/MODEL-UPGRADE.md](docs/MODEL-UPGRADE.md).
 
