@@ -717,6 +717,13 @@
         return await withLease(op.signal, async function () {
           // Another tab may have finished this download while we waited for the lock.
           var existing = await findValidWasm(artifact);
+          // OPFS metadata can become visible just after the cross-tab lock is
+          // released (notably on mobile browsers). Give the completed transfer
+          // a short window to appear before starting a duplicate download.
+          for (var visibilityWait = 0; !existing && visibilityWait < 5; visibilityWait++) {
+            await sleep(100, op.signal);
+            existing = await findValidWasm(artifact);
+          }
           if (existing && existing.model && !existing.invalid) return existing.model;
           setPhase('downloading', { reason: 'Downloading the model once. Other tabs wait for this one.' });
           return downloadOnce(artifact, op);
