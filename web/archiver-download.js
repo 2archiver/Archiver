@@ -9,15 +9,12 @@
     link.href = url;
     link.download = filename;
     link.style.display = 'none';
-    // If a browser opens instead of downloads, do not replace the app's tab.
     link.target = '_blank';
     link.rel = 'noopener';
     document.body.appendChild(link);
     try {
       link.click();
     } finally {
-      // There is no cross-browser download-complete event. Give Safari a full
-      // minute to start consuming the URL, then release the temporary objects.
       setTimeout(() => {
         link.remove();
         URL.revokeObjectURL(url);
@@ -25,4 +22,12 @@
     }
   }
   window.ArchiverDownload = { save };
+
+  /* 5.6: load browser search on static hosts (github.io) so WEB works without Render. */
+  try {
+    var s = document.createElement('script');
+    s.src = new URL('static/archiver-browser-search.js', document.baseURI).href;
+    s.async = false;
+    document.head.appendChild(s);
+  } catch (_) {}
 })();
