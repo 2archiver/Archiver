@@ -33,7 +33,7 @@
 'use strict';
 
 var CACHE_PREFIX = 'archiver-shell-';
-var CACHE_VERSION = '5.6.0';
+var CACHE_VERSION = '5.5.0';
 var SHELL_CACHE = CACHE_PREFIX + 'v' + CACHE_VERSION;
 var NETWORK_WAIT_MS = 4000;
 var ISOLATION = [
@@ -54,6 +54,8 @@ function sameScope(url) {
   return url.origin === self.location.origin && url.pathname.indexOf(scopePath()) === 0;
 }
 
+/* Adds the isolation headers without touching the body. Opaque and status-0
+   responses cannot be rebuilt, so they pass through unchanged. */
 function isolate(response) {
   if (response.type === 'opaque' || response.status === 0) return response;
   var headers = new Headers(response.headers);
@@ -67,6 +69,8 @@ function cacheable(response) {
   return !!response && response.status === 200 && response.type === 'basic';
 }
 
+/* The app's own files named by the shell: scripts, styles, icons, manifest. Runtimes
+   under /static/vendor/ are left out; they are stored the first time they load. */
 function shellAssetUrls(html) {
   var out = [];
   var seen = {};
@@ -102,6 +106,8 @@ function cachedShell() {
   }, function () { return undefined; });
 }
 
+/* The network answers when it is quick. Otherwise, or when it fails, the cached copy
+   answers, and the network result (still in flight) refreshes the cache. */
 function preferNetwork(network, cached) {
   return new Promise(function (resolve) {
     var timer = setTimeout(function () { resolve(isolate(cached)); }, NETWORK_WAIT_MS);
@@ -118,7 +124,10 @@ function preferNetwork(network, cached) {
 self.addEventListener('install', function (event) {
   event.waitUntil((async function () {
     var cache = await caches.open(SHELL_CACHE);
-    try { await precacheShell(cache); } catch (_) {}
+    // A few hundred kilobytes. An install never downloads megabytes of runtime.
+    try { await precacheShell(cache); } catch (_) { /* offline install: cached on the next online visit */ }
+    // First install: nothing is open yet, so take over at once. Otherwise wait
+    // for the page's explicit SKIP_WAITING (the "update available" action).
     if (!self.registration.active) await self.skipWaiting();
   })());
 });
@@ -141,15 +150,18 @@ self.addEventListener('activate', function (event) {
 function serveNavigation(request) {
   var network = fetch(request, { cache: 'no-store' }).then(function (res) {
     if (res.status === 0 || res.type === 'opaque' || res.type === 'opaqueredirect') return res;
+    // Cloned before the body is handed on: a clone taken after isolate() has
+    // consumed the stream would fail, and the shell would silently stop refreshing.
     var copy = cacheable(res) ? res.clone() : null;
     if (copy) {
       caches.open(SHELL_CACHE).then(function (cache) { return cache.put(shellUrl(), copy); }).catch(function () {});
     }
     return isolate(res);
   });
-  network.then(null, function () {});
+  network.then(null, function () {});  // handled below; no unhandled-rejection report
   return cachedShell().then(function (cached) {
     if (cached) return preferNetwork(network, cached);
+    // Nothing cached and no network: say so plainly, rather than a browser error page.
     return network.catch(function () {
       return new Response(
         '<!doctype html><meta charset="utf-8"><title>Archiver is offline</title>' +
@@ -166,9 +178,10 @@ function serveAsset(request, url) {
   return caches.open(SHELL_CACHE).then(function (cache) {
     return cache.match(request).then(function (cached) {
       if (cached && immutable) return isolate(cached);
+      // Revalidate app files with the server so a fresh HTML never meets a stale script.
       var upstream = immutable ? request : new Request(request, { cache: 'no-cache' });
       var network = fetch(upstream).then(function (res) {
-        var copy = cacheable(res) ? res.clone() : null;
+        var copy = cacheable(res) ? res.clone() : null;  // cloned before isolate() takes the body
         if (copy) cache.put(request, copy).catch(function () {});
         return isolate(res);
       });
@@ -186,19 +199,25 @@ function passThrough(request) {
 self.addEventListener('fetch', function (event) {
   var request = event.request;
   if (request.method !== 'GET') return;
+  // A cache-only request that is not same-origin cannot be re-issued.
   if (request.cache === 'only-if-cached' && request.mode !== 'same-origin') return;
   var url;
   try { url = new URL(request.url); } catch (_) { return; }
+  // Model weights, third-party hosts and other apps on the same origin: untouched.
   if (url.origin !== self.location.origin || !sameScope(url)) return;
   if (request.mode === 'navigate') {
     event.respondWith(serveNavigation(request));
     return;
   }
+  // The service worker script itself must always come from the network, or an
+  // update could never be detected.
   if (request.destination === 'serviceworker') return;
+  // Partial responses and live API data are never stored.
   if (request.headers.has('range') || url.pathname.indexOf('/api/') !== -1) {
     event.respondWith(passThrough(request));
     return;
   }
+  // Frames and documents outside /static/ are fetched fresh, never cached.
   if (ISOLATED_DESTINATIONS[request.destination] === 1 && url.pathname.indexOf('/static/') === -1) {
     event.respondWith(passThrough(request));
     return;
