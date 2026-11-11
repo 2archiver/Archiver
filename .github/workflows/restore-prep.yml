@@ -15,28 +15,27 @@ jobs:
           fetch-depth: 0
       - name: Restore prep from last good commit
         run: |
+          set -e
           git show c993a6bc21e6e270515f835b22e531ba256555cd:web/archiver-prep.js > web/archiver-prep.js
-          # 5.6: auto-init on open for all devices
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path('web/archiver-prep.js')
-          t = p.read_text()
-          t = t.replace("var VERSION = '5.5';", "var VERSION = '5.6';")
-          t = t.replace('/* Archiver 5.5 — one controller', '/* Archiver 5.6 — one controller')
-          old = '''    if (isTouchFirst()) {
-      // Phones and tablets: store the file now, start the runtime on the first question.
-      return ensure({ source: \'auto\', allowDownload: true, allowInit: false });
-    }
-    return ensure({ source: \'auto\', allowDownload: true, allowInit: true });'''
-          new = '''    // 5.6: prepare fully on open (download + init) on every device.
-    return ensure({ source: \'auto\', allowDownload: true, allowInit: true });'''
-          if old in t:
-              t = t.replace(old, new)
-          p.write_text(t)
-          print('prep restored', len(t))
-          PY
+          sed -i "s/var VERSION = '5.5'/var VERSION = '5.6'/" web/archiver-prep.js
+          sed -i 's/Archiver 5.5 — one controller/Archiver 5.6 — one controller/' web/archiver-prep.js
+          # Force allowInit true on auto path (delete the touch-first defer block)
+          python3 -c "
+from pathlib import Path
+t = Path('web/archiver-prep.js').read_text()
+import re
+t2, n = re.subn(
+r'if \(isTouchFirst\(\)\) \{\s*// Phones and tablets:.*?return ensure\(\{ source: \'auto\', allowDownload: true, allowInit: false \}\);\s*\}\s*return ensure\(\{ source: \'auto\', allowDownload: true, allowInit: true \}\);',
+'/* 5.6: prepare fully on open */ return ensure({ source: \\'auto\\', allowDownload: true, allowInit: true });',
+t, count=1, flags=re.S)
+print('patched', n, 'len', len(t2))
+Path('web/archiver-prep.js').write_text(t2 if n else t)
+"
+          wc -c web/archiver-prep.js
           git config user.name 'Archiver Bot'
           git config user.email 'bot@users.noreply.github.com'
           git add web/archiver-prep.js
-          git diff --cached --quiet || git commit -m 'Archiver 5.6: restore full prep.js (auto-init on open)'
+          git status
+          git diff --cached --stat
+          git commit -m 'Archiver 5.6: restore full prep.js (auto-init on open)' || echo 'nothing to commit'
           git push
