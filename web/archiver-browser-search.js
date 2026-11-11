@@ -140,3 +140,59 @@
 
   root.ArchiverBrowserSearch = { search: clientSearch };
 })(typeof self !== 'undefined' ? self : this);
+
+(function () {
+  function install() {
+    var A = window.Archiver;
+    if (!A || typeof A.webSearch !== 'function') return false;
+    if (A.__browserSearchWired) return true;
+    A.webSearch = async function (query, limit, signal, onStatus) {
+      var controller = new AbortController();
+      var cancel = function () { controller.abort(); };
+      if (signal) {
+        if (signal.aborted) throw new DOMException('Stopped', 'AbortError');
+        signal.addEventListener('abort', cancel, { once: true });
+      }
+      var timer = setTimeout(cancel, 6000);
+      try {
+        var res = await fetch(new URL('api/search?limit=' + (limit || 3) + '&q=' + encodeURIComponent(query), document.baseURI).href, {
+          signal: controller.signal, cache: 'no-store'
+        });
+        clearTimeout(timer);
+        if (res.ok) {
+          var data = await res.json();
+          return {
+            results: (data && data.results) || [],
+            report: (data && data.report) || null,
+            confidence: (data && data.confidence) || '',
+            corrected: (data && data.corrected) || '',
+            query: (data && data.query) || query,
+            unverified: !!(data && data.unverified),
+            providers: (data && data.providers) || null,
+            errors: (data && data.errors) || [],
+            error: null
+          };
+        }
+      } catch (e) {
+        clearTimeout(timer);
+        if (signal && signal.aborted) throw new DOMException('Stopped', 'AbortError');
+      } finally {
+        if (signal) signal.removeEventListener('abort', cancel);
+      }
+      if (onStatus) onStatus('Server search unavailable — searching from this browser…');
+      if (window.ArchiverBrowserSearch && window.ArchiverBrowserSearch.search) {
+        return window.ArchiverBrowserSearch.search(query, limit, signal, onStatus);
+      }
+      return { results: [], error: 'Browser search not available.', providers: null, errors: [] };
+    };
+    A.__browserSearchWired = true;
+    return true;
+  }
+  function boot() {
+    if (install()) return;
+    var n = 0;
+    var t = setInterval(function () { if (install() || ++n > 40) clearInterval(t); }, 250);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();
