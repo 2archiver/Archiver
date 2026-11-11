@@ -19,7 +19,7 @@ try {
 <meta name="apple-mobile-web-app-title" content="Archiver">
 <meta name="format-detection" content="telephone=no">
 <meta name="mobile-web-app-capable" content="yes">
-<title>Archiver 5.5 — Your everyday assistant</title>
+<title>Archiver 5.6 — Your everyday assistant</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
@@ -712,37 +712,6 @@ a:hover { text-decoration-color: var(--ink); }
 }
 
 
-/* 5.6 discord removed */
-.discord-widget,.discord-fab,.discord-card,.discord-embed,.btn-discord{display:none!important}
-/* Community card in Settings — banner + one line + invite, nothing else */
-.discord-embed{
-  border:1px solid var(--line-strong); border-radius:var(--radius-md); overflow:hidden;
-  background:var(--surface); box-shadow:var(--shadow-1);
-}
-.discord-embed-banner{ display:block; width:100%; height:96px; object-fit:cover; }
-.discord-embed-head{
-  display:flex; align-items:center; gap:8px; padding:12px 14px 0;
-  font-family:var(--serif); font-weight:750; font-size:15px; letter-spacing:-.015em; color:var(--ink);
-}
-.community-icon{
-  width:26px; height:26px; border-radius:7px; background:#5865F2; color:#fff;
-  display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;
-}
-.community-icon svg{ display:block; }
-.discord-embed-copy{ margin:6px 14px 0; font-size:12.5px; color:var(--ink-2); line-height:1.5; }
-.btn-discord{
-  display:inline-flex; align-items:center; justify-content:center; width:calc(100% - 28px);
-  margin:10px 14px 0; padding:9px 12px; border-radius:9px;
-  background:#5865F2; border:1px solid #4752C4; color:#fff;
-  font-size:13px; font-weight:700; letter-spacing:-.01em; text-decoration:none;
-  transition: all 140ms var(--ease);
-}
-.btn-discord:hover{ background:#4752C4; border-color:#3B45A0; }
-.discord-embed-foot{
-  padding:8px 14px 12px; text-align:center;
-  font-family:var(--mono); font-size:10.5px; color:var(--ink-3); letter-spacing:.02em;
-}
-
 /* ---------- Updates row + Changelog overlay ---------- */
 .update-row{
   display:flex; align-items:center; justify-content:space-between; gap:14px;
@@ -788,8 +757,6 @@ a:hover { text-decoration-color: var(--ink); }
 }
 
 
-/* Discord hidden on main — only in Settings */
-.discord-widget{ display:none !important; }
 
 
 /* iPhone 14 Add to Home Screen — safe area & standalone */
@@ -1060,7 +1027,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
           </svg>
         </span>
       </span>
-      <span class="side-label">Archiver <span class="version-tag">5.5</span></span>
+      <span class="side-label">Archiver <span class="version-tag">5.6</span></span>
       <button class="side-x" id="sideClose" aria-label="Close menu" title="Close">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
@@ -1138,7 +1105,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
         </div>
         <div class="start-greeting">Make sense of anything.</div>
         <div class="start-sub">A quiet place to ask, explore, and keep what matters.</div>
-        <p class="ai-disclosure">Private answers from an open model running in this browser. No third-party AI provider receives your prompts. On the static GitHub Pages copy, web search runs in the browser. Runs on WebGPU, or on the CPU through WebAssembly. <span id="disclosureModel" style="font-size:11px;color:var(--ink-3)"></span></p>
+        <p class="ai-disclosure">Private answers from a model running in this browser. On GitHub Pages, web search runs from this browser. No third-party AI provider receives your prompts. Runs on WebGPU, or on the CPU through WebAssembly.</p>
         <div class="start-features">
           <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> No model-provider key</span>
           <span class="feat-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="12 2 21 7 21 17 12 22 3 17 3 7"/></svg> Open model, in your browser</span>
@@ -1231,10 +1198,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
         </div>
       </fieldset>
 
-      <fieldset>
-        <legend>Long chats</legend>
-        <label class="toggle"><input type="checkbox" id="setAutoDistill"> Auto-distill and consolidate long chats</label>
-      </fieldset>
+
 
       <fieldset>
         <legend>Persona & Prompt</legend>
@@ -1279,8 +1243,8 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
         <legend>Updates</legend>
         <div class="update-row">
           <div class="update-meta">
-            <b>5.5</b><span>2026-10-08 · latest</span>
-            <p>Archiver 5.5 — the app and the model are named separately, factual questions are answered from curated cards or not at all, and answers cached before the grounding rules changed are no longer served.</p>
+            <b>5.6</b><span>2026-11-11 · latest</span>
+            <p>Archiver 5.6 — browser search on GitHub Pages, a cleaner interface, automatic model preparation, and an iPhone diagnostics scroll fix.</p>
           </div>
           <button class="btn sm" id="openChangelog" style="white-space:nowrap; flex-shrink:0;">View changelog →</button>
         </div>
@@ -1297,7 +1261,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
 </div>
 
 
-<!-- Discord — unintrusive floating invite (like Chatwave) -->
+
 
 
 
@@ -1318,6 +1282,11 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
         <div class="cl-entry" style="border-color:var(--accent);">
           <div class="cl-head"><span class="cl-ver">5.6</span><span class="cl-date">2026-11-11</span></div>
           <div class="cl-title">5.6 — github.io browser search, cleanup, auto model on open</div>
+          <div class="cl-body"><ul>
+            <li>Search now falls back to browser-accessible sources on GitHub Pages when the server is unavailable.</li>
+            <li>Model details moved into Settings; generation tuning, the Discord invite, and auto-distill control were removed.</li>
+            <li>Model preparation starts automatically when the page opens and browser conditions allow. Diagnostics scrolling was improved for iPhone.</li>
+          </ul></div>
           <div class="cl-head"><span class="cl-ver">5.5</span><span class="cl-date">2026-10-08</span></div>
           <div class="cl-title">5.5 — consistent identity, grounded answers, Mishima cards, corrected Hitler cards</div>
           <div class="cl-body">
@@ -1481,6 +1450,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
 <script src="static/archiver-sha256.js" defer></script>
 <script src="static/archiver-prep.js" defer></script>
 <script src="static/archiver-engine.js" defer></script>
+<script src="static/archiver-browser-search.js" defer></script>
 <script src="static/archiver-download.js" defer></script>
 <script src="static/archiver-diag.js" defer></script>
 
@@ -2291,18 +2261,14 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
           : 'Running on this device’s GPU through WebGPU. Lookup and note tools stay instant.')
           : 'It prepares in the background when your connection and settings allow, and starts with your first question.');
     }
-    /* The model named here is the one that is actually loaded, or the one being
-       prepared. With no model loaded, no model name is shown as active. */
+    /* Keep model details in Settings; the main screen only identifies the app. */
     const idn = st.identity || {};
     const named = idn.active ? idn.activeModelLabel : (idn.selectedModelLabel || '');
-    const disclose = named ? named + ' — an open model published by Qwen' : 'an open model published by Qwen';
-    if ($('#disclosureModel')) $('#disclosureModel').textContent = named ? ('Model: ' + named) : '';
+    const disclose = named ? named + ' — an open model published by Qwen' : 'An open model published by Qwen';
     $('#engineBlurb').textContent = disclose + '. Archiver did not train it; it runs privately in this browser and no third-party AI provider sees your prompts.';
     if ($('#modelLabel')) {
-      const tail = idn.active ? ' · ' + idn.activeModelLabel + ' · ' + idn.backendLabel
-        : ' · No model loaded.';
       const plain = (x) => String(x == null ? '' : x).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-      $('#modelLabel').innerHTML = 'Archiver <span class="version-tag">' + plain(st.appVersion || '5.6') + '</span>' + plain(tail);
+      $('#modelLabel').innerHTML = 'Archiver <span class="version-tag">' + plain(st.appVersion || '5.6') + '</span>';
     }
 
     const size = p.bytesTotal ? (p.bytesTotal >= 1073741824 ? (p.bytesTotal / 1073741824).toFixed(1) + ' GB' : Math.round(p.bytesTotal / 1048576) + ' MB') : 'Shown when the download starts';
@@ -2344,13 +2310,8 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
 
   function fillSettings(s) {
     if (!s) return;
-    if ($('#setAutoDistill')) $('#setAutoDistill').checked = String(s.auto_distill) === '1';
     if ($('#setPersona')) $('#setPersona').value = s.persona || '';
     if ($('#setSearchCount')) $('#setSearchCount').value = storageGet('archiver.searchCount', '3');
-    /* Generation tuning: the input mirrors the stored setting so it is never
-       left blank — an empty field here used to look like a broken pipeline,
-       and the value below is exactly what the server runs with. */
-    if ($('#setContextTokens')) $('#setContextTokens').value = s.max_context_tokens ?? '6000';
   }
 
   async function restoreDefaults() {
@@ -2393,20 +2354,12 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
 
   function collectSettings() {
     const s = state.settings || {};
-    /* The context-token field is read from the Generation input when it has a
-       value (it is filled from settings on load), otherwise the stored value,
-       otherwise the server default — an empty input can never write an empty
-       setting that would break int() parsing server-side. */
-    const num = (sel, key, fallback, lo, hi) => {
-      const el = $(sel);
-      const raw = el && el.value !== '' && el.value != null ? el.value : (s[key] ?? fallback);
-      const n = Number(raw);
-      return String(Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : fallback);
-    };
+    /* Preserve the server-side context budget after removing its tuning control. */
+    const context = Number(s.max_context_tokens ?? 6000);
     return {
-      max_context_tokens: num('#setContextTokens', 'max_context_tokens', '6000', 500, 16000),
+      max_context_tokens: String(Number.isFinite(context) ? Math.min(16000, Math.max(500, context)) : 6000),
       distill_after: String(s.distill_after ?? 8),
-      auto_distill: $('#setAutoDistill') ? ($('#setAutoDistill').checked ? '1' : '0') : String(s.auto_distill ?? '1'),
+      auto_distill: String(s.auto_distill ?? '1'),
       persona: $('#setPersona') ? $('#setPersona').value : (s.persona || '')
     };
   }
@@ -2440,9 +2393,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     const personaSave = debounced(save, 450);
     if ($('#setPersona')) $('#setPersona').addEventListener('input', personaSave);
     if ($('#setSearchCount')) $('#setSearchCount').addEventListener('change', save);
-    if ($('#setAutoDistill')) $('#setAutoDistill').addEventListener('change', save);
     /* Advanced retrieval saves itself like every other control. */
-    if ($('#setContextTokens')) $('#setContextTokens').addEventListener('change', save);
     /* The pending persona save is cancelled by the caller, which then saves
        the field's current value itself — the edit is never dropped. */
     return () => personaSave.cancel();
@@ -2881,119 +2832,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
 </script>
 
 
-<script>
-/* Discord widget — unintrusive, Chatwave-style (auto after delay, dismiss persists) */
-(function(){
-  try{
-    var card = document.getElementById('discordCard');
-    var fab  = document.getElementById('discordFab');
-    var closeBtn = document.getElementById('discordCardClose');
-    var joinBtn  = document.getElementById('discordJoinBtn');
-    if(!card || !fab) return;
 
-    var KEY_D = 'archiver_discord_dismissed';
-    var KEY_J = 'archiver_discord_joined';
-    var DISCORD = 'https://discord.gg/n9nBWJWu2a';
-
-    function now(){ return Date.now(); }
-    function getTs(k){
-      try{ var v = localStorage.getItem(k); return v ? parseInt(v,10) : 0; }catch(e){ return 0; }
-    }
-    function shouldAuto(){
-      var d = getTs(KEY_D);
-      var j = getTs(KEY_J);
-      // joined -> suppress 30d, dismissed -> suppress 7d
-      if(j && (now() - j) < 30*24*60*60*1000) return false;
-      if(d && (now() - d) < 7*24*60*60*1000) return false;
-      return true;
-    }
-    function openCard(){
-      card.hidden = false;
-      fab.setAttribute('aria-expanded','true');
-      // force reflow for animation if needed
-      card.style.animation = 'none'; card.offsetHeight; card.style.animation = '';
-    }
-    function closeCard(persist){
-      card.hidden = true;
-      fab.setAttribute('aria-expanded','false');
-      if(persist){
-        try{ localStorage.setItem(KEY_D, String(now())); }catch(e){}
-      }
-    }
-    function toggle(){
-      if(card.hidden) openCard(); else closeCard(false);
-    }
-
-    fab.addEventListener('click', function(e){
-      e.preventDefault();
-      toggle();
-    });
-    if(closeBtn){
-      closeBtn.addEventListener('click', function(e){
-        e.preventDefault(); e.stopPropagation();
-        closeCard(true);
-      });
-    }
-    function recordJoined(){
-      try{ localStorage.setItem(KEY_J, String(now())); }catch(e){}
-    }
-    if(joinBtn){
-      joinBtn.addEventListener('click', function(){
-        recordJoined();
-        // keep link behaviour (_blank) — also close card softly so it doesn't linger
-        setTimeout(function(){ closeCard(false); }, 400);
-      });
-    }
-    // The Settings Community card points at the same invite; record the join there too.
-    var settingsJoin = document.getElementById('settingsDiscordJoin');
-    if(settingsJoin){ settingsJoin.addEventListener('click', recordJoined); }
-    document.addEventListener('keydown', function(e){
-      if(e.key==='Escape' && !card.hidden) closeCard(false);
-    });
-    // click outside to dismiss (not persist)
-    document.addEventListener('click', function(e){
-      if(card.hidden) return;
-      var w = document.getElementById('discordWidget');
-      if(w && !w.contains(e.target)){
-        // only if click is far – keep it subtle: don't auto-close on every click inside chat
-        // we scope to clicks on scrim/shell outside — so just ignore for now
-      }
-    });
-
-    // Less intrusive: NO auto-popup by default. Card only opens on FAB click.
-    // If you want Chatwave-like auto, enable it in Settings → Community → “Show invite automatically”.
-    var AUTO_KEY = 'archiver_discord_autoshow';
-    function isAutoEnabled(){
-      try{ return localStorage.getItem(AUTO_KEY)==='1'; }catch(e){ return false; }
-    }
-    if(isAutoEnabled() && shouldAuto()){
-      setTimeout(function(){
-        var active = document.activeElement;
-        var isTyping = active && (active.tagName==='INPUT' || active.tagName==='TEXTAREA' || active.isContentEditable);
-        if(isTyping && document.visibilityState==='visible'){
-          setTimeout(openCard, 4000);
-        } else {
-          openCard();
-        }
-      }, 4000);
-    }
-    // Respect “hide floating button” setting
-    var HIDE_KEY='archiver_discord_hide_fab';
-    function applyFabVisibility(){
-      try{
-        if(localStorage.getItem(HIDE_KEY)==='1'){
-          var w=document.getElementById('discordWidget');
-          if(w) w.style.display='none';
-        }
-      }catch(e){}
-    }
-    applyFabVisibility();
-
-    // Expose for debugging
-    window.__archiverDiscord = { open: openCard, close: closeCard, toggle: toggle, url: DISCORD };
-  }catch(e){}
-})();
-</script>
 
 
 <script>
