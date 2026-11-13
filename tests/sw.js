@@ -145,7 +145,7 @@ async function cachedText(worker, cacheName, url) {
 
 (async () => {
   console.log('Pages service worker (tests/sw.js)');
-  const SHELL = 'archiver-shell-v5.6.0';
+  const SHELL = 'archiver-shell-v5.6.1';
 
   await test('first install stores the shell and the app files it names, not the runtimes', async () => {
     const w = makeWorker();
@@ -194,6 +194,7 @@ async function cachedText(worker, cacheName, url) {
     assert.equal(res.status, 200);
     assert.equal(res.headers.get('Cross-Origin-Embedder-Policy'), 'require-corp');
     assert.equal(res.headers.get('Cross-Origin-Opener-Policy'), 'same-origin');
+    assert.equal(res.headers.get('Cross-Origin-Resource-Policy'), 'same-origin');
     assert.equal(w.network.log[0].cache, 'no-store', 'the page itself is never taken from the HTTP cache');
     assert.equal(await res.text(), '<html>v1</html>');
     await settle();

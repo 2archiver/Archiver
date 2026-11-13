@@ -33,12 +33,13 @@
 'use strict';
 
 var CACHE_PREFIX = 'archiver-shell-';
-var CACHE_VERSION = '5.6.0';
+var CACHE_VERSION = '5.6.1';
 var SHELL_CACHE = CACHE_PREFIX + 'v' + CACHE_VERSION;
 var NETWORK_WAIT_MS = 4000;
 var ISOLATION = [
   ['Cross-Origin-Opener-Policy', 'same-origin'],
   ['Cross-Origin-Embedder-Policy', 'require-corp'],
+  ['Cross-Origin-Resource-Policy', 'same-origin'],
 ];
 var ISOLATED_DESTINATIONS = { document: 1, iframe: 1, frame: 1, worker: 1, sharedworker: 1 };
 

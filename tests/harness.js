@@ -89,8 +89,9 @@ function storageMap(map, denied) {
   };
 }
 
-function makeOPFS(origin, ctx) {
+function makeOPFS(origin, ctx, opts) {
   const dir = origin.opfs;
+  const safari = !!(opts && opts.safariOPFS);
   class FileSystemFileHandle {
     constructor(name) { this.kind = 'file'; this.name = name; }
     async getFile() {
@@ -98,7 +99,43 @@ function makeOPFS(origin, ctx) {
       if (!bytes) throw Object.assign(new Error('NotFound'), { name: 'NotFoundError' });
       return new ctx.Blob([bytes]);
     }
-    async createWritable() {
+    async createSyncAccessHandle() {
+      const name = this.name;
+      let buf = dir.has(name) ? dir.get(name).slice() : new Uint8Array(0);
+      let closed = false;
+      return {
+        async truncate(size) {
+          if (closed) throw new Error('closed');
+          buf = size > 0 ? buf.slice(0, size) : new Uint8Array(0);
+        },
+        async write(chunk, writeOpts) {
+          if (closed) throw new Error('closed');
+          const bytes = chunk instanceof Uint8Array ? chunk : new Uint8Array(chunk);
+          const at = writeOpts && typeof writeOpts.at === 'number' ? writeOpts.at : buf.length;
+          if (origin.failWrites && at + bytes.length > origin.failWrites.afterBytes) {
+            throw Object.assign(new Error('The quota has been exceeded.'), { name: 'QuotaExceededError' });
+          }
+          const next = new Uint8Array(Math.max(buf.length, at + bytes.length));
+          next.set(buf, 0);
+          next.set(bytes, at);
+          buf = next;
+          return bytes.length;
+        },
+        async flush() {
+          if (closed) throw new Error('closed');
+          dir.set(name, buf.slice());
+        },
+        async close() {
+          if (!closed) {
+            dir.set(name, buf.slice());
+            closed = true;
+          }
+        }
+      };
+    }
+  }
+  if (!safari) {
+    FileSystemFileHandle.prototype.createWritable = async function createWritable() {
       const name = this.name;
       let parts = [];
       let total = 0;
@@ -120,7 +157,7 @@ function makeOPFS(origin, ctx) {
         },
         async abort() { parts = []; }
       };
-    }
+    };
   }
   const cacheDir = {
     kind: 'directory', name: 'cache',
@@ -263,7 +300,7 @@ function hubRoute(origin, url, init, ctx, plan) {
 
 /* --------------------------------------------------------- workers (real hash) */
 
-function makeWorkerClass(ctx, origin) {
+function makeWorkerClass(ctx, origin, blobUrls) {
   return class FakeWorker {
     constructor(url) {
       this.url = String(url);
@@ -280,6 +317,18 @@ function makeWorkerClass(ctx, origin) {
           vm.runInContext(fs.readFileSync(path.join(WEB, path.basename(String(rel))), 'utf8'), child, { filename: String(rel) });
         };
         vm.runInContext(fs.readFileSync(path.join(WEB, 'archiver-hash-worker.js'), 'utf8'), child, { filename: 'archiver-hash-worker.js' });
+        this.onmessage = null;
+        this.onerror = null;
+        this.messageerror = null;
+      } else if (blobUrls && blobUrls.has(this.url)) {
+        const src = blobUrls.get(this.url);
+        this._child = vm.createContext({ console, Uint8Array, ArrayBuffer, Object, Date, Math, Promise, Error, setTimeout, clearTimeout, URL, DOMException });
+        const child = this._child;
+        child.self = child;
+        child.globalThis = child;
+        child.navigator = ctx.navigator;
+        child.postMessage = (msg) => this._emit('message', { data: msg });
+        vm.runInContext(src, child, { filename: 'blob-worker.js' });
         this.onmessage = null;
         this.onerror = null;
         this.messageerror = null;
@@ -368,7 +417,13 @@ function makeWebLLMExports(ctx, origin, plan, opts) {
         chat: { completions: { create: async (args) => {
           log.payloads.push(args);
           const set = opts && opts.nextChunks ? opts.nextChunks() : ['WebGPU answer.'];
-          return (async function* () { for (const c of set) yield { choices: [{ delta: { content: c } }] }; })();
+          const delay = opts && opts.chunkDelay ? opts.chunkDelay : 0;
+          return (async function* () {
+            for (const c of set) {
+              if (delay) await new Promise(r => setTimeout(r, delay));
+              yield { choices: [{ delta: { content: c } }] };
+            }
+          })();
         } } }
       };
       log.engines.push(engine);
@@ -428,6 +483,7 @@ async function createBrowser(options) {
   const visibility = { state: opts.visibility || 'visible', listeners: [] };
   ctx.document = {
     baseURI: opts.baseURI || ORIGIN,
+    readyState: 'complete',
     get visibilityState() { return visibility.state; },
     addEventListener(type, fn) { if (type === 'visibilitychange') visibility.listeners.push(fn); },
     body: null
@@ -437,10 +493,33 @@ async function createBrowser(options) {
   // The OPFS backend detects support from this prototype (as real browsers expose it).
   if (opts.durableOPFS !== false) {
     ctx.FileSystemFileHandle = function FileSystemFileHandle() {};
-    ctx.FileSystemFileHandle.prototype.createWritable = function () {};
+    if (!opts.safariOPFS) {
+      ctx.FileSystemFileHandle.prototype.createWritable = function () {};
+    }
+  }
+  const blobUrls = new Map();
+  let blobSeq = 0;
+  if (opts.safariOPFS) {
+    const NativeBlob = ctx.Blob;
+    ctx.Blob = class HarnessBlob extends NativeBlob {
+      constructor(parts, blobOpts) {
+        super(parts, blobOpts);
+        this.__parts = parts || [];
+      }
+    };
+    const NativeURL = ctx.URL;
+    class HarnessURL extends NativeURL {}
+    HarnessURL.createObjectURL = (blob) => {
+      const id = 'blob:http://localhost/' + (++blobSeq);
+      const src = blob && Array.isArray(blob.__parts) ? blob.__parts.map(String).join('') : '';
+      blobUrls.set(id, src);
+      return id;
+    };
+    HarnessURL.revokeObjectURL = (id) => { blobUrls.delete(id); };
+    ctx.URL = HarnessURL;
   }
   ctx.navigator.storage = {
-    getDirectory: async () => (opts.durableOPFS === false ? (() => { throw Object.assign(new Error('no OPFS'), { name: 'NotSupportedError' }); })() : makeOPFS(origin, ctx).getDirectory()),
+    getDirectory: async () => (opts.durableOPFS === false ? (() => { throw Object.assign(new Error('no OPFS'), { name: 'NotSupportedError' }); })() : makeOPFS(origin, ctx, { safariOPFS: !!opts.safariOPFS }).getDirectory()),
     estimate: async () => ({ quota: origin.quota, usage: usageOf(origin) }),
     persist: async () => origin.persistAnswer,
     persisted: async () => origin.persisted
@@ -448,9 +527,13 @@ async function createBrowser(options) {
   ctx.navigator.locks = opts.noLocks ? undefined : makeLocks(origin);
   ctx.matchMedia = (q) => ({ matches: /coarse/.test(q) ? !!opts.touch : false });
   if (opts.requestIdle) ctx.requestIdleCallback = (fn, o) => setTimeout(() => fn({ didTimeout: false }), 0);
-  ctx.Worker = makeWorkerClass(ctx, origin);
+  ctx.Worker = makeWorkerClass(ctx, origin, blobUrls);
   ctx.fetch = async (input, init) => {
     const url = typeof input === 'string' ? input : input.url;
+    if (typeof opts.fetch === 'function') {
+      const handled = await opts.fetch(url, init || {}, ctx);
+      if (handled !== undefined) return handled;
+    }
     return hubRoute(origin, url, init || {}, ctx, opts.plan || null);
   };
   ctx.window = ctx;
@@ -467,6 +550,7 @@ async function createBrowser(options) {
   if (opts.crossOriginIsolated !== false) ctx.crossOriginIsolated = true;
   if (opts.sharedArrayBuffer !== false) ctx.SharedArrayBuffer = SharedArrayBuffer;
   ctx.__isolation = undefined;
+  if (opts.isolation) ctx.__archiverIsolation = opts.isolation;
   vm.createContext(ctx);
 
   // Modules: real wllama (or a stand-in Wllama class), WebLLM stand-in.
@@ -513,6 +597,7 @@ async function createBrowser(options) {
   };
   ctx.__imports = imports;
   const files = ['archiver-sha256.js', 'archiver-prep.js', 'archiver-knowledge.js', 'archiver-comprehension.js', 'archiver-engine.js'];
+  if (opts.browserSearch) files.push('archiver-browser-search.js');
   for (const file of files) {
     if (file === 'archiver-knowledge.js' && opts.skipKnowledge) continue;
     const script = new vm.Script(fs.readFileSync(path.join(WEB, file), 'utf8'), {

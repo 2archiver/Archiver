@@ -1396,7 +1396,13 @@ const HELP = [
      Edge on D3D12 and some Android GPUs report maxStorageBufferBindingSize at
      the 128 MiB spec minimum; that is enough for 0.5B (WebLLM marks it
      low_resource_required) but not for anything larger. */
-  const GPU_NEEDS = { storageBinding: 128 * 1024 * 1024, buffer: 128 * 1024 * 1024, canary: 64 * 1024 * 1024 };
+  const GPU_NEEDS = {
+    storageBinding: 128 * 1024 * 1024,
+    buffer: 256 * 1024 * 1024,
+    canary: 64 * 1024 * 1024,
+    workgroupStorage: 32 * 1024,
+    storageBuffersPerStage: 10
+  };
   async function gpuFitsModel(adapter) {
     try {
       if (adapter.isFallbackAdapter || (adapter.info && adapter.info.isFallbackAdapter)) {
@@ -1407,7 +1413,13 @@ const HELP = [
         return { ok: false, reason: 'This GPU allows only ' + Math.round((lim.maxStorageBufferBindingSize || 0) / 1048576) + ' MiB storage bindings; the model needs 128 MiB.' };
       }
       if ((lim.maxBufferSize || 0) < GPU_NEEDS.buffer) {
-        return { ok: false, reason: 'This GPU caps buffers below 128 MiB, too small for the model.' };
+        return { ok: false, reason: 'This GPU caps buffers below 256 MiB, too small for WebLLM.' };
+      }
+      if (typeof lim.maxComputeWorkgroupStorageSize === 'number' && lim.maxComputeWorkgroupStorageSize < GPU_NEEDS.workgroupStorage) {
+        return { ok: false, reason: 'This GPU offers ' + lim.maxComputeWorkgroupStorageSize + ' B compute workgroup storage; WebLLM needs 32 KiB.' };
+      }
+      if (typeof lim.maxStorageBuffersPerShaderStage === 'number' && lim.maxStorageBuffersPerShaderStage < GPU_NEEDS.storageBuffersPerStage) {
+        return { ok: false, reason: 'This GPU allows ' + lim.maxStorageBuffersPerShaderStage + ' storage buffers per shader stage; WebLLM needs 10.' };
       }
       const dm = typeof navigator !== 'undefined' ? navigator.deviceMemory : undefined;
       if (typeof dm === 'number' && dm > 0 && dm < 2) {
@@ -1548,13 +1560,24 @@ const HELP = [
     fault.catch(() => {});
     const onWorkerError = (event) => raise(gpuError('The WebGPU worker stopped: ' + ((event && event.message) || 'unknown error')));
     const onMessageError = () => raise(gpuError('The WebGPU worker sent an unreadable message.'));
+    const onAbort = () => {
+      try { worker.terminate(); } catch (_) {}
+      raise(new DOMException('Stopped', 'AbortError'));
+    };
     worker.addEventListener('error', onWorkerError);
     worker.addEventListener('messageerror', onMessageError);
+    if (hooks.signal) {
+      if (hooks.signal.aborted) {
+        onAbort();
+      } else {
+        hooks.signal.addEventListener('abort', onAbort, { once: true });
+      }
+    }
     let candidate = null;
     try {
       candidate = await Promise.race([
         mod.CreateWebWorkerMLCEngine(worker, record.model_id, {
-          appConfig: { model_list: [record], useIndexedDBCache: false },
+          appConfig: { model_list: [record], useIndexedDBCache: typeof caches === 'undefined' },
           initProgressCallback: (r) => {
             hooks.touch();
             hooks.onProgress(r && typeof r.progress === 'number' ? r.progress : 0, (r && r.text) || '');
@@ -1565,11 +1588,13 @@ const HELP = [
     } catch (err) {
       worker.removeEventListener('error', onWorkerError);
       worker.removeEventListener('messageerror', onMessageError);
+      if (hooks.signal) hooks.signal.removeEventListener('abort', onAbort);
       try { worker.terminate(); } catch (_) {}
       throw err;
     }
     worker.removeEventListener('error', onWorkerError);
     worker.removeEventListener('messageerror', onMessageError);
+    if (hooks.signal) hooks.signal.removeEventListener('abort', onAbort);
     if (gen !== identityGen) {
       /* A newer load or an unload began while this one was starting: release it. */
       try { if (candidate && typeof candidate.unload === 'function') await withDeadline(candidate.unload(), 3000); } catch (_) {}
@@ -1833,7 +1858,16 @@ const HELP = [
      Progress is reported to the chat's status line while it waits. */
   async function ensureAI(opts) {
     const o = opts || {};
-    const unsubscribe = Prep.subscribe(s => { if (o.onStatus && s.reason) o.onStatus(s.reason); });
+    const unsubscribe = Prep.subscribe(s => {
+      if (!o.onStatus) return;
+      if (s.phase === 'downloading' && s.pct > 0) {
+        o.onStatus('Downloading ' + (s.model || 'on-device model') + ' (' + s.pct + '%)…');
+      } else if (s.phase === 'verifying' && s.pct > 0) {
+        o.onStatus('Verifying ' + (s.model || 'on-device model') + ' (' + s.pct + '%)…');
+      } else if (s.reason) {
+        o.onStatus(s.reason);
+      }
+    });
     try {
       return await Prep.joinOnSend();
     } finally {
@@ -2501,7 +2535,6 @@ const HELP = [
         const deduped = stripRepeatedTail(text);
         if (deduped !== text && deduped.startsWith(emitted) && deduped.trim().length >= 12) text = deduped;
         if ((text.match(/```/g) || []).length % 2 === 1) text += '\n```';
-        if (text.length > emitted.length) onDelta(text.slice(emitted.length));
         emitted = text;
         return text;
       }
@@ -2510,32 +2543,52 @@ const HELP = [
 
   /* Display stream for a generated answer that is still being written.
 
-     Text is released as it is produced, with one exception: the line currently
-     being written is held back whenever it could still turn out to be a
-     citation or a URL, because those are exactly what the validation step is
-     allowed to withdraw. A reader therefore never sees a fabricated reference,
-     even for a frame, while ordinary prose still streams live. */
+     Receives incremental delta chunks from makeShaper, accumulates them, and
+     releases safe prose live. Any line that could turn out to be a citation or
+     a URL is held back until the validation step passes, so a reader never sees
+     a fabricated reference even for a frame while ordinary prose streams live. */
   function makeSafeDisplayStream(onDelta) {
+    let buf = '';
     let shown = 0;
+    let shownText = '';
     const release = (text, force) => {
       const body = String(text || '');
+      if (force) {
+        if (body.startsWith(shownText) && body.length > shown) {
+          const tail = body.slice(shown);
+          shown = body.length;
+          shownText = body;
+          onDelta(tail);
+        } else if (shown === 0 && body) {
+          shown = body.length;
+          shownText = body;
+          onDelta(body);
+        }
+        return;
+      }
       if (body.length <= shown) return;
       let limit = body.length;
-      if (!force) {
-        const lastBreak = body.lastIndexOf('\n');
-        const line = body.slice(Math.max(shown, lastBreak + 1));
-        if (/[[\]]|https?:/i.test(line)) limit = Math.max(shown, lastBreak + 1);
+      const tail = body.slice(shown);
+      const suspect = tail.search(/[[\]]|https?:/i);
+      if (suspect >= 0) {
+        const lineStart = body.lastIndexOf('\n', shown + suspect);
+        limit = Math.max(shown, lineStart + 1);
       }
       if (limit > shown) {
         const chunk = body.slice(shown, limit);
         shown = limit;
+        shownText = body.slice(0, limit);
         onDelta(chunk);
       }
     };
     return {
-      push: (text) => release(text, false),
-      finish: (text) => release(text, true),
-      reset() { shown = 0; },
+      push(delta) {
+        if (!delta) return;
+        buf += String(delta);
+        release(buf, false);
+      },
+      finish(text) { release(text, true); },
+      reset() { buf = ''; shown = 0; shownText = ''; },
       get shown() { return shown; }
     };
   }
@@ -2767,7 +2820,10 @@ const HELP = [
       traceStep(isExplicitSearch && !opts.search
         ? 'The prompt explicitly asked for a search, so WEB was used for this turn only.'
         : 'WEB was on for this turn.');
-      got = await webSearch(query, Math.min(opts.searchLimit || 3, 3), opts.signal, opts.onStatus);
+      const searchFn = (window.Archiver && typeof window.Archiver.webSearch === 'function')
+        ? window.Archiver.webSearch
+        : webSearch;
+      got = await searchFn(query, Math.min(opts.searchLimit || 3, 3), opts.signal, opts.onStatus);
       checkStopped();
       web = usableSources(got.results);
       lastReport = got.report || null;
@@ -2841,9 +2897,11 @@ const HELP = [
       }
     }
 
-    if (!generationReady() && !searchEnabled && opts.autoAI !== false) {
+    if (!generationReady() && (!searchEnabled || !web.length) && opts.autoAI !== false) {
       const local = _reply(t);
-      if (['capability', 'miss', 'fuzzy', 'related', 'clarify'].includes(local.kind)) {
+      const needsModel = ['capability', 'miss', 'fuzzy', 'related', 'clarify'].includes(local.kind)
+        || ['writing', 'code', 'translation'].includes(approachKind(t));
+      if (needsModel) {
         traceStep('Local tools could not answer this (' + local.kind + '), so the on-device model was prepared automatically.');
         if (opts.onStatus) opts.onStatus('Preparing ' + (identityState().selectedModelLabel || 'the on-device model') + '…');
         await ensureAI(opts);
@@ -3059,20 +3117,8 @@ const HELP = [
        seconds on an iPhone CPU should show its first sentences the moment they
        exist, not hold a blank bubble until the very end. */
     const display = makeSafeDisplayStream(piece => onDelta(piece));
-    /* A blank pass must never reach the reader: blank-looking pieces are held
-       back from the display stream so a retry (or the honest notice) replaces
-       them wholesale instead of stacking on top of stray punctuation. */
-    const shaper = makeShaper(piece => { if (!isBlankAnswer(piece)) display.push(piece); });
     let rawOut = '';
-    const record = piece => { rawOut += piece; shaper.push(piece); };
-    const gate = wantsThinking
-      ? makeThinkingGate(record, thought => {
-        audit.thinking = thought;
-        audit.planBy = 'model';
-        traceStep('The model planned in one line before answering: “' + thought + '”');
-        if (opts.onStatus) opts.onStatus('Writing…');
-      })
-      : null;
+    let gate = null;
     const startedAt = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
     const interrupt = () => interruptGeneration();
     if (opts.signal) opts.signal.addEventListener('abort', interrupt, { once: true });
@@ -3080,21 +3126,31 @@ const HELP = [
       checkStopped();
       if (opts.onGeneration) opts.onGeneration();
       if (opts.onStatus && activeBackend === 'wasm') opts.onStatus('Generating on this device’s CPU…');
-      const runOnce = async (msgs, cap) => {
+      const runOnce = async (msgs, cap, allowGate) => {
         display.reset();
         rawOut = '';
+        const shaper = makeShaper(piece => { if (piece) display.push(piece); });
+        const record = piece => { rawOut += piece; shaper.push(piece); };
+        gate = allowGate
+          ? makeThinkingGate(record, thought => {
+            audit.thinking = thought;
+            audit.planBy = 'model';
+            traceStep('The model planned in one line before answering: “' + thought + '”');
+            if (opts.onStatus) opts.onStatus('Writing…');
+          })
+          : null;
         await generateStream(msgs, {
           temperature: opts.temperature != null ? opts.temperature : (approachKind(t) === 'writing' ? 0.35 : 0.15),
           maxTokens: cap,
           signal: opts.signal,
           checkStopped,
-          thinking: wantsThinking,
+          thinking: !!allowGate,
           onPiece: piece => { if (gate) gate.push(piece); else record(piece); }
         });
         if (gate) gate.finish();
         return shaper.finish();
       };
-      let generatedAnswer = await runOnce(messages, maxTokens);
+      let generatedAnswer = await runOnce(messages, maxTokens, wantsThinking);
       if (!audit.thinking && THINK_TAG_BLOCK_RE.test(rawOut)) {
         const tagMatch = THINK_TAG_BLOCK_RE.exec(rawOut);
         const inner = tagMatch && tagMatch[1].replace(/[*_`]/g, '').replace(/\s+/g, ' ').trim();
@@ -3121,7 +3177,7 @@ const HELP = [
         const retrySys = identityPromptLine() + '\n\n' + (activeBackend === 'wasm' ? SAFARI_CPU_PERSONA : PERSONA)
           + '\n\nAnswer the question directly in plain prose. No preamble, no planning line, no thinking. Start with the first sentence of the answer.\n';
         const retryCap = Math.max(96, Math.min(256, maxTokens));
-        const retryAnswer = await runOnce([{ role: 'system', content: retrySys }, ...turns], retryCap);
+        const retryAnswer = await runOnce([{ role: 'system', content: retrySys }, ...turns], retryCap, false);
         if (!isBlankAnswer(retryAnswer)) {
           generatedAnswer = retryAnswer;
           traceStep('The retry produced ' + generatedAnswer.length + ' characters of visible answer.');
@@ -3133,6 +3189,7 @@ const HELP = [
         answer = 'I could not validate the citations in the generated answer, so I have withheld it. Please provide a reliable source or narrow the question.';
         audit.citationCheck = 'rejected';
         traceStep('Withheld generated text containing a citation or URL not present in the supplied evidence/request. This check does not verify factual accuracy.');
+        if (display.shown === 0) onDelta(answer);
       } else {
         audit.citationCheck = 'passed-membership-only';
         traceStep('Checked citation IDs and URLs against supplied evidence/request; factual support is not automatically verified.');
