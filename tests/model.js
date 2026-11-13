@@ -91,7 +91,7 @@ async function fixture(options) {
       const mib = opts.tinyLimits ? 64 : 256;
       return {
         features: new Set(opts.f32 ? [] : ['shader-f16']),
-        limits: { maxStorageBufferBindingSize: mib * 1048576, maxBufferSize: mib * 1048576 },
+        limits: Object.assign({ maxStorageBufferBindingSize: mib * 1048576, maxBufferSize: mib * 1048576 }, opts.gpuLimits || {}),
         requestDevice: async () => ({
           pushErrorScope() {}, popErrorScope: async () => null,
           createBuffer: () => ({ destroy() {} }), destroy() {}
@@ -115,6 +115,10 @@ async function fixture(options) {
     plan: opts.plan || null,
     crossOriginIsolated: opts.noIsolation ? false : undefined,
     sharedArrayBuffer: opts.noIsolation ? false : undefined,
+    durableOPFS: opts.durableOPFS,
+    browserSearch: !!opts.browserSearch,
+    fetch: opts.fetch,
+    chunkDelay: opts.chunkDelay || 0,
     noWasm: !!opts.noWasm,
     timeouts: opts.timeouts,
     nextChunks: opts.nextChunks
@@ -188,7 +192,7 @@ async function check(name, fn) {
   assert.equal(A.mode(), 'neural'); assert.equal(A.status().aiState, 'ready');
   assert.equal(A.status().backend, 'webgpu');
   assert.equal(A.status().contextBudget, 4096);
-  assert.match(A.reply('who are you').text, /Archiver 5\.5/, 'the app is named with its version');
+  assert.match(A.reply('who are you').text, /Archiver 5\.6/, 'the app is named with its version');
   assert.match(A.reply('who are you').text, /\*\*Qwen 2\.5 0\.5B Instruct\*\*/, 'the loaded model is named');
   assert.match(A.reply('who are you').text, /WebGPU/);
   assert.ok(!A.reply('who are you').text.includes('${'));
@@ -786,6 +790,130 @@ async function check(name, fn) {
     assert.equal(gens3, 1, 'an answer made under the older rules is regenerated, not replayed');
     assert.ok(origin.opfs.size > 0 || origin.caches.size > 0, 'downloaded model files survive');
     assert.match(origin.local.get('archiver.taught.v2') || '', /quagga fact/, 'taught cards survive');
+  });
+
+  await check('static Pages browser search runs from chat(), cleans queries, and caches static host 404s', async () => {
+    const calls = [];
+    const mockFetch = async (url, _init, ctx) => {
+      calls.push(url);
+      if (url.includes('/api/search')) {
+        return new ctx.Response('Not Found', { status: 404, headers: { 'content-type': 'text/html' } });
+      }
+      if (url.includes('en.wikipedia.org/w/api.php') && url.includes('list=search')) {
+        const q = new URL(url).searchParams.get('srsearch') || '';
+        const title = /ada/i.test(q) ? 'Ada Lovelace' : 'Silk Road';
+        return new ctx.Response(JSON.stringify({
+          query: { search: [{ title, snippet: 'Overview of ' + title }] }
+        }), { status: 200, headers: { 'content-type': 'application/json' } });
+      }
+      if (url.includes('en.wikipedia.org/w/api.php') && url.includes('prop=extracts')) {
+        const isAda = /Ada/i.test(url);
+        return new ctx.Response(JSON.stringify({
+          query: {
+            pages: {
+              1: {
+                title: isAda ? 'Ada Lovelace' : 'Silk Road',
+                extract: isAda
+                  ? 'Augusta Ada King, Countess of Lovelace was an English mathematician and writer chiefly known for her work on Charles Babbage’s Analytical Engine.'
+                  : 'The Silk Road was a network of Eurasian trade routes active from the second century BCE until the mid-15th century.',
+                fullurl: isAda ? 'https://en.wikipedia.org/wiki/Ada_Lovelace' : 'https://en.wikipedia.org/wiki/Silk_Road'
+              }
+            }
+          }
+        }), { status: 200, headers: { 'content-type': 'application/json' } });
+      }
+      if (url.includes('hn.algolia.com')) {
+        return new ctx.Response(JSON.stringify({ hits: [] }), { status: 200, headers: { 'content-type': 'application/json' } });
+      }
+      return undefined;
+    };
+    const f = await fixture({ browserSearch: true, fetch: mockFetch });
+    const first = await f.A.chat('Search the web for the history of the Silk Road', [], { autoAI: false });
+    assert.match(first, /Eurasian trade routes/, 'browser Wikipedia extract answers the explicit search');
+    assert.match(first, /https:\/\/en\.wikipedia\.org\/wiki\/Silk_Road/, 'Wikipedia URL is preserved in sources');
+    const wikiQueryUrl = calls.find(u => u.includes('list=search'));
+    assert.ok(wikiQueryUrl, 'Wikipedia search was called');
+    assert.ok(!/search the web for/i.test(new URL(wikiQueryUrl).searchParams.get('srsearch')), 'search command boilerplate stripped before Wikipedia query');
+    const apiCountAfterFirst = calls.filter(u => u.includes('/api/search')).length;
+    assert.equal(apiCountAfterFirst, 1, '/api/search probed once');
+
+    const second = await f.A.chat('Who is Ada Lovelace?', [], { search: true, autoAI: false });
+    assert.match(second, /Analytical Engine/, 'second search returns Wikipedia summary for Ada Lovelace');
+    assert.equal(calls.filter(u => u.includes('/api/search')).length, 1, 'static host 404 is memoized so /api/search is not retried');
+  });
+
+  await check('multi-token streaming delivers live incremental deltas matching the final answer byte-for-byte', async () => {
+    const pieces = [
+      'A rate limiter ', 'tracks request timestamps ', 'inside a sliding window ',
+      'so bursts never overwhelm ', 'your downstream API.\n\n',
+      'First, keep a deque of ', 'recent call times and drop ', 'entries older than the window. ',
+      'Second, raise an error or ', 'sleep briefly whenever the ', 'deque reaches the configured limit. ',
+      'Third, protect shared state ', 'with a lock if multiple ', 'threads call the wrapped function.'
+    ];
+    const f = await fixture({ chunks: pieces, chunkDelay: 2 });
+    const liveDeltas = [];
+    const answer = await f.A.chat(GENERATIVE, [], { onDelta: d => liveDeltas.push(d) });
+    assert.equal(answer, pieces.join(''), 'final cleaned answer keeps every streamed token');
+    assert.equal(liveDeltas.join(''), answer, 'concatenated streamed deltas equal the final answer byte-for-byte');
+    assert.ok(liveDeltas.length >= 4, 'deltas streamed incrementally during generation, not frozen into one chunk (got ' + liveDeltas.length + ')');
+  });
+
+  await check('blank-answer recovery resets the shaper cleanly so retry streams without leftover state', async () => {
+    const retryPieces = [
+      'Recursion solves a problem ', 'by breaking it into smaller ', 'instances of the same problem ',
+      'until a simple base case ', 'stops the chain and returns ', 'a concrete value back up the call stack.'
+    ];
+    const f = await fixture({
+      chunkDelay: 2,
+      chunkQueue: [
+        ['<think>deciding how to explain recursion cleanly</think>   \n'],
+        retryPieces
+      ]
+    });
+    const liveDeltas = [];
+    const answer = await f.A.chat(GENERATIVE, [], { onDelta: d => liveDeltas.push(d) });
+    assert.equal(answer, retryPieces.join(''), 'retry answer is returned cleanly');
+    assert.equal(liveDeltas.join(''), answer, 'streamed deltas match retry answer with no leftover pass-1 state');
+    assert.ok(!answer.includes('<think>'), 'no hidden thinking leaked into output');
+  });
+
+  await check('session-only CPU startup without OPFS succeeds instead of crashing CacheManager', async () => {
+    const f = await fixture({ noGPU: true, durableOPFS: false, chunks: ['Session-only CPU answer.'] });
+    const answer = await f.A.chat(GENERATIVE, []);
+    assert.equal(answer, 'Session-only CPU answer.');
+    assert.equal(f.A.status().backend, 'wasm');
+    assert.equal(f.Prep.snapshot().durable, false);
+    assert.equal(f.origin.opfs.size, 0, 'nothing written to OPFS when storage is unavailable');
+  });
+
+  await check('WebGPU adapters with insufficient workgroup storage or shader storage buffers route directly to CPU WASM', async () => {
+    const f1 = await fixture({ gpuLimits: { maxComputeWorkgroupStorageSize: 16384 }, chunks: ['CPU fallback after low workgroup storage.'] });
+    const a1 = await f1.A.chat(GENERATIVE, []);
+    assert.equal(a1, 'CPU fallback after low workgroup storage.');
+    assert.equal(f1.stats.attempts, 0, 'WebLLM was not attempted when workgroup storage is below 32 KiB');
+    assert.equal(f1.A.status().backend, 'wasm');
+
+    const f2 = await fixture({ gpuLimits: { maxStorageBuffersPerShaderStage: 8 }, chunks: ['CPU fallback after low storage buffers.'] });
+    const a2 = await f2.A.chat(GENERATIVE, []);
+    assert.equal(a2, 'CPU fallback after low storage buffers.');
+    assert.equal(f2.stats.attempts, 0, 'WebLLM was not attempted when shader storage buffers are below 10');
+    assert.equal(f2.A.status().backend, 'wasm');
+  });
+
+  await check('natural writing and code requests reach the model even when local cards exist or WEB search is empty', async () => {
+    const f1 = await fixture({ chunks: ['Subject: Quick update\n\nHi Alex, sharing a brief status update.'] });
+    const email = await f1.A.chat('help me write an email to my boss', []);
+    assert.match(email, /Subject: Quick update/, 'natural writing prompt starts Qwen instead of returning a generic local tip card');
+    assert.equal(f1.stats.attempts, 1);
+
+    const emptySearchFetch = async (url, _init, ctx) => {
+      if (url.includes('/api/search')) return new ctx.Response('Not Found', { status: 404 });
+      return new ctx.Response(JSON.stringify({ query: { search: [] }, hits: [] }), { status: 200, headers: { 'content-type': 'application/json' } });
+    };
+    const f2 = await fixture({ browserSearch: true, fetch: emptySearchFetch, chunks: ['def rate_limit(fn): return fn'] });
+    const code = await f2.A.chat('Write a Python decorator that rate-limits a function', [], { search: true });
+    assert.match(code, /def rate_limit/, 'code prompt with WEB on and empty search still runs the on-device model');
+    assert.equal(f2.stats.attempts, 1);
   });
 
   console.log('\n' + passed + ' sections passed, ' + failed + ' failed');

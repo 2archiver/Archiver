@@ -44,6 +44,7 @@ REQUIRED_PATHS = (
     "favicon.svg",
     "archiver-coi-sw.js",
     "static/archiver-engine.js",
+    "static/archiver-browser-search.js",
     "static/archiver-prep.js",
     "static/archiver-worker.js",
     "static/vendor/wllama-3.6.1.wasm",

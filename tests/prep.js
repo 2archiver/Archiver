@@ -592,6 +592,69 @@ function hubFile(origin, url, bytes, extra) {
     assert.equal(b.Prep.artifactLabel({ id: 'Qwen3-0.6B', quant: 'Q8_0' }), 'Qwen 3 0.6B Q8_0');
   });
 
+  /* ----- Safari OPFS sync-access, storage-denied runtimeKit, WebGPU fallback, COI reload ----- */
+
+  await test('Safari OPFS without createWritable writes via sync worker and adopts on reload', async () => {
+    const origin = createOrigin();
+    hubFile(origin, Q4_0, bytes);
+    const a = await createBrowser({ origin, safariOPFS: true });
+    assert.equal(typeof a.ctx.FileSystemFileHandle.prototype.createWritable, 'undefined', 'Safari exposes no createWritable');
+    await a.Prep.init();
+    assert.equal(a.Prep.snapshot().durable, true, 'sync worker path marks OPFS durable');
+    a.Prep.configure(runtimeHooks([]));
+    await a.Prep.prepareNow();
+    assert.equal(a.Prep.snapshot().phase, 'ready');
+    assert.ok(origin.opfs.size >= 1, 'GGUF was stored in OPFS via sync worker');
+    const fetchedFirst = origin.fetchLog.filter(f => f.method === 'GET').length;
+    const b = await createBrowser({ origin, safariOPFS: true });
+    await b.Prep.init();
+    b.Prep.configure(runtimeHooks([]));
+    await b.Prep.prepareNow();
+    assert.equal(b.Prep.snapshot().phase, 'ready');
+    assert.equal(origin.fetchLog.filter(f => f.method === 'GET').length, fetchedFirst, 'reload adopts stored file without re-downloading');
+  });
+
+  await test('storage denied: runtimeKit falls back to an in-memory backend instead of throwing', async () => {
+    const origin = createOrigin();
+    const b = await createBrowser({ origin, durableOPFS: false });
+    await b.Prep.init();
+    assert.equal(b.Prep.snapshot().durable, false);
+    const kit = await b.Prep.runtimeKit();
+    assert.ok(kit && kit.cacheManager && kit.modelManager, 'runtimeKit builds a working CacheManager without OPFS');
+    assert.equal(origin.opfs.size, 0, 'nothing written to OPFS');
+  });
+
+  await test('WebGPU runtime or timeout failure transitions cleanly to the CPU runtime', async () => {
+    const origin = createOrigin();
+    hubFile(origin, Q4_0, bytes);
+    const b = await createBrowser({ origin });
+    let gpuCalls = 0;
+    let wasmCalls = 0;
+    b.Prep.configure({
+      ...runtimeHooks([]),
+      probeGPU: async () => ({ ok: true, f16: true }),
+      initWebGPU: async () => {
+        gpuCalls++;
+        throw new Error('Cannot initialize runtime because of requested maxComputeWorkgroupStorageSize exceeds limit.');
+      },
+      initWASM: async () => { wasmCalls++; return { backend: 'wasm' }; }
+    });
+    await b.Prep.prepareNow();
+    assert.equal(gpuCalls, 1, 'WebGPU fault does not retry another WebGPU model');
+    assert.equal(wasmCalls, 1, 'falls through directly to CPU WebAssembly');
+    assert.equal(b.Prep.snapshot().phase, 'ready');
+    assert.equal(b.Prep.snapshot().backend, 'wasm');
+  });
+
+  await test('automatic preparation pauses quietly while COI bootstrap is reloading the page', async () => {
+    const origin = createOrigin();
+    const b = await createBrowser({ origin, crossOriginIsolated: false, sharedArrayBuffer: false, isolation: { state: 'reloading' } });
+    await b.Prep.init();
+    b.Prep.configure(runtimeHooks([]));
+    await b.Prep.maybeAuto();
+    assert.equal(b.Prep.snapshot().phase, 'checking', 'does not flash failed before COI reload finishes');
+  });
+
   console.log('\n' + passed + ' passed, ' + failed + ' failed');
   if (failed) process.exit(1);
 })().catch((err) => {

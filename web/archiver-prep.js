@@ -182,7 +182,7 @@
       var code = Number(http[1]);
       return code === 429 || code >= 500 ? 'server' : 'source';
     }
-    if (/device was lost|device.*lost|webgpu|gpu|shader/i.test(msg)) return 'gpu';
+    if (/device was lost|device.*lost|webgpu|gpu|shader|compatible gpu|no adapter|maxbuffersize|maxstoragebuffer|maxcomputeworkgroup|featuresupporterror|webgpunotavailable|webgpunotfound/i.test(msg)) return 'gpu';
     if (root.navigator && root.navigator.onLine === false) return 'offline';
     if (name === 'TypeError' || /Failed to fetch|NetworkError|network error/i.test(msg)) return 'network';
     if (/timed out|timeout|did not respond/i.test(msg)) return 'timeout';
@@ -353,19 +353,141 @@
   /* The runtime's own CacheManager defaults to a backend that can divert writes to
      navigator.crossOriginStorage while listing only OPFS. That would split one model
      across two stores. This backend is OPFS only, uses the same directory and file
-     names as the runtime, so weights stored by 5.3 are adopted as they are. */
+     names as the runtime, so weights stored by 5.3 are adopted as they are.
+     Safari/WebKit does not expose FileSystemFileHandle.createWritable on the main
+     thread, so writes fall back to a dedicated worker using createSyncAccessHandle(). */
   function OPFSBackend() {}
+
+  function hasMainWritable() {
+    return !!(root.FileSystemFileHandle && root.FileSystemFileHandle.prototype &&
+      typeof root.FileSystemFileHandle.prototype.createWritable === 'function');
+  }
+
+  function hasWorkerSyncAccess() {
+    return !!(root.FileSystemFileHandle && typeof root.Worker === 'function' &&
+      typeof root.Blob === 'function' && root.URL &&
+      typeof root.URL.createObjectURL === 'function');
+  }
 
   OPFSBackend.prototype.isSupported = function () {
     var nav = root.navigator;
     return !!(nav && nav.storage && typeof nav.storage.getDirectory === 'function' &&
-      root.FileSystemFileHandle && root.FileSystemFileHandle.prototype &&
-      typeof root.FileSystemFileHandle.prototype.createWritable === 'function');
+      (hasMainWritable() || hasWorkerSyncAccess()));
   };
 
   async function cacheDir() {
     var top = await root.navigator.storage.getDirectory();
     return top.getDirectoryHandle('cache', { create: true });
+  }
+
+  var OPFS_SYNC_WORKER_CODE = [
+    "'use strict';",
+    'var dir = null, access = null, fileKey = null, offset = 0;',
+    'async function cleanup(remove) {',
+    '  if (access) { try { await access.close(); } catch (_) {} access = null; }',
+    '  if (remove && dir && fileKey) { try { await dir.removeEntry(fileKey); } catch (_) {} }',
+    '}',
+    'self.onmessage = async function (event) {',
+    '  var d = event.data || {};',
+    '  try {',
+    '    if (d.cmd === "open") {',
+    '      fileKey = d.key; offset = 0;',
+    '      var top = await navigator.storage.getDirectory();',
+    '      dir = await top.getDirectoryHandle("cache", { create: true });',
+    '      var handle = await dir.getFileHandle(fileKey, { create: true });',
+    '      if (typeof handle.createSyncAccessHandle !== "function") {',
+    '        throw Object.assign(new Error("OPFS sync access handle unavailable"), { name: "NotSupportedError" });',
+    '      }',
+    '      access = await handle.createSyncAccessHandle();',
+    '      await access.truncate(0);',
+    '      self.postMessage({ id: d.id, ok: true });',
+    '    } else if (d.cmd === "write") {',
+    '      var view = new Uint8Array(d.buffer);',
+    '      var written = await access.write(view, { at: offset });',
+    '      offset += typeof written === "number" ? written : view.byteLength;',
+    '      self.postMessage({ id: d.id, ok: true });',
+    '    } else if (d.cmd === "close") {',
+    '      if (access) { await access.flush(); await access.close(); access = null; }',
+    '      self.postMessage({ id: d.id, ok: true });',
+    '    } else if (d.cmd === "abort") {',
+    '      await cleanup(true);',
+    '      self.postMessage({ id: d.id, ok: true });',
+    '    }',
+    '  } catch (err) {',
+    '    await cleanup(true);',
+    '    self.postMessage({ id: d.id, ok: false, name: (err && err.name) || "Error", message: (err && err.message) || String(err) });',
+    '  }',
+    '};'
+  ].join('\n');
+
+  async function writeViaSyncWorker(key, stream) {
+    var blob = new root.Blob([OPFS_SYNC_WORKER_CODE], { type: 'text/javascript' });
+    var workerUrl = root.URL.createObjectURL(blob);
+    var worker = null;
+    var seq = 0;
+    var pendingReq = null;
+    function rpc(payload, transfer) {
+      return new Promise(function (resolve, reject) {
+        var id = ++seq;
+        pendingReq = { id: id, resolve: resolve, reject: reject };
+        payload.id = id;
+        if (transfer) worker.postMessage(payload, transfer);
+        else worker.postMessage(payload);
+      });
+    }
+    try {
+      worker = new root.Worker(workerUrl);
+      worker.onmessage = function (event) {
+        var d = event.data || {};
+        if (!pendingReq || d.id !== pendingReq.id) return;
+        var req = pendingReq;
+        pendingReq = null;
+        if (d.ok) req.resolve();
+        else {
+          var err = new Error(d.message || 'OPFS write failed');
+          if (d.name) err.name = d.name;
+          req.reject(err);
+        }
+      };
+      worker.onerror = function (event) {
+        if (!pendingReq) return;
+        var req = pendingReq;
+        pendingReq = null;
+        req.reject(new Error((event && event.message) || 'OPFS worker failed'));
+      };
+      await rpc({ cmd: 'open', key: key });
+      var reader = stream.getReader();
+      var pending = [];
+      var pendingBytes = 0;
+      var FLUSH = 4 * MB;
+      try {
+        for (;;) {
+          var step = await reader.read();
+          if (step.done) break;
+          pending.push(step.value);
+          pendingBytes += step.value.byteLength;
+          if (pendingBytes >= FLUSH) {
+            var block = joinChunks(pending, pendingBytes);
+            pending = [];
+            pendingBytes = 0;
+            await rpc({ cmd: 'write', buffer: block.buffer }, [block.buffer]);
+          }
+        }
+        if (pendingBytes) {
+          var tail = joinChunks(pending, pendingBytes);
+          await rpc({ cmd: 'write', buffer: tail.buffer }, [tail.buffer]);
+        }
+        await rpc({ cmd: 'close' });
+      } catch (err) {
+        try { await rpc({ cmd: 'abort' }); } catch (_) {}
+        throw err;
+      } finally {
+        try { reader.releaseLock(); } catch (_) {}
+      }
+    } finally {
+      if (worker) { try { worker.terminate(); } catch (_) {} }
+      try { if (root.URL && typeof root.URL.revokeObjectURL === 'function') root.URL.revokeObjectURL(workerUrl); } catch (_) {}
+    }
   }
 
   OPFSBackend.prototype.read = async function (key) {
@@ -385,6 +507,9 @@
   };
 
   OPFSBackend.prototype.write = async function (key, stream) {
+    if (!hasMainWritable()) {
+      return writeViaSyncWorker(key, stream);
+    }
     var dir = await cacheDir();
     var handle = await dir.getFileHandle(key, { create: true });
     var writable = await handle.createWritable();   // replaces the file only on close()
@@ -424,12 +549,18 @@
   OPFSBackend.prototype.list = async function () {
     var dir = await cacheDir();
     var out = [];
-    // wllama's own OPFS backend iterates the same way; entries() is in every
-    // engine this app supports.
-    for await (var pair of dir.entries()) {
-      var name = pair[0];
-      var handle = pair[1];
-      if (handle.kind === 'file') out.push({ key: name, size: (await handle.getFile()).size });
+    if (typeof dir.entries === 'function') {
+      for await (var pair of dir.entries()) {
+        var name = pair[0];
+        var handle = pair[1];
+        if (handle.kind === 'file') out.push({ key: name, size: (await handle.getFile()).size });
+      }
+      return out;
+    }
+    if (typeof dir.values === 'function') {
+      for await (var entry of dir.values()) {
+        if (entry.kind === 'file') out.push({ key: entry.name, size: (await entry.getFile()).size });
+      }
     }
     return out;
   };
@@ -443,19 +574,54 @@
     }
   };
 
+  /* Ephemeral fallback backend used only when OPFS is unavailable (e.g. private
+     browsing / denied storage) so wllama's CacheManager still constructs cleanly
+     when loading session-only weights from an in-memory Blob. */
+  function MemoryBackend() { this.files = new Map(); }
+  MemoryBackend.prototype.isSupported = function () { return true; };
+  MemoryBackend.prototype.read = async function (key) {
+    return this.files.has(key) ? this.files.get(key) : null;
+  };
+  MemoryBackend.prototype.getSize = async function (key) {
+    return this.files.has(key) ? this.files.get(key).size : -1;
+  };
+  MemoryBackend.prototype.write = async function (key, stream) {
+    var reader = stream.getReader();
+    var chunks = [];
+    var total = 0;
+    try {
+      for (;;) {
+        var step = await reader.read();
+        if (step.done) break;
+        chunks.push(step.value);
+        total += step.value.byteLength;
+      }
+    } finally {
+      try { reader.releaseLock(); } catch (_) {}
+    }
+    this.files.set(key, new root.Blob([joinChunks(chunks, total)]));
+  };
+  MemoryBackend.prototype.list = async function () {
+    var out = [];
+    this.files.forEach(function (blob, key) { out.push({ key: key, size: blob.size }); });
+    return out;
+  };
+  MemoryBackend.prototype.delete = async function (key) { this.files.delete(key); };
+
   /* The runtime module, loaded once per page. Tests replace it through configure(). */
   var kit = null;
   async function wllamaKit() {
     if (kit) return kit;
     var mod = await import(/* webpackIgnore: true */ absUrl(RUNTIME.wllama.file));
     var store = new OPFSBackend();
-    var cacheManager = new mod.CacheManager([store]);
+    var backend = store.isSupported() ? store : new MemoryBackend();
+    var cacheManager = new mod.CacheManager([backend]);
     var modelManager = new mod.ModelManager({
       cacheManager: cacheManager,
       logger: mod.LoggerWithoutDebug || root.console,
       parallelDownloads: 1
     });
-    kit = { mod: mod, store: store, cacheManager: cacheManager, modelManager: modelManager };
+    kit = { mod: mod, store: backend, cacheManager: cacheManager, modelManager: modelManager };
     return kit;
   }
 
@@ -931,9 +1097,9 @@
       }
       setPhase('initializing', { reason: status.complete ? 'Starting WebGPU from the cached files.' : 'Downloading and starting WebGPU. This is a one-time download.' });
       try {
-        var handleValue = await initWithWatchdog(op, 'webgpu', function (touch) {
+        var handleValue = await initWithWatchdog(op, 'webgpu', function (touch, initSignal) {
           return cfg.initWebGPU(record, {
-            signal: op.signal,
+            signal: initSignal || op.signal,
             fresh: op.fresh,
             touch: touch,
             onProgress: function (pct, text) {
@@ -946,7 +1112,7 @@
       } catch (err) {
         if (isAbort(err)) throw err;
         var category = categorize(err);
-        if (category === 'storage' || category === 'gpu') throw err;
+        if (category === 'storage' || category === 'gpu' || category === 'timeout') throw err;
         lastErr = err.category ? err : PrepError(category, err.message || String(err));
         continue;   // the primary could not start: try the fallback model
       }
@@ -966,12 +1132,14 @@
     return new Promise(function (resolve, reject) {
       var last = now();
       var done = false;
+      var attemptCtl = new AbortController();
       function touch() { last = now(); }
       var timer = setInterval(function () {
         if (!done && now() - last > cfg.timeouts.initStallMs) {
           done = true;
           clearInterval(timer);
           op.signal.removeEventListener('abort', onAbort);
+          try { attemptCtl.abort(); } catch (_) {}
           reject(PrepError('timeout', 'The ' + (backend === 'webgpu' ? 'WebGPU' : 'WebAssembly') +
             ' runtime did not respond for ' + Math.round(cfg.timeouts.initStallMs / 1000) + ' seconds.'));
         }
@@ -980,11 +1148,12 @@
         if (done) return;
         done = true;
         clearInterval(timer);
+        try { attemptCtl.abort(); } catch (_) {}
         reject(abortError());
       }
       if (op.signal.aborted) { onAbort(); return; }
       op.signal.addEventListener('abort', onAbort, { once: true });
-      Promise.resolve().then(function () { return start(touch); }).then(function (value) {
+      Promise.resolve().then(function () { return start(touch, attemptCtl.signal); }).then(function (value) {
         if (done) return;
         done = true;
         clearInterval(timer);
@@ -1006,6 +1175,11 @@
   var run = null;          // the operation in flight: { source, allowDownload, allowInit, abort, signal, promise }
   var handle = null;       // { backend, value, modelId } while a runtime is ready
   var transitions = 0;     // GPU → WASM transitions in this page session (at most one)
+  var initPromise = null;  // resolves once startup storage probe finishes
+
+  function waitForInit() {
+    return (S.durable === null && initPromise) ? initPromise.catch(function () {}) : Promise.resolve();
+  }
 
   function covers(op, want) {
     return (op.allowDownload || !want.allowDownload) && (op.allowInit || !want.allowInit);
@@ -1024,6 +1198,7 @@
 
   async function pipeline(op) {
     if (handle) return true;
+    await waitForInit();
     setPhase('checking', { reason: 'Checking which runtime this browser can use.', error: null });
     var gpu = op.forceWasm ? { ok: false, reason: 'Switched from WebGPU to the CPU runtime.' } : await gpuProbe();
     if (!gpu.ok && gpu.reason) S.gpuReason = gpu.reason;
@@ -1035,13 +1210,14 @@
       } catch (err) {
         if (isAbort(err)) throw err;
         var category = categorize(err);
-        // One controlled transition: a GPU fault (device lost, shader or buffer
-        // error) moves to the verified WASM runtime. Network, storage and cancel
-        // never do; those surface as they are.
-        if (category === 'gpu' && transitions === 0 && cfg.wasmSupported && cfg.wasmSupported()) {
+        // One controlled transition: a GPU fault, runtime/shader/limit error,
+        // timeout, or unavailable WebGPU artifact moves to the verified WASM
+        // runtime. Network, storage and cancel never do; those surface as they are.
+        if ((category === 'gpu' || category === 'runtime' || category === 'timeout' || category === 'source') &&
+            transitions === 0 && cfg.wasmSupported && cfg.wasmSupported()) {
           transitions++;
           await stopGPU();
-          setPhase('checking', { reason: 'WebGPU stopped responding. Switching to the CPU runtime.' });
+          setPhase('checking', { reason: 'WebGPU could not start the model. Switching to the CPU runtime.' });
           return pipeline(Object.assign({}, op, { forceWasm: true }));
         }
         throw err;
@@ -1058,9 +1234,9 @@
     if (!op.allowInit) return false;
     setPhase('initializing', { backend: 'wasm', reason: 'Starting the CPU runtime from the stored file.' });
     try {
-      var value = await initWithWatchdog(op, 'wasm', function (touch) {
+      var value = await initWithWatchdog(op, 'wasm', function (touch, initSignal) {
         return cfg.initWASM(picked.artifact, picked.source, {
-          signal: op.signal,
+          signal: initSignal || op.signal,
           touch: touch,
           onProgress: function () { touch(); }
         });
@@ -1173,16 +1349,22 @@
     else setTimeout(run1, 400);
   }
 
-  function maybeAuto(source) {
-    if (handle) return Promise.resolve(true);
+  async function maybeAuto(source) {
+    if (handle) return true;
+    await waitForInit();
     if (!autoEnabled()) {
       setPhase('idle', { reason: 'Automatic preparation is off. Prepare now starts it.', auto: false });
-      return Promise.resolve(false);
+      return false;
     }
-    if (S.cancelled && source === 'auto') return Promise.resolve(false);
+    if (S.cancelled && source === 'auto') return false;
     if (root.document && root.document.visibilityState === 'hidden') {
       pendingVisible = true;
-      return Promise.resolve(false);
+      return false;
+    }
+    if (source === 'auto' && root.crossOriginIsolated !== true &&
+        root.__archiverIsolation && root.__archiverIsolation.state === 'reloading') {
+      setPhase('checking', { reason: 'Finishing one-time isolation setup for this page…', error: null });
+      return false;
     }
     var g = gates();
     if (g.paused) {
@@ -1191,7 +1373,7 @@
     }
     if (S.durable === false && source === 'auto') {
       setPhase('paused', { reason: 'Browser storage is unavailable, so the model is not downloaded in the background. It loads for this session when you ask a question.' });
-      return Promise.resolve(false);
+      return false;
     }
     if (isTouchFirst()) {
       // 5.6: phones/tablets also init on open so github.io visitors get a ready model.
@@ -1312,15 +1494,18 @@
 
   /* Startup: decide storage durability, persistence, and the stored preference. This
      is cheap (one small write) and never downloads anything. */
-  async function init() {
-    S.auto = autoEnabled();
-    S.durable = await probeDurableStorage();
-    S.persist = await persistedState();
-    if (!S.durable) {
-      S.reason = 'Browser storage is unavailable here, so models last only for this page session.';
-    }
-    emit(true);
-    return snapshot();
+  function init() {
+    initPromise = (async function () {
+      S.auto = autoEnabled();
+      S.durable = await probeDurableStorage();
+      S.persist = await persistedState();
+      if (!S.durable) {
+        S.reason = 'Browser storage is unavailable here, so models last only for this page session.';
+      }
+      emit(true);
+      return snapshot();
+    })();
+    return initPromise;
   }
 
   /* ----------------------------------------------------------- wiring events */
