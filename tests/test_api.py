@@ -15,7 +15,7 @@ def client(tmp_path, monkeypatch):
 
 
 def test_release_assets(client):
-    assert client.get("/api/health").json()["version"] == "5.5"
+    assert client.get("/api/health").json()["version"] == "5.7"
     for asset in ("archiver-comprehension.js", "archiver-engine.js", "archiver-worker.js",
                   "archiver-viewport.js", "archiver-download.js"):
         assert client.get("/static/" + asset).status_code == 200
@@ -23,8 +23,8 @@ def test_release_assets(client):
     assert 'maximum-scale=1' not in page
     assert 'id="autoAI"' not in page
     assert 'id="retryModel"' in page
-    # 5.6: the visible shell and browser search adapter match the engine release.
-    assert '<title>Archiver 5.6' in page
+    # 5.7: the visible shell and browser search adapter match the engine release.
+    assert '<title>Archiver 5.7' in page
     assert 'src="static/archiver-browser-search.js"' in page
     assert 'id="disclosureModel"' not in page
     # 5.1: settings apply as they change, so there is nothing to press.
@@ -208,7 +208,7 @@ def test_health_performs_no_outbound_fetch(client, monkeypatch):
     response = client.get("/api/health")
     assert response.status_code == 200
     assert response.json()["ok"] is True
-    assert response.json()["version"] == "5.5"
+    assert response.json()["version"] == "5.7"
     assert calls == []
 
 
@@ -356,10 +356,10 @@ def test_docs_match_the_release():
     assert "## 5.5 — 2026-10-08" in changelog, changelog[:40]
     assert changelog.index("## 5.5 —") < changelog.index("## 5.3 —"), 'newest release leads'
     assert "1,561" in changelog
-    assert readme.startswith("# Archiver 5.6")
+    assert readme.startswith("# Archiver 5.7")
     # Current claims never say Archiver trained its own model. Historical
     # entries keep their wording; the README is the current statement.
     current = readme.split("## New in 5.3", 1)[0]
     assert "our own model" not in current.lower(), "the current README section"
     assert "1,561 cards" in readme
-    assert "Archiver 5.5" in upgrade
+    assert "Archiver 5.7" in upgrade

@@ -23,11 +23,16 @@
   }
   window.ArchiverDownload = { save };
 
-  /* 5.6: load browser search on static hosts (github.io) so WEB works without Render. */
+  /* 5.6: load browser search on static hosts (github.io) so WEB works without Render.
+     5.7: only when the page did not already load it. Since 5.7 the module ships as
+     a deferred script tag as well, and loading it twice would register the same
+     installer twice (harmless, but a wasted request on a slow phone). */
   try {
-    var s = document.createElement('script');
-    s.src = new URL('static/archiver-browser-search.js', document.baseURI).href;
-    s.async = false;
-    document.head.appendChild(s);
+    if (!window.ArchiverBrowserSearch) {
+      var s = document.createElement('script');
+      s.src = new URL('static/archiver-browser-search.js', document.baseURI).href;
+      s.async = false;
+      document.head.appendChild(s);
+    }
   } catch (_) {}
 })();

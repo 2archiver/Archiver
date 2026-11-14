@@ -33,7 +33,7 @@
 'use strict';
 
 var CACHE_PREFIX = 'archiver-shell-';
-var CACHE_VERSION = '5.6.1';
+var CACHE_VERSION = '5.7.0';
 var SHELL_CACHE = CACHE_PREFIX + 'v' + CACHE_VERSION;
 var NETWORK_WAIT_MS = 4000;
 var ISOLATION = [
@@ -178,14 +178,18 @@ function serveAsset(request, url) {
   var immutable = url.pathname.indexOf('/static/vendor/') !== -1;
   return caches.open(SHELL_CACHE).then(function (cache) {
     return cache.match(request).then(function (cached) {
+      // Versioned runtimes never change under their name.
       if (cached && immutable) return isolate(cached);
-      // Revalidate app files with the server so a fresh HTML never meets a stale script.
-      var upstream = immutable ? request : new Request(request, { cache: 'no-cache' });
-      var network = fetch(upstream).then(function (res) {
-        var copy = cacheable(res) ? res.clone() : null;  // cloned before isolate() takes the body
-        if (copy) cache.put(request, copy).catch(function () {});
-        return isolate(res);
-      });
+      // Revalidate app files with the server so a fresh HTML never meets a stale
+      // script, but collapse the burst of revalidations a single page load makes
+      // and skip the ask when the network just answered for this file.
+      var network = immutable
+        ? fetch(request).then(function (res) {
+            var copy = cacheable(res) ? res.clone() : null;
+            if (copy) cache.put(request, copy).catch(function () {});
+            return isolate(res);
+          })
+        : revalidate(request, url);
       network.then(null, function () {});
       if (!cached) return network;
       return preferNetwork(network, cached);
@@ -195,6 +199,38 @@ function serveAsset(request, url) {
 
 function passThrough(request) {
   return fetch(request).then(isolate);
+}
+
+/* The app's own files under /static/ are revalidated on every visit, which is
+   right for a page that names them without a version string, but a single cold
+   open asks for a dozen of them and each ask is a separate round trip. Under
+   COEP: require-corp those fetches are cross-origin isolated and cannot be
+   shared across the process pool, so the burst costs more on Safari than on the
+   browsers people compare it with. Concurrent asks for the same file are
+   collapsed into one fetch (each caller gets its own copy of the response), and
+   the cache is refreshed by the result. Nothing is ever served from cache just
+   because it was fetched recently: a deploy must reach the reader on the next
+   navigation. */
+var pendingNetwork = Object.create(null);      // url -> in-flight revalidation
+var MAX_PENDING = 64;                          // bounded: a long session must not grow this
+
+function revalidate(request, url) {
+  var key = url.href;
+  if (pendingNetwork[key]) return pendingNetwork[key].then(function (res) { return res.clone(); });
+  var names = Object.keys(pendingNetwork);
+  if (names.length >= MAX_PENDING) {
+    for (var i = 0; i < names.length - Math.floor(MAX_PENDING / 2); i++) delete pendingNetwork[names[i]];
+  }
+  var upstream = new Request(request, { cache: 'no-cache' });
+  var run = fetch(upstream).then(function (res) {
+    var copy = cacheable(res) ? res.clone() : null;   // cloned before isolate() takes the body
+    if (copy) caches.open(SHELL_CACHE).then(function (cache) { return cache.put(request, copy); }).catch(function () {});
+    return isolate(res);
+  });
+  pendingNetwork[key] = run;
+  var done = function () { delete pendingNetwork[key]; };
+  run.then(done, done);
+  return run.then(function (res) { return res.clone(); });
 }
 
 self.addEventListener('fetch', function (event) {

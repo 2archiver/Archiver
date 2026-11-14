@@ -1,4 +1,21 @@
-# Browser support matrix (Archiver 5.5)
+# Browser support matrix (Archiver 5.7)
+
+## What 5.7 changed, per browser
+
+- **Search runs in the page, not through a server.** All three browser sources
+  (Wikipedia search, Wikipedia OpenSearch, Hacker News) are reached directly,
+  each with its own deadline, and a static host is probed once per session
+  rather than before every search. This is the path Safari, Edge and a
+  github.io visitor takes.
+- **Quiet mode is on by default.** The CPU runtime asks for about half the
+  cores (four at most; three on a phone), preparation progress is painted at
+  most four times a second, and idle work waits for a running answer. Settings
+  → On-device model has the switch.
+- **A released runtime says so.** A hidden tab, memory pressure or 2.5 minutes
+  idle releases the runtime. The stored model files are kept, and the next
+  question restarts from local storage with no download.
+- **Streaming is plain text until the answer is complete**, so a long reply no
+  longer re-parses its own markdown on every frame.
 
 ## 5.5 limits, stated plainly
 
@@ -84,6 +101,9 @@ isolated page. See [PAGES.md](PAGES.md).
 Run on a fresh profile (or after "Clear cached model weights" in Diagnostics).
 
 **Every browser**
+- [ ] WEB on, then "search the web for the history of the Silk Road": sources appear with links, and the answer leads with the fetched text.
+- [ ] Search with the model loading in the background: the page still scrolls and the composer still accepts typing.
+- [ ] Settings shows "Lower CPU priority while the model is loaded", checked.
 - [ ] Page opens; no model download starts until a generative prompt.
 - [ ] Diagnostics opens from Settings, `#diag` and Ctrl/⌘+Shift+D; Escape closes; focus lands on Close.
 - [ ] `Cross-origin isolated: true` in Diagnostics.
@@ -94,13 +114,18 @@ Run on a fresh profile (or after "Clear cached model weights" in Diagnostics).
 - [ ] DevTools console shows no CSP report-only violations for normal use.
 
 **Edge**
+- [ ] Search works on a static host with no server (github.io): the first search probes `api/search` once, later searches do not.
+- [ ] While weights download, scroll the changelog and type in the composer: both stay responsive.
+- [ ] Hide the tab for two minutes, come back: Diagnostics says the model was released, and the next question restarts it without a download.
 - [ ] Windows, D3D12: Diagnostics shows adapter limits; a < 128 MiB binding routes to WASM with a reason.
 - [ ] `edge://settings/privacy` → Enhanced security *Strict* → site not excepted: WASM validate false, one-line explanation, instant tools still work.
 - [ ] Put tab to sleep (`edge://discards` → Discard), return, send a prompt: worker recreated, answer arrives.
 - [ ] Installed as app / in sidebar: Diagnostics quota shown; model still downloads or explains quota.
 
 **Safari macOS / iOS**
+- [ ] WEB on, ask a question: Wikipedia results appear within about ten seconds, or the trail names the failure (*timeout*, *blocked*).
 - [ ] Opening the page does not start a worker (Web Inspector → no worker listed).
+- [ ] Cached model, iPhone: ask a generated question, then a search — the interface stays usable while the CPU runtime is loaded.
 - [ ] Safari 26: WebGPU chosen when the probe passes; Safari 18: WASM with "does not expose WebGPU".
 - [ ] iPhone: 0.5B model loads without the tab reloading; long chat stays within budget.
 - [ ] Background the tab mid-generation, come back: generation completes or can be retried cleanly.

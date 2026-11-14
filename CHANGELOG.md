@@ -1,3 +1,40 @@
+## 5.7 — 2026-11-13
+
+Search and performance release. Engine, preparation controller and shell cache are **Archiver 5.7**.
+
+### Browser search actually works (github.io, Safari, Edge)
+- The origin is probed once per page session and the result is remembered in `sessionStorage`; a static host goes straight to Wikipedia and Hacker News instead of waiting up to 6 s for `api/search` to refuse. A live server still wins when there is one, and a server that fails falls back instead of ending the turn.
+- Every source has its own deadline (6 s, 9 s on a slow link). A dropped connection is retried once. Failures are categorised — `timeout`, `blocked (HTTP 403)`, `HTTP 5xx` — so the trail says what happened instead of "nothing found".
+- Wikipedia and Hacker News are raced rather than chained, and a source that timed out is not asked a second question (which used to double the wait).
+- Aborting a search aborts the requests underneath it. A slow source is no longer mistaken for a reader cancel, which is what made an ordinary search report nothing at all.
+
+### Answers that lead with the source
+- With WEB on, fetched sources lead and a bundled card follows as a labelled aside. Before, a matching local card was printed above the web read.
+- The evidence-gap reply now names WEB as a working control ("turn on WEB … or paste a source") instead of claiming server search is unavailable.
+
+### Quiet mode — the page stays usable while the model runs
+- Progress repaints are coalesced to four a second; a preparation tick used to repaint ~20 DOM nodes several times a second.
+- The CPU runtime asks for about half the cores (capped at four; three on a phone) through the new `web/archiver-quiet.js` policy, which also exposes a cooperative yielder for long local work.
+- Idle work waits for a running answer, an idle runtime is released after 2.5 minutes, and a hidden tab releases its runtime after one minute so Edge does not discard a page with a Wasm heap still resident.
+- A released runtime reports why it was released and keeps its stored files; the next question restarts it from local storage with no download.
+- Settings → On-device model has the switch ("Lower CPU priority while the model is loaded", on by default).
+- The answer stream is plain text while it arrives and is parsed as markdown once, when it is complete. Re-parsing the whole reply on every animation frame was competing with the model for the main thread on a laptop.
+- The GitHub Pages service worker collapses concurrent revalidations of the same script into one fetch (each caller still gets its own copy), so a cold open does not pay a dozen isolated round trips on Safari.
+- A browser without shared memory *and* without WebAssembly threads gets `not-supported` from the isolation bootstrap instead of one pointless reload.
+
+### Tests
+- New `tests/search.js` runs the search module against a modelled network: static-host probe once, hanging source, dropped connection retry, blocked source, abort, server-wins. New `tests/quiet.js` covers the yielder, the CPU thread budget and the memory gates. Both run in `make test`.
+- New `tests/page.js` boots the real `index.html` against a static host: SEARCH is a real control, a question is answered from a fetched Wikipedia page with its link, quiet mode round-trips through Settings and `localStorage`, a burst of preparation ticks paints once, the stream is plain text until the answer is complete, and a hidden tab is not released immediately. It skips with a printed line when jsdom is not installed (jsdom is not a repository dependency).
+- `tests/sw.js` gains the concurrent-revalidation case; `tests/pages.js` gains the stream/cursor, changelog structure, quiet-switch, answer-policy and CSP-adjacent assertions.
+
+### Grounding
+- The answer cache policy is `grounding-5.7`: an answer stored when the bundled card led is regenerated instead of replayed, because the rules that produced it changed.
+- `connect-src` now allows `https://en.wikipedia.org` and `https://hn.algolia.com`, so browser search still works when the CSP is enforced (`ARCHIVER_CSP=enforce`) rather than report-only.
+
+### Not finished, stated plainly
+- Not tested on a real iPhone or Edge device in this environment. The page-level behaviour is exercised in a DOM model and in the VM harness; the device checklist in `docs/BROWSER-SUPPORT.md` still applies.
+- Quiet mode's idle release is a timer policy, not a measurement of a particular laptop's responsiveness.
+
 ## 5.6 — 2026-11-11
 
 Cleanup release focused on the public GitHub Pages experience. Engine, prep, and shell are **Archiver 5.6**.

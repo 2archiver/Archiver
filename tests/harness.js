@@ -596,7 +596,7 @@ async function createBrowser(options) {
     throw new Error('unexpected import ' + specifier);
   };
   ctx.__imports = imports;
-  const files = ['archiver-sha256.js', 'archiver-prep.js', 'archiver-knowledge.js', 'archiver-comprehension.js', 'archiver-engine.js'];
+  const files = ['archiver-sha256.js', 'archiver-quiet.js', 'archiver-prep.js', 'archiver-knowledge.js', 'archiver-comprehension.js', 'archiver-engine.js'];
   if (opts.browserSearch) files.push('archiver-browser-search.js');
   for (const file of files) {
     if (file === 'archiver-knowledge.js' && opts.skipKnowledge) continue;

@@ -331,7 +331,7 @@ function hubFile(origin, url, bytes, extra) {
     await b.Prep.maybeAuto();
     await until(() => b.Prep.snapshot().phase === 'ready', 4000, 'ready on touch');
     assert.equal(b.Prep.snapshot().phase, 'ready');
-    assert.equal(log.length, 1, 'runtime started on open (5.6)');
+    assert.equal(log.length, 1, 'runtime started on open');
   });
 
   await test('automatic preparation can be turned off, and the choice survives a reload', async () => {

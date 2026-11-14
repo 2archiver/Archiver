@@ -1,6 +1,6 @@
 # Archiver on GitHub Pages — the public site
 
-## What 5.5 changed for Pages
+## What 5.7 changed for Pages
 
 - **Scope is `/Archiver/`.** Every URL the page or service worker uses is
   relative to the project-pages root, and `tests/pages.js` asserts there are no
@@ -9,15 +9,23 @@
 - **No root `/api/` calls.** Server calls go through the page's `api()` helper,
   which rebases through `ABS()` and is disabled when the server is not
   reachable. On Pages the server is unreachable by design, so no call is made.
-- **Shell cache `archiver-shell-v5.5.0`.** The service worker deletes only its
+- **Shell cache `archiver-shell-v5.7.0`.** The service worker deletes only its
   own older `archiver-shell-*` caches. Other origins' caches and the model
   cache are not touched.
-- **Answer cache is tied to the grounding policy** (`grounding-5.5`). An answer
+- **Answer cache is tied to the grounding policy** (`grounding-5.7`). An answer
   stored under an older policy is regenerated, not replayed.
 - **Cross-origin isolation bootstrap is kept.** The one-time service-worker
   bootstrap still supplies the COOP/COEP headers that Pages cannot send.
-- **Not verified in this release:** a reload-loop test. The bootstrap is
-  unchanged, but no test was added for it in 5.5.
+- **Search no longer pays for a server that is not there.** The browser-search
+  module probes `api/search` once per page session and remembers the answer, so
+  the second search on a github.io page goes straight to Wikipedia and Hacker
+  News. `tests/search.js` pins that, including the hanging-source, dropped
+  connection and blocked-source paths.
+- **The isolation bootstrap stops reloading for browsers that can never
+  isolate.** A browser without SharedArrayBuffer *and* without WebAssembly
+  threads gets `not-supported` instead of a pointless reload.
+- **Not verified in this release:** a reload-loop test on a real device. The
+  bootstrap is exercised in a VM by `tests/pages.js`, as before.
 
 
 **Public site:** <https://2archiver.github.io/Archiver/>

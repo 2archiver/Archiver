@@ -34,6 +34,9 @@ def test_security_and_isolation_headers_on_html_api_and_static(client):
         assert "camera=()" in r.headers["permissions-policy"]
         csp = r.headers["content-security-policy-report-only"]
         assert "https://huggingface.co" in csp and "'wasm-unsafe-eval'" in csp
+        # WEB reads Wikipedia and Hacker News directly; an enforced policy must
+        # allow those origins or search fails only when the CSP is turned on.
+        assert "https://en.wikipedia.org" in csp and "https://hn.algolia.com" in csp
     # Vendor asset keeps its own immutable caching and a single CORP header.
     r = client.get("/static/vendor/wllama-3.6.1.js")
     assert "immutable" in r.headers["cache-control"]
@@ -142,7 +145,7 @@ def test_concurrency_cap_returns_503_but_health_still_answers():
 
 def test_health_reports_boot_and_db_stamps_and_ping(client):
     body = client.get("/api/health").json()
-    assert body["version"] == "5.5"
+    assert body["version"] == "5.7"
     assert body["boot_id"] and body["db_created_at"] > 0 and body["ephemeral_disk"] is True
     # Stable across calls within one process.
     assert client.get("/api/health").json()["db_created_at"] == body["db_created_at"]

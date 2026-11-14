@@ -145,7 +145,7 @@ async function cachedText(worker, cacheName, url) {
 
 (async () => {
   console.log('Pages service worker (tests/sw.js)');
-  const SHELL = 'archiver-shell-v5.6.1';
+  const SHELL = 'archiver-shell-v5.7.0';
 
   await test('first install stores the shell and the app files it names, not the runtimes', async () => {
     const w = makeWorker();
@@ -255,6 +255,30 @@ async function cachedText(worker, cacheName, url) {
     assert.equal(await (await fetchTo(w, makeRequest(url, { destination: 'script' }))).text(), '// engine v1');
     assert.equal(await (await fetchTo(w, makeRequest(url, { destination: 'script' }))).text(), '// engine v2', 'no stale copy while online');
     assert.equal(w.network.log.at(-1).cache, 'no-cache', 'the request revalidates with the server');
+  });
+
+  await test('concurrent asks for one file collapse into a single fetch, each caller getting its own copy', async () => {
+    const w = makeWorker();
+    const url = SCOPE + 'static/archiver-browser-search.js';
+    let hits = 0;
+    w.network.routes.set(url, () => { hits++; return js('// search v1'); });
+    const [a, b, c] = await Promise.all([
+      fetchTo(w, makeRequest(url, { destination: 'script' })),
+      fetchTo(w, makeRequest(url, { destination: 'script' })),
+      fetchTo(w, makeRequest(url, { destination: 'script' })),
+    ]);
+    assert.equal(hits, 1, 'the page load asks the network once, not once per script');
+    // Each caller must be able to read the body: a shared Response would be
+    // consumed by the first reader and leave the others empty.
+    assert.equal(await a.text(), '// search v1');
+    assert.equal(await b.text(), '// search v1');
+    assert.equal(await c.text(), '// search v1');
+    assert.equal(a.headers.get('Cross-Origin-Embedder-Policy'), 'require-corp', 'and every copy is isolated');
+    await settle();
+    assert.equal(await cachedText(w, SHELL, url), '// search v1', 'the one answer refreshes the cache');
+    const again = await fetchTo(w, makeRequest(url, { destination: 'script' }));
+    assert.equal(await again.text(), '// search v1');
+    assert.equal(hits, 2, 'a later request still asks the network (a deploy is never hidden by the collapse)');
   });
 
   await test('a slow network yields the last good copy, and the late answer still refreshes the cache', async () => {

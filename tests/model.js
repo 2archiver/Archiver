@@ -173,8 +173,8 @@ async function check(name, fn) {
   console.log('On-device engine (tests/model.js)');
   /* ---------------- WebGPU backend (unchanged fast path) ---------------- */
   const { A, stats, storage } = await fixture();
-  assert.equal(A.version, '5.6');
-  assert.equal(A.name, 'Archiver 5.6');
+  assert.equal(A.version, '5.7');
+  assert.equal(A.name, 'Archiver 5.7');
   assert.equal(Array.from(A.status().backendCandidates).join(','), 'webgpu,wasm', 'both runtimes are available here');
   for (const q of ['hello', '2+2', 'compare Python and JavaScript', 'summarize: One. Two.']) await A.chat(q, []);
   assert.equal(stats.imports.length, 0, 'instant tasks do not download a model');
@@ -192,7 +192,7 @@ async function check(name, fn) {
   assert.equal(A.mode(), 'neural'); assert.equal(A.status().aiState, 'ready');
   assert.equal(A.status().backend, 'webgpu');
   assert.equal(A.status().contextBudget, 4096);
-  assert.match(A.reply('who are you').text, /Archiver 5\.6/, 'the app is named with its version');
+  assert.match(A.reply('who are you').text, /Archiver 5\.7/, 'the app is named with its version');
   assert.match(A.reply('who are you').text, /\*\*Qwen 2\.5 0\.5B Instruct\*\*/, 'the loaded model is named');
   assert.match(A.reply('who are you').text, /WebGPU/);
   assert.ok(!A.reply('who are you').text.includes('${'));
@@ -558,7 +558,7 @@ async function check(name, fn) {
   /* ---------------- the status surface ---------------- */
   const idle = await fixture();
   const st = idle.A.status();
-  assert.equal(st.version, '5.6');
+  assert.equal(st.version, '5.7');
   assert.ok(st.prep && st.prep.phase === 'idle', 'the controller state is reported');
   assert.equal(idle.stats.imports.length, 0, 'opening the page starts no runtime');
   const diag = await idle.A.diagnostics();
@@ -568,11 +568,11 @@ async function check(name, fn) {
   assert.ok(diag.storage && Array.isArray(diag.storage.entries));
 
   /* ---------------- 5.5: identity follows the runtime that is actually running ---------------- */
-  const GAP = 'I don\'t have reliable information about that here. Paste a source, or use WEB when server search is available.';
+  const GAP = 'I don\'t have reliable information about that in the local knowledge base. Turn on WEB (or say “search the web for …”) and I will look it up, or paste a source and I will read it.';
   await check('identity: nothing loaded says so and names no model as running', async () => {
     const f = await fixture();
     const id = f.A.status().identity;
-    assert.equal(id.line, 'Archiver 5.6 · No model loaded.');
+    assert.equal(id.line, 'Archiver 5.7 · No model loaded.');
     assert.equal(id.active, false);
     assert.equal(f.A.status().modelPretty, null, 'no model label without a running model');
     const text = f.A.reply('what model are you').text;
@@ -586,7 +586,7 @@ async function check(name, fn) {
     const f = await fixture();
     await f.A.chat(GENERATIVE, []);
     const id = f.A.status().identity;
-    assert.equal(id.line, 'Archiver 5.6 · Qwen 2.5 0.5B Instruct · GPU (WebGPU)');
+    assert.equal(id.line, 'Archiver 5.7 · Qwen 2.5 0.5B Instruct · GPU (WebGPU)');
     assert.equal(id.quantization, 'q4f16_1');
     assert.equal(id.runtimeName, 'WebLLM');
     assert.equal(id.runtimeVersion, '0.2.80');
@@ -606,7 +606,7 @@ async function check(name, fn) {
     const f = await fixture({ noGPU: true });
     await f.A.chat(GENERATIVE, []);
     const id = f.A.status().identity;
-    assert.equal(id.line, 'Archiver 5.6 · Qwen 2.5 0.5B Instruct · CPU (WebAssembly)');
+    assert.equal(id.line, 'Archiver 5.7 · Qwen 2.5 0.5B Instruct · CPU (WebAssembly)');
     assert.equal(id.quantization, 'Q4_0');
     assert.equal(id.runtimeName, 'wllama (llama.cpp WebAssembly)');
     assert.match(f.stats.wasm.payload.messages[0].content, /CPU \(WebAssembly\)/, 'the compact CPU prompt carries it too');
@@ -617,7 +617,7 @@ async function check(name, fn) {
     for (const url of WASM_SOURCES_PRIMARY) f.origin.hub.delete(url);   // Qwen 2.5 cannot be published: the fallback is the next choice
     await f.A.chat(GENERATIVE, []);
     const id = f.A.status().identity;
-    assert.equal(id.line, 'Archiver 5.6 · Qwen 3 0.6B · CPU (WebAssembly)');
+    assert.equal(id.line, 'Archiver 5.7 · Qwen 3 0.6B · CPU (WebAssembly)');
     assert.equal(id.activeModelId, 'Qwen3-0.6B');
     assert.equal(id.quantization, 'Q4_0');
     assert.match(f.A.reply('what version are you').text, /Qwen 3 0\.6B/);
@@ -630,7 +630,7 @@ async function check(name, fn) {
     await f.A.chat(GENERATIVE, []);
     await f.A.unload();
     assert.equal(f.A.status().identity.active, false);
-    assert.equal(f.A.status().identity.line, 'Archiver 5.6 · No model loaded.');
+    assert.equal(f.A.status().identity.line, 'Archiver 5.7 · No model loaded.');
     assert.match(f.A.reply('who are you').text, /No model is loaded/);
   });
 
@@ -642,7 +642,7 @@ async function check(name, fn) {
     assert.equal(st.identity.active, false, 'a candidate is not an active model');
     assert.equal(st.modelPretty, null, 'modelPretty describes only the running model');
     assert.equal(st.identity.selectedModelLabel, 'Qwen 2.5 0.5B Instruct');
-    assert.equal(st.identity.line, 'Archiver 5.6 · No model loaded.');
+    assert.equal(st.identity.line, 'Archiver 5.7 · No model loaded.');
     f.A.cancelLoad();
     await pending;
     assert.equal(f.A.status().identity.active, false, 'a cancelled preparation publishes no identity');
@@ -840,6 +840,13 @@ async function check(name, fn) {
     const second = await f.A.chat('Who is Ada Lovelace?', [], { search: true, autoAI: false });
     assert.match(second, /Analytical Engine/, 'second search returns Wikipedia summary for Ada Lovelace');
     assert.equal(calls.filter(u => u.includes('/api/search')).length, 1, 'static host 404 is memoized so /api/search is not retried');
+
+    /* 5.7: the fetched sources lead and a bundled card is an aside, not the
+       answer. "Search the web for the history of the Silk Road" matches a
+       local card, which used to be printed as the answer above the web read. */
+    assert.match(first, /Eurasian trade routes[\s\S]*Sources/, 'the web answer comes before the source list');
+    assert.ok(first.indexOf('Eurasian trade routes') < first.indexOf('knowledge base'),
+      'the web result is not relegated behind the bundled card');
   });
 
   await check('multi-token streaming delivers live incremental deltas matching the final answer byte-for-byte', async () => {

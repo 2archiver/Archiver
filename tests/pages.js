@@ -28,7 +28,8 @@ const has = (p) => fs.existsSync(path.join(out, p));
 for (const f of ['index.html', 'manifest.json', 'favicon.svg', 'apple-touch-icon.png', 'archiver-coi-sw.js'])
   check(has(f), `site root carries ${f}`);
 for (const f of ['static/archiver-knowledge.js', 'static/archiver-engine.js', 'static/archiver-worker.js',
-                 'static/archiver-prep.js', 'static/archiver-sha256.js', 'static/archiver-hash-worker.js',
+                 'static/archiver-prep.js', 'static/archiver-quiet.js', 'static/archiver-browser-search.js',
+                 'static/archiver-sha256.js', 'static/archiver-hash-worker.js',
                  'static/discord-banner.jpg', 'static/vendor/wllama-3.6.1.wasm', 'static/vendor/web-llm-0.2.80.js'])
   check(has(f), `static/ carries ${f}`);
 
@@ -46,6 +47,32 @@ check(idx.includes('src="static/archiver-prep.js"') && idx.indexOf('archiver-pre
 check(idx.includes('href="manifest.json"') && idx.includes('href="favicon.svg"'), 'index.html: root links are relative');
 check(idx.includes('document.baseURI') && /const ABS = /.test(idx), 'index.html: fetches route through the ABS rebaser');
 check(/api\/archive\/export/.test(idx) && !/location\.href = '\/api/.test(idx), 'index.html: export rebased, never raw-navigates');
+/* 5.7: the streaming fix. Re-parsing markdown every frame is what made a long
+   answer compete with the model for the main thread on a laptop. */
+check(/body\.textContent = acc/.test(idx) && /body\.innerHTML = md\(cleanAnswer\)/.test(idx),
+  'index.html: the stream paints plain text, and markdown is rendered once at the end');
+check((idx.match(/body\.innerHTML = md\(/g) || []).length <= 2,
+  'index.html: no per-frame markdown re-render of the whole answer');
+/* The cursor lives inside the element whose textContent overwrites it, so it
+   has to be re-created on each paint; remembering it hid it after frame one. */
+check(/const paintStream = \(\) => \{[\s\S]{0,600}?streamCursor = document\.createElement/.test(idx) &&
+  !/if \(!streamCursor\)/.test(idx),
+  'index.html: the streaming cursor is re-created on every paint');
+/* 5.7: progress paints are coalesced; one per preparation tick is a stall. */
+check(/function schedulePaint/.test(idx) && /t - paintLast < 250/.test(idx),
+  'index.html: preparation progress repaints are coalesced');
+/* The changelog is a flat timeline. 5.7 shipped with an unclosed card, so every
+   older release rendered inside it (and 5.5 inside 5.6 before that). */
+check((() => {
+  /* Each release card opens with its own heading. A card that is never closed
+     leaves the next heading one level deeper, with no .cl-entry in front of it. */
+  const versions = (idx.match(/class="cl-ver">([0-9][0-9.x\u2013-]*)/g) || []).map((m) => m.split('>')[1]);
+  const owned = (idx.match(/<div class="cl-entry"[^>]*>\s*<div class="cl-head"><span class="cl-ver">/g) || []).length;
+  return versions.length >= 12 && owned === versions.length && versions[0] === '5.7';
+}), 'index.html: every changelog card owns its heading, newest (5.7) first');
+/* 5.7: the quiet-mode switch is in Settings and reads the controller state. */
+check(/id="ecoToggle"/.test(idx) && /Archiver\.setQuietMode|ArchiverPrep\.setQuiet/.test(idx),
+  'index.html: quiet mode has a Settings switch wired to the controller');
 check(idx.includes('--viewport-height: 100vh') && idx.includes('--viewport-height: -webkit-fill-available') && idx.includes('@supports (height: 100dvh)'),
   'index.html: Safari viewport units have legacy, iOS, and dynamic fallbacks');
 
@@ -57,6 +84,12 @@ check(engine.includes('ABS(Prep.RUNTIME.wllamaCompatJs)') && engine.includes('AB
   'the compat build is referenced through ABS, never a CDN');
 check(!/fetch\(['"]\/api|new Worker\(['"]\/|import\(['"]\/static/.test(engine + prep), 'engine and controller: no root-absolute network refs');
 check(engine.includes('SharedArrayBuffer') && engine.includes('crossOriginIsolated'), 'engine: the CPU runtime is gated on real shared memory and isolation');
+check(engine.includes('quietThreads(') && prep.includes('ArchiverQuiet'),
+  'engine and controller use the quiet-mode CPU policy');
+check(engine.includes('ArchiverBrowserSearch.search(query, limit, signal, onStatus)'),
+  'engine: a static-host 404 falls back to browser search even if the module installed late');
+check(engine.includes("ANSWER_POLICY = 'grounding-5.7'"),
+  'engine: answers cached under the 5.5 grounding rule are not served again');
 check(!/cdn\.jsdelivr|unpkg\.com/.test(engine + prep), 'no CDN hosts in the engine or the controller');
 
 const manifest = JSON.parse(site('manifest.json'));
