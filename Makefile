@@ -23,7 +23,10 @@ test:
 	node tests/viewport.js
 	node tests/download.js
 	node tests/grounding.js
+	node tests/search.js
+	node tests/quiet.js
 	node tests/sw.js
+	@NODE_PATH=. node tests/page.js
 	node --experimental-vm-modules tests/prep.js
 	node --experimental-vm-modules tests/model.js
 	$(PYTHON) -m pytest tests/ -q

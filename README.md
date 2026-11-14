@@ -1,4 +1,4 @@
-# Archiver 5.6
+# Archiver 5.7
 
 **An everyday assistant with instant local tools, private on-device answers, and browser-side search on GitHub Pages.**
 
@@ -8,7 +8,7 @@ No account or model-provider API key. Two inference runtimes are bundled with th
 
 **The public app is [https://2archiver.github.io/Archiver/](https://2archiver.github.io/Archiver/).** It is a static, local-first deployment published by GitHub Actions from this repository. Local tools, the knowledge corpus, the on-device model (WebGPU or WebAssembly), browser-stored chats, and browser-side search work there. Search uses Wikipedia and Hacker News as browser-accessible sources; the optional server-backed deployment provides broader multi-provider search and cross-device sync.
 
-Archiver 5.6 cleans up the page, prepares the model automatically when conditions allow, moves model details to Settings, and fixes iPhone Diagnostics scrolling. The Render deployment remains available for broader server-backed search and sync. GitHub Pages is the public front door, not a replacement for the optional backend. A `scripts/build_pages.py` safety gate keeps databases, Python and secrets out of the public artifact, and a one-time service-worker bootstrap supplies the cross-origin-isolation headers Pages cannot send. The workflow asserts the **GitHub Actions** Pages source before deployment, waits out any built-in branch build queued for the same commit, then fetches the published URL and fails if it is not the app — a branch-sourced or replaced deployment goes red instead of 404ing; see [docs/PAGES.md](docs/PAGES.md).
+Archiver 5.7 makes search work on the public site and makes the page stay usable while the local model runs: the server is probed once per session instead of before every search, each browser source has its own deadline, and quiet mode keeps the interface's share of the CPU. The Render deployment remains available for broader server-backed search and sync. GitHub Pages is the public front door, not a replacement for the optional backend. A `scripts/build_pages.py` safety gate keeps databases, Python and secrets out of the public artifact, and a one-time service-worker bootstrap supplies the cross-origin-isolation headers Pages cannot send. The workflow asserts the **GitHub Actions** Pages source before deployment, waits out any built-in branch build queued for the same commit, then fetches the published URL and fails if it is not the app — a branch-sourced or replaced deployment goes red instead of 404ing; see [docs/PAGES.md](docs/PAGES.md).
 
 ## Default model — lighter Qwen2.5-0.5B (October 2026)
 
@@ -16,9 +16,19 @@ For static hosting the default model is **Qwen2.5-0.5B-Instruct** again, on both
 runtimes — about a third less GPU memory than Qwen3-0.6B in WebLLM's catalogue
 (~945 MB against ~1.4 GB at q4f16_1). **Qwen3-0.6B** stays as an automatic
 fallback, tried only when every Qwen2.5 artifact is missing or blocked. The app
-is now Archiver 5.6 (see CHANGELOG.md); Qwen remains the upstream model. The CPU/WebAssembly
+is now Archiver 5.7 (see CHANGELOG.md); Qwen remains the upstream model. The CPU/WebAssembly
 download is the same size either way (~429 MB at Q4_0), so the saving is on the
 GPU path. Details: [docs/MODEL-UPGRADE.md](docs/MODEL-UPGRADE.md).
+
+## New in 5.7 — search that works, laptops that stay usable
+
+- **Search mode works on GitHub Pages, Safari and Edge.** The app used to ask its own origin for `api/search` before every search and wait up to 6 s for a static host to refuse it. The origin is now probed once per page session (cached in `sessionStorage`), and a known-static host goes straight to the browser search. A live server still wins when there is one.
+- **One slow source cannot stall the answer.** Wikipedia, Wikipedia OpenSearch and Hacker News each get their own `AbortController` deadline (6 s; 9 s on a slow link), a dropped connection is retried once, and a failure is reported by category — `timeout`, `blocked (HTTP 403)`, `HTTP 500` — rather than as "nothing found". Aborting a search aborts the requests under it.
+- **Sourced answers lead.** With WEB on, the fetched sources are the answer and a bundled card follows as a labelled aside. The evidence-gap reply no longer says web search is unavailable, because on the public site it is not.
+- **Quiet mode (on by default, switch in Settings).** Progress repaints are coalesced to four a second instead of one per download tick; the CPU runtime asks for about half the cores (never more than four, three on a phone) instead of every core it can get; idle work waits for a running answer; an idle runtime is released after 2.5 minutes, and a hidden tab releases its runtime after a minute so Edge does not discard a page with a Wasm heap still resident.
+- **Honest release states.** A runtime released by quiet mode, a hidden tab or memory pressure reports *why* and keeps the stored files: the next question restarts the model from local storage with no download.
+- **Streaming costs one parse, not one per frame.** The answer is painted as plain text while it arrives and rendered as markdown when it completes, so a long reply no longer re-parses itself on every animation frame while the model is loaded. The GitHub Pages service worker also collapses concurrent revalidations of the same script into one fetch.
+- **Fresh answers, not stale ones.** Answers cached under the 5.5 grounding rule are not served again (`grounding-5.7`), and `connect-src` allows the two search hosts so WEB keeps working with the CSP enforced.
 
 ## New in 5.3 — Qwen3 model, no memories, refresh-free, redesigned
 

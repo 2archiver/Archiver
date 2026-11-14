@@ -4,7 +4,7 @@
 const assert = require('assert');
 const A = require('./ui_check');
 const KB = A.__ctx.ARCHIVER_KB;
-const GAP = 'I don\'t have reliable information about that here. Paste a source, or use WEB when server search is available.';
+const GAP = 'I don\'t have reliable information about that in the local knowledge base. Turn on WEB (or say “search the web for …”) and I will look it up, or paste a source and I will read it.';
 
 let passed = 0, failed = 0;
 function check(name, fn) {

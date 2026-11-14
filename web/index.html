@@ -19,7 +19,7 @@ try {
 <meta name="apple-mobile-web-app-title" content="Archiver">
 <meta name="format-detection" content="telephone=no">
 <meta name="mobile-web-app-capable" content="yes">
-<title>Archiver 5.6 — Your everyday assistant</title>
+<title>Archiver 5.7 — Your everyday assistant</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
@@ -996,6 +996,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
 .engine-facts dt { color: var(--ink-3); }
 .engine-facts dd { margin: 0; color: var(--ink-2); min-width: 0; overflow-wrap: anywhere; }
 .engine-toggle { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-2); margin-top: 8px; }
+.engine-hint { font-size: 11.5px; color: var(--ink-3); }
 .update-banner { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; padding: 8px 10px; border-radius: 8px; background: var(--surface-3); font-size: 12.5px; }
 .update-banner[hidden] { display: none; }
 .ai-confirmation.warn { border-color: var(--warn, var(--accent)); }
@@ -1027,7 +1028,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
           </svg>
         </span>
       </span>
-      <span class="side-label">Archiver <span class="version-tag">5.6</span></span>
+      <span class="side-label">Archiver <span class="version-tag">5.7</span></span>
       <button class="side-x" id="sideClose" aria-label="Close menu" title="Close">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
@@ -1084,7 +1085,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
               <circle cx="32" cy="32" r="4" fill="#FFFFFF"/>
             </svg>
           </span>
-          <span class="model-name" id="modelLabel">Archiver <span class="version-tag">5.6</span></span>
+          <span class="model-name" id="modelLabel">Archiver <span class="version-tag">5.7</span></span>
           <div class="status-pill" id="topStatusPill" style="display:none !important;"><span class="dot"></span><span id="modelText">ready</span></div>
         </div>
       </div>
@@ -1180,6 +1181,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
             <button class="btn" id="retryModel" type="button" hidden>Retry</button>
           </div>
           <label class="engine-toggle"><input type="checkbox" id="autoPrepToggle" checked> Prepare automatically after the page opens</label>
+          <label class="engine-toggle"><input type="checkbox" id="ecoToggle" checked> Lower CPU priority while the model is loaded <span class="engine-hint">(keeps the rest of the page responsive)</span></label>
           <div class="engine-bar" id="engineBar" style="display:none" role="progressbar" aria-label="Model preparation"><span id="engineBarFill"></span></div>
           <div class="engine-progress" id="engineProgress" aria-live="polite" style="display:none"></div>
           <div class="update-banner" id="updateBanner" role="status" hidden>
@@ -1243,8 +1245,8 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
         <legend>Updates</legend>
         <div class="update-row">
           <div class="update-meta">
-            <b>5.6</b><span>2026-11-11 · latest</span>
-            <p>Archiver 5.6 — browser search on GitHub Pages, a cleaner interface, automatic model preparation, and an iPhone diagnostics scroll fix.</p>
+            <b>5.7</b><span>2026-11-13 · latest</span>
+            <p>Archiver 5.7 — search that works on Safari, Edge and github.io; a faster, quieter model on laptops; and a page that stays responsive while the model loads.</p>
           </div>
           <button class="btn sm" id="openChangelog" style="white-space:nowrap; flex-shrink:0;">View changelog →</button>
         </div>
@@ -1280,6 +1282,18 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     <div class="changelog-body">
       <div class="changelog-timeline">
         <div class="cl-entry" style="border-color:var(--accent);">
+          <div class="cl-head"><span class="cl-ver">5.7</span><span class="cl-date">2026-11-13</span></div>
+          <div class="cl-title">5.7 — search that works, laptops that stay usable</div>
+          <div class="cl-body"><ul>
+            <li><b>Search works on github.io.</b> The server is probed once per session, not before every search, and a static host goes straight to Wikipedia and Hacker News. Each source has its own deadline, so one slow endpoint cannot stall the answer.</li>
+            <li><b>Search on Safari and Edge.</b> A dropped connection is retried once, failures are named (timeout, blocked, HTTP status) instead of “nothing found”, and aborting stops the requests underneath.</li>
+            <li><b>Sourced answers lead.</b> When WEB is on, the fetched sources are the answer and a bundled card follows as an aside. The evidence-gap message no longer claims web search is unavailable.</li>
+            <li><b>Quiet mode.</b> Progress repaints are coalesced to four a second, the CPU runtime uses about half the cores, idle work waits for a running answer, and a hidden tab releases its runtime. Settings has the switch.</li>
+            <li><b>A cheaper stream.</b> Answers paint as plain text while they arrive and are rendered as markdown once, when they are complete — the old code re-parsed the whole reply on every frame while the model was loading the CPU.</li>
+            <li><b>Version.</b> Engine, preparation controller and shell cache are 5.7; answers cached under the old grounding rule are regenerated.</li>
+          </ul></div>
+        </div>
+        <div class="cl-entry">
           <div class="cl-head"><span class="cl-ver">5.6</span><span class="cl-date">2026-11-11</span></div>
           <div class="cl-title">5.6 — github.io browser search, cleanup, auto model on open</div>
           <div class="cl-body"><ul>
@@ -1287,6 +1301,8 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
             <li>Model details moved into Settings; generation tuning, the Discord invite, and auto-distill control were removed.</li>
             <li>Model preparation starts automatically when the page opens and browser conditions allow. Diagnostics scrolling was improved for iPhone.</li>
           </ul></div>
+        </div>
+        <div class="cl-entry">
           <div class="cl-head"><span class="cl-ver">5.5</span><span class="cl-date">2026-10-08</span></div>
           <div class="cl-title">5.5 — consistent identity, grounded answers, Mishima cards, corrected Hitler cards</div>
           <div class="cl-body">
@@ -1448,6 +1464,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
 <script src="static/archiver-comprehension.js" defer></script>
 <script src="static/archiver-viewport.js" defer></script>
 <script src="static/archiver-sha256.js" defer></script>
+<script src="static/archiver-quiet.js" defer></script>
 <script src="static/archiver-prep.js" defer></script>
 <script src="static/archiver-engine.js" defer></script>
 <script src="static/archiver-browser-search.js" defer></script>
@@ -2011,6 +2028,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
 
     const aEl = appendMessage({ role: 'archiver', content: '', created_at: Date.now()/1000 });
     const body = $('.msg-body', aEl);
+    let streamCursor = null;
 
     /* One loading indicator, not two. This used to be accompanied by three
        bouncing dots inside the bubble, so a slow answer showed the reader two
@@ -2032,15 +2050,36 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     setThinking(state.search ? 'Searching the web and reading the request…' : 'Reading the request…');
     const A = window.Archiver;
     let acc = '', frame = null, usedModel = false, answerPath = null;
+    /* 5.7 — stream without re-rendering the whole answer every frame.
+       Re-running the markdown parser over the entire reply on each animation
+       frame is O(length) per frame: on a four-core laptop with the model
+       loaded, a long answer spent more CPU parsing its own text than the model
+       spent writing it, and that is felt as the interface freezing. Now the
+       text is plain while it arrives (cheap), and the markdown is rendered once
+       when the answer is complete — which is also the moment the citation
+       checks have already run. */
+    let streamDirty = false;
+    const paintStream = () => {
+      frame = null;
+      if (signal.aborted || !streamDirty) return;
+      streamDirty = false;
+      /* textContent is the cheap paint; the markdown parser runs once, at the
+         end. Assigning it also drops the cursor node, so the cursor is created
+         again on every paint instead of being remembered — keeping a reference
+         to a node that textContent has already removed is how the first paint
+         ended up as the only one with a cursor. */
+      body.textContent = acc;
+      streamCursor = document.createElement('span');
+      streamCursor.className = 'cursor-blink';
+      streamCursor.setAttribute('aria-hidden', 'true');
+      body.appendChild(streamCursor);
+      scrollDown();
+    };
     const onDelta = piece => {
       if (signal.aborted) return;
       acc += piece;
-      if (frame === null) frame = requestAnimationFrame(() => {
-        frame = null;
-        if (signal.aborted) return;
-        body.innerHTML = md(acc) + '<span class="cursor-blink"></span>';
-        scrollDown();
-      });
+      streamDirty = true;
+      if (frame === null) frame = requestAnimationFrame(paintStream);
     };
 
     try {
@@ -2095,7 +2134,16 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
       cleanAnswer = cleanAnswer.replace(/^\*\*Archiver reads this as[^\n]*\*\*\n+/i, '').trim();
 
       dropThinking();
-      body.innerHTML = md(cleanAnswer);
+      streamCursor = null;
+      if (!(answer || '').trim()) {
+        /* An empty completion (the model streamed nothing usable): the last
+           plain-text paint is no answer at all, so clear it rather than leave a
+           bare cursor. The engine's own blank-answer recovery normally replaces
+           this before it is reached. */
+        body.innerHTML = '';
+      } else {
+        body.innerHTML = md(cleanAnswer);
+      }
 
       if (sources.length) {
         $('#composerStatus').textContent = sources.length + ' source' + (sources.length === 1 ? '' : 's');
@@ -2132,7 +2180,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     } catch (err) {
       dropThinking();
       if (err.name === 'AbortError') {
-        body.innerHTML = md(acc) + '<p style="color:var(--ink-3);font-size:12px">— stopped —</p>';
+        body.innerHTML = (acc ? md(acc) : '') + '<p style="color:var(--ink-3);font-size:12px">— stopped —</p>';
         LocalStore.addMessage(sid, { role: 'archiver', content: (acc || '') + '\n\n— stopped —', created_at: Date.now() / 1000 });
       } else {
         body.innerHTML = '<p style="color:var(--bad)">' + esc(err.message) + '</p>';
@@ -2217,6 +2265,23 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
   /* ---------- stats / settings / engine ---------- */
   /* One compact status for the on-device model. It reads the controller's
      snapshot (the single source of preparation state) and never guesses. */
+  let paintFrame = null;
+  let paintLast = 0;
+  /* One scheduled paint per animation frame, at most ~4 per second. A paused or
+     hidden page paints once when it returns, not once per tick queued. */
+  function schedulePaint() {
+    if (paintFrame !== null) return;
+    const run = () => {
+      paintFrame = null;
+      if (document.visibilityState === 'hidden') return;
+      const t = Date.now();
+      if (t - paintLast < 250) { paintFrame = window.setTimeout(run, 250 - (t - paintLast)); return; }
+      paintLast = t;
+      paintEngine();
+    };
+    try { paintFrame = window.requestAnimationFrame(run); } catch (_) { paintFrame = window.setTimeout(run, 16); }
+  }
+
   function paintEngine() {
     const A = window.Archiver;
     if (!A) return;
@@ -2268,7 +2333,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     $('#engineBlurb').textContent = disclose + '. Archiver did not train it; it runs privately in this browser and no third-party AI provider sees your prompts.';
     if ($('#modelLabel')) {
       const plain = (x) => String(x == null ? '' : x).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-      $('#modelLabel').innerHTML = 'Archiver <span class="version-tag">' + plain(st.appVersion || '5.6') + '</span>';
+      $('#modelLabel').innerHTML = 'Archiver <span class="version-tag">' + plain(st.appVersion || '5.7') + '</span>';
     }
 
     const size = p.bytesTotal ? (p.bytesTotal >= 1073741824 ? (p.bytesTotal / 1073741824).toFixed(1) + ' GB' : Math.round(p.bytesTotal / 1048576) + ' MB') : 'Shown when the download starts';
@@ -2297,6 +2362,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     retry.hidden = !(phase === 'failed');
     retry.disabled = busy;
     if ($('#autoPrepToggle')) $('#autoPrepToggle').checked = p.auto !== false;
+    if ($('#ecoToggle')) $('#ecoToggle').checked = p.quiet !== false;
     $('#engineProgress').style.display = (busy || phase === 'paused' || phase === 'failed') ? 'block' : 'none';
     $('#engineProgress').textContent = isolation.state === 'reloading' && !ready
       ? 'Finishing the one-time setup for this site; the model starts after it reloads.'
@@ -2312,6 +2378,8 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     if (!s) return;
     if ($('#setPersona')) $('#setPersona').value = s.persona || '';
     if ($('#setSearchCount')) $('#setSearchCount').value = storageGet('archiver.searchCount', '3');
+    /* 5.7: quiet mode is a browser preference, not a server setting. */
+    if ($('#ecoToggle')) $('#ecoToggle').checked = storageGet('archiver.quiet', 'on') !== 'off';
   }
 
   async function restoreDefaults() {
@@ -2507,6 +2575,13 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     $('#pauseModelBtn').onclick = () => { window.Archiver.pausePreparation(); paintEngine(); };
     $('#cancelModelBtn').onclick = () => { window.Archiver.cancelLoad(); paintEngine(); };
     $('#autoPrepToggle').onchange = (e) => { window.Archiver.setAutoPreparation(e.target.checked); paintEngine(); };
+    if ($('#ecoToggle')) $('#ecoToggle').onchange = (e) => {
+      storageSet('archiver.quiet', e.target.checked ? 'on' : 'off');
+      if (window.Archiver && typeof window.Archiver.setQuietMode === 'function') window.Archiver.setQuietMode(e.target.checked);
+      else if (window.ArchiverPrep && typeof window.ArchiverPrep.setQuiet === 'function') window.ArchiverPrep.setQuiet(e.target.checked);
+      paintEngine();
+      toast(e.target.checked ? 'Quiet mode on — the model yields to the interface' : 'Quiet mode off — the model uses the full CPU while it answers', 'mem');
+    };
     $('#sendBtn').onclick = () => {
       if (state.streaming) { if (state.abort) state.abort.abort(); }
       else send();
@@ -2707,6 +2782,39 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
   /* ---------- update ----------
      On GitHub Pages a new service worker waits until the reader asks for it. The
      page is reloaded only after that click, never underneath a running chat. */
+  /* 5.7 — release local resources when the page is backgrounded.
+     Browsers throttle timers and may freeze a hidden page; a GPU worker and a
+     Wasm heap that are still held there cost memory the device needs, and on
+     Edge the process can be discarded with the model still resident. After a
+     minute hidden, an idle runtime is released. The next question starts it
+     again from local files — no download. A page that is hidden mid-answer is
+     left alone: the answer finishes. */
+  let hiddenTimer = null;
+  function initBackgroundRelease() {
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'hidden') {
+        clearTimeout(hiddenTimer);
+        hiddenTimer = null;
+        schedulePaint();
+        return;
+      }
+      clearTimeout(hiddenTimer);
+      hiddenTimer = setTimeout(() => {
+        hiddenTimer = null;
+        if (state.streaming) return;
+        /* Nothing to give back? Do nothing, and say nothing. */
+        if (!window.Archiver || !window.Archiver.status || window.Archiver.status().aiState !== 'ready') return;
+        try { if (typeof window.Archiver.unload === 'function') window.Archiver.unload('hidden'); } catch (_) {}
+      }, 60000);
+    });
+    window.addEventListener('pagehide', () => {
+      if (hiddenTimer) { clearTimeout(hiddenTimer); hiddenTimer = null; }
+      if (state.streaming) return;
+      if (!window.Archiver || !window.Archiver.status || window.Archiver.status().aiState !== 'ready') return;
+      try { if (typeof window.Archiver.unload === 'function') window.Archiver.unload('hidden'); } catch (_) {}
+    });
+  }
+
   function initUpdateBanner() {
     if (!('serviceWorker' in navigator)) return;
     navigator.serviceWorker.getRegistration().then((reg) => {
@@ -2729,7 +2837,12 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
   /* ---------- boot ---------- */
   async function boot() {
     bind();
-    if (window.Archiver) window.Archiver.onProgress(() => paintEngine());
+    /* The preparation controller emits on every progress tick (several times a
+       second while weights download). paintEngine() writes ~20 DOM nodes, so
+       calling it per tick made the whole page crawl while a model was loading —
+       the "Edge is unusable with the local model" report. Coalesce to one paint
+       per frame, and skip paints while the tab is hidden. */
+    if (window.Archiver) window.Archiver.onProgress(() => schedulePaint());
     initTouch();
     initKeyboard();
     grow();
@@ -2764,6 +2877,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
        to prepare (idle callback, Data Saver and slow links respected). Nothing else
        starts a download or a model at boot. */
     if (window.Archiver && typeof window.Archiver.scheduleAuto === 'function') window.Archiver.scheduleAuto();
+    initBackgroundRelease();
     initUpdateBanner();
 
     // Check last active session from LocalStore

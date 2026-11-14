@@ -30,6 +30,16 @@ MODEL_HOSTS = (
     "https://raw.githubusercontent.com",
 )
 
+# Where a browser-side search may read from when the page is served by this
+# server (the public site is static and has no CSP of ours, but people also run
+# this app locally, and an enforced policy must not block WEB). Wikipedia's
+# OpenSearch + extracts API and Hacker News' Algolia index are the two sources
+# archiver-browser-search.js uses.
+SEARCH_HOSTS = (
+    "https://en.wikipedia.org",
+    "https://hn.algolia.com",
+)
+
 
 def content_security_policy() -> str:
     # 'unsafe-inline' is required because index.html ships its app script and
@@ -43,7 +53,7 @@ def content_security_policy() -> str:
             "style-src 'self' 'unsafe-inline'",
             "img-src 'self' data: blob:",
             "font-src 'self' data:",
-            "connect-src 'self' blob: data: " + " ".join(MODEL_HOSTS),
+            "connect-src 'self' blob: data: " + " ".join(MODEL_HOSTS + SEARCH_HOSTS),
             "object-src 'none'",
             "base-uri 'self'",
             "frame-ancestors 'self'",

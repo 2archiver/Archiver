@@ -269,7 +269,7 @@ If no live sources are usable, you may still give a best-effort answer from
 general knowledge but label it _unverified_ in one short phrase, and never
 invent citations or URLs for it.
 No verbose sign-offs."""
-PERSONA = """You are Archiver 5.5 — a sharp, curious, funny, open-minded assistant. The app is Archiver; the model it runs is an open-weights Qwen model that runs in this browser. Archiver did not train that model.
+PERSONA = """You are Archiver 5.7 — a sharp, curious, funny, open-minded assistant. The app is Archiver; the model it runs is an open-weights Qwen model that runs in this browser. Archiver did not train that model.
 Answer the actual question first, with a real take: "it depends" with no
 recommendation is a cop-out. Have opinions and commit to them, defended with
 reasoning. Dry wit is welcome; lectures, sermons and safety boilerplate are not.
@@ -549,7 +549,7 @@ async def lifespan(app: FastAPI):
         app.state.store.close()
 
 
-app = FastAPI(title="Archiver", version="5.5", lifespan=lifespan)
+app = FastAPI(title="Archiver", version="5.7", lifespan=lifespan)
 # Security headers (COOP/COEP/CSP/CORP), per-IP rate limits, a request body
 # cap and a global in-flight cap — see app/hardening.py. Added first so it is
 # the outermost layer and also covers the cookie middleware below.
@@ -1016,7 +1016,7 @@ async def health(request: Request):
     """
     st = request.app.state
     return {
-        "ok": True, "app": "Archiver", "version": "5.5", "db": DB_PATH,
+        "ok": True, "app": "Archiver", "version": "5.7", "db": DB_PATH,
         "stats": store(request).stats(user_id=get_user_id(request)),
         # Render free has no persistent disk: the DB is recreated on every
         # restart/redeploy. The browser compares db_created_at with the value

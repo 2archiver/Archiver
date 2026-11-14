@@ -1,4 +1,4 @@
-/* Archiver 5.6: an app that runs an open Qwen model in your browser, plus instant
+/* Archiver 5.7: an app that runs an open Qwen model in your browser, plus instant
    retrieval and text tools — on WebGPU where it exists and on a Safari-optimised
    WebAssembly runtime where it does not. Archiver did not train that model.
 
@@ -18,13 +18,28 @@
     try { return new URL(rel, document.baseURI).href; } catch (_) { return '/' + rel; }
   };
 
+  /* 5.7 — quiet mode. The policy lives in archiver-quiet.js so it can be read
+     without a browser; these are the two call sites the engine needs. */
+  const Quiet = (typeof window !== 'undefined' && window.ArchiverQuiet) || null;
+  function quietOn() {
+    try { return Quiet ? Quiet.quiet !== false : true; } catch (_) { return true; }
+  }
+  function quietThreads(cores, mobile) {
+    if (Quiet && typeof Quiet.cpuThreads === 'function') return Quiet.cpuThreads(cores, mobile);
+    const n = Number(cores) || 2;
+    return mobile ? Math.max(1, Math.min(3, n - 1)) : Math.max(1, Math.min(4, Math.floor(n / 2)));
+  }
+
   /* One definition of the version, so the label in the sidebar, the persona, the
      self-description, the API and the tests cannot disagree with each other. */
-  const VERSION = '5.6';
+  const VERSION = '5.7';
   const NAME = 'Archiver ' + VERSION;
   /* Bump when the rules that decide whether a generated answer may be reused change.
-     Cached answers carry the policy they were made under; any other policy is bypassed. */
-  const ANSWER_POLICY = 'grounding-5.5';
+     Cached answers carry the policy they were made under; any other policy is bypassed.
+     5.7 bumps this because the rules changed: with WEB on, a fetched source now
+     leads and a bundled card is an aside, so an answer stored under 5.5's rule
+     (card first) must not be served again. */
+  const ANSWER_POLICY = 'grounding-5.7';
 
   /* ======================================================================== */
   /* PART 1 — the corpus (instant, offline, no weights)                       */
@@ -1068,7 +1083,10 @@ const HELP = [
     return PROPER_TELL_RE.test(raw);
   }
 
-  const GAP_TEXT = 'I don\'t have reliable information about that here. Paste a source, or use WEB when server search is available.';
+  /* 5.7: this used to say "use WEB when server search is available", which is
+     false on the public site — browser search works there. The message names
+     the control that exists on this page. */
+  const GAP_TEXT = 'I don\'t have reliable information about that in the local knowledge base. Turn on WEB (or say “search the web for …”) and I will look it up, or paste a source and I will read it.';
 
   function gapReply(route) {
     return { text: GAP_TEXT, kind: 'evidence-gap', score: 0, route: route || 'evidence-gap' };
@@ -1654,7 +1672,10 @@ const HELP = [
        yet that another setting is better on any device. */
     const appleMobile = /iPad|iPhone|iPod/.test(String(navigator.userAgent || ''));
     const cores = Number(navigator.hardwareConcurrency) || 2;
-    const threads = appleMobile ? 3 : Math.max(1, Math.min(4, Math.floor(cores / 2)));
+    /* 5.7: the thread count comes from the quiet-mode policy (archiver-quiet.js)
+       so the interface keeps cores to itself. Off a phone it is about half the
+       cores, capped at four; on a phone it is at most three. */
+    const threads = quietThreads(cores, appleMobile);
     const params = {
       n_gpu_layers: 0,
       n_ctx: WASM_CONTEXT,
@@ -1703,7 +1724,7 @@ const HELP = [
   /* ---- what the page shows ------------------------------------------------- */
 
   /* ---- identity -----------------------------------------------------------
-     Two different things, kept apart. The APP is Archiver 5.6. The MODEL is the
+     Two different things, kept apart. The APP is Archiver 5.7. The MODEL is the
      upstream open model the runtime loaded (Qwen). The preparation controller
      owns candidate state (what is being prepared or cached). Only a runtime
      that has started successfully owns active identity, and it is published
@@ -1875,8 +1896,50 @@ const HELP = [
     }
   }
 
+  /* 5.7: while an answer is being generated, idle work (a stale preparation, a
+     cache sweep) must not compete with it. The flag is the same one the quiet
+     policy exposes. */
+  let generating = false;
+  function setQuietMode(on) {
+    try { if (Quiet && typeof Quiet.setQuiet === 'function') Quiet.setQuiet(!!on); } catch (_) {}
+    try { if (Prep && typeof Prep.setQuiet === 'function') Prep.setQuiet(!!on); } catch (_) {}
+    /* A stored choice wins on the next visit; this only records it for readers
+       whose Settings panel is open in another tab. */
+    try { localStorage.setItem('archiver.quiet', on ? 'on' : 'off'); } catch (_) {}
+    /* Turning quiet mode back on also releases a model that is sitting idle:
+       the WebGPU worker keeps a device and a KV cache alive for no benefit. */
+    if (on) scheduleIdleRelease();
+    return !!on;
+  }
+
+  /* ---- idle release ------------------------------------------------------
+     A runtime that finished an answer and then sits untouched holds GPU memory
+     and, on the CPU path, its Wasm heap. Quiet mode gives it back after a
+     while and starts it again on the next question (a stored model re-starts
+     from local files, so this costs no download). Only the quiet default is
+     affected: with quiet mode off nothing is released behind the reader's back. */
+  const IDLE_RELEASE_MS = 150000;   // 2.5 minutes after the last answer
+  let idleTimer = null;
+  function scheduleIdleRelease() {
+    if (!quietOn()) return;
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => {
+      idleTimer = null;
+      if (generating || !generationReady()) return;
+      try {
+        traceStep('Released the idle runtime after ' + Math.round(IDLE_RELEASE_MS / 1000) + 's without a question; the model starts again from local files.');
+        releaseBackend('idle');
+      } catch (_) {}
+    }, IDLE_RELEASE_MS);
+  }
+  function noteGenerationDone() {
+    scheduleIdleRelease();
+  }
+
   function cancelLoad() { Prep.cancel(); }
-  function releaseBackend() { return Prep.release(); }
+  /* 5.7: the reason is passed through so the status line can explain a release
+     that the reader did not ask for (hidden tab, memory, idle). */
+  function releaseBackend(reason) { return Prep.release(reason); }
 
   Prep.configure({
     probeGPU: probeForPrep,
@@ -1950,6 +2013,11 @@ const HELP = [
     // A generation token: anything that stops this answer moves genSeq on, and a late
     // completion from the old answer is then dropped instead of written anywhere.
     const token = ++genSeq;
+    /* 5.7: this is the only place inference starts, so it is the one place that
+       marks the page busy. The idle-release timer must not fire mid-answer. */
+    generating = true;
+    clearTimeout(idleTimer);
+    const finishGenerating = () => { generating = false; noteGenerationDone(); };
     const sampling = {
       temperature: params.temperature,
       top_p: 0.9,
@@ -1986,8 +2054,10 @@ const HELP = [
         }
         if (params.coalescer) params.coalescer.flush();
         if (token !== genSeq) throw new DOMException('Stopped', 'AbortError');
+        finishGenerating();
         return acc;
       } catch (err) {
+        finishGenerating();
         if (params.coalescer) params.coalescer.flush();
         const msg = String((err && err.message) || err || '').toLowerCase();
         if (msg.includes('device') && (msg.includes('lost') || msg.includes('destroyed'))) {
@@ -2002,7 +2072,7 @@ const HELP = [
     wasmAbort = new AbortController();
     const abort = () => { try { wasmAbort.abort(); } catch (_) {} };
     if (params.signal) {
-      if (params.signal.aborted) { wasmAbort = null; throw new DOMException('Stopped', 'AbortError'); }
+      if (params.signal.aborted) { wasmAbort = null; finishGenerating(); throw new DOMException('Stopped', 'AbortError'); }
       params.signal.addEventListener('abort', abort, { once: true });
     }
     /* Qwen 3 defaults to a hidden thinking pass, which on a CPU budget of a
@@ -2031,6 +2101,7 @@ const HELP = [
       if (token !== genSeq) throw new DOMException('Stopped', 'AbortError');
       return acc;
     } finally {
+      finishGenerating();
       if (params.coalescer) params.coalescer.flush();
       if (params.signal) params.signal.removeEventListener('abort', abort);
       wasmAbort = null;
@@ -2072,6 +2143,18 @@ const HELP = [
         try {
           const res = await fetch(ABS('api/search?limit=' + (limit || 3) + '&q=' + encodeURIComponent(query)), { signal: controller.signal, cache: 'no-store' });
           if (!res.ok) {
+            /* 5.7 safety net: if the browser-search module has not installed
+               itself (a late script on Safari, a script error), a static host's
+               404/405 is answered from the browser instead of reporting an
+               endpoint failure nobody can act on. */
+            if ((res.status === 404 || res.status === 405 || res.status === 501) &&
+                window.ArchiverBrowserSearch && typeof window.ArchiverBrowserSearch.search === 'function') {
+              try {
+                return await window.ArchiverBrowserSearch.search(query, limit, signal, onStatus);
+              } catch (err) {
+                if (err && err.name === 'AbortError') throw err;
+              }
+            }
             if ((res.status === 502 || res.status === 503 || res.status === 504) && attempt === 0) {
               attempt++;
               if (onStatus) onStatus('Server waking… retrying search in a moment');
@@ -2857,6 +2940,11 @@ const HELP = [
     const mustHaveLive = FRESH_FACT_RE.test(t) || SOURCE_REQUEST_RE.test(t);
     let unverified = false;
     if (got && got.unverified) unverified = true;
+    /* 5.7: a search that ran and returned nothing must never be reported as
+       "search is off" or silently answered from a card. The reason is named. */
+    if (!web.length && searchEnabled && got && got.error) {
+      traceStep('Search ran and came back empty — ' + String(got.error).slice(0, 160));
+    }
     if (!web.length && searchEnabled && mustHaveLive) {
       const message = 'I could not retrieve usable live sources for this, so I cannot verify an up-to-date answer. Try the search again or paste a reliable source; I will not invent current facts or citations.';
       tracePlan('No usable live evidence for a time-sensitive question: explain the gap rather than guess.');
@@ -2917,8 +3005,12 @@ const HELP = [
        passages are readable even without a model to reason over them. */
     if (!generationReady()) {
       const r = reply(t);
-      traceStep('Answered from ' + describeKind(r.kind, r.score)
-        + (web.length ? ', plus the fetched sources read back directly' : '') + '.');
+      /* 5.7: with sources in hand, the sources are the answer — saying
+         "answered from a stored knowledge card" first understates it. */
+      traceStep(web.length
+        ? 'Answered from the ' + web.length + ' fetched source' + (web.length === 1 ? '' : 's') + ' read back directly'
+          + (r.kind === 'kb' || r.kind === 'taught' ? ', with the stored card as an aside.' : '.')
+        : 'Answered from ' + describeKind(r.kind, r.score) + '.');
       tracePlan(web.length
         ? 'Read the question as “' + (lastReport && lastReport.reading || t).slice(0, 80) + '”; ' + web.length + ' live source' + (web.length === 1 ? '' : 's')
           + ' answered — lead with the strongest line, then the facts they carry, then my own read of them.'
@@ -2936,7 +3028,12 @@ const HELP = [
         const read = reportBlock(lastReport, web.length, t, web);
         if (read) out += read + '\n\n';
         if (corpusHelped) {
-          out += r.text + '\n\n';
+          /* 5.7: when the reader asked for the web, the fetched sources lead and
+             a bundled card follows as a local aside — it used to read as if the
+             card were the answer and the web were decoration. */
+          out += (searchEnabled
+            ? '_Also in the local knowledge base:_ ' + r.text
+            : r.text) + '\n\n';
         }
         out += '**Sources** · ' + web.map((w, i) => `[${i + 1}] **[${w.title}](${w.url})** _(${w.source})_`).join(' · ');
         lastSources = web.map(w => ({ title: w.title, url: w.url, source: w.source, short: (w.quote || w.short || '').slice(0, 200) }));
@@ -3291,7 +3388,7 @@ const HELP = [
     load,
     retryAI,
     cancelLoad,
-    unload: releaseBackend,
+    unload: (reason) => releaseBackend(reason || 'hidden'),
     mode,
     /* The preparation controller: the one state for every path that stores or
        starts a model. */
@@ -3308,6 +3405,9 @@ const HELP = [
     approachKind,
     onProgress,
     setAIEnabled,
+    /* 5.7: quiet mode — the interface keeps CPU and memory it needs. */
+    setQuietMode,
+    quietMode: () => quietOn(),
     wasReadyBefore: () => !!Prep.snapshot().cachedAt,
     status: statusObject,
     /* The one identity descriptor (app vs model), and the answer-policy revision. */

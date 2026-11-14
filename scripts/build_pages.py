@@ -55,7 +55,13 @@ ROOT_FILES = ("index.html", "manifest.json", "favicon.svg", "apple-touch-icon.pn
 #   * at most ONE reload per tab, of the EXACT current URL (query and hash kept),
 #     guarded by sessionStorage written BEFORE the reload;
 #   * if sessionStorage is denied, nothing is reloaded and the state says so;
-#   * window.__archiverIsolation records what happened for the app's status line.
+#   * window.__archiverIsolation records what happened for the app's status line;
+#   * on a browser that never exposes SharedArrayBuffer at all (iOS Safari
+#     before 15.2, very old WebKit), there is nothing to isolate *for*: the CPU
+#     runtime refuses to start there anyway, but search, the corpus and the
+#     interface are fine. Those browsers get `not-supported` and no reload, so
+#     the one-time reload cannot become a reload loop on a device that will
+#     never satisfy it.
 COI_BOOTSTRAP = """<!-- pages-bootstrap: added by scripts/build_pages.py. GitHub Pages cannot send
      COOP/COEP headers, and the WebAssembly runtime needs a cross-origin-isolated
      document. The service worker synthesizes those headers; this script reloads
@@ -70,6 +76,19 @@ COI_BOOTSTRAP = """<!-- pages-bootstrap: added by scripts/build_pages.py. GitHub
   try {
     if (window.crossOriginIsolated === true) { set('isolated', 'native'); return; }
     if (!window.isSecureContext || !('serviceWorker' in navigator)) { set('unavailable', 'no-service-worker'); return; }
+    /* Nothing to isolate for: a browser that does not expose SharedArrayBuffer
+       on a secure page cannot use the CPU runtime whether or not it reloads, so
+       a reload would change nothing. Search, the corpus and the interface still
+       work. Say so instead of reloading once for nothing. */
+    if (typeof SharedArrayBuffer === 'undefined' &&
+        typeof WebAssembly !== 'undefined' &&
+        (function () {
+          try { return !WebAssembly.validate(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0, 5, 4, 1, 3, 1, 1])); }
+          catch (_) { return true; }
+        })()) {
+      set('not-supported', 'no-shared-memory');
+      return;
+    }
     var store = null;
     try { store = window.sessionStorage; store.getItem(KEY); } catch (_) { store = null; }
     if (!store) { set('unavailable', 'storage-denied'); return; }
@@ -183,7 +202,9 @@ def main() -> int:
 
     required = ["index.html", "manifest.json", "favicon.svg", "apple-touch-icon.png",
                 "archiver-coi-sw.js", "static/archiver-engine.js", "static/archiver-worker.js",
-                "static/archiver-prep.js", "static/archiver-sha256.js", "static/archiver-hash-worker.js"]
+                "static/archiver-prep.js", "static/archiver-quiet.js",
+                "static/archiver-sha256.js", "static/archiver-hash-worker.js",
+                "static/archiver-browser-search.js"]
     for name in required:
         if not (out / name).is_file():
             fail(f"missing {name} in built site")

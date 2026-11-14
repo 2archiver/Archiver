@@ -1,4 +1,4 @@
-/* Archiver 5.6 — one controller for every path that puts a model into this browser.
+/* Archiver 5.7 — one controller for every path that puts a model into this browser.
 
    Before 5.4, five functions (warm, warmNow, prepare, load, retryAI) each decided
    for themselves when to download, and the boot path had its own user-agent
@@ -37,7 +37,7 @@
 (function (root) {
   'use strict';
 
-  var VERSION = '5.6';
+  var VERSION = '5.7';
   var MB = 1024 * 1024;
 
   /* Pinned runtimes. Files are versioned and served by app/main.py (VENDOR_ASSETS)
@@ -242,6 +242,37 @@
 
   function autoEnabled() { return preferences().auto !== false; }
 
+  /* 5.7 quiet mode. Stored with the other preparation preferences so the
+     Settings checkbox and the engine agree, and defaulted ON because the
+     complaint it answers ("the laptop is unusable while the model is loaded")
+     is the common case, not the power-user one. */
+  var QUIET_KEY = 'archiver.quiet';
+  /* Read from the in-memory preference cache first: the checkbox writes there
+     (kv falls back to a Map when localStorage is denied), and paintEngine runs
+     on every progress tick, so this must not touch storage each time. */
+  function readQuiet() {
+    try {
+      var v = kv.get(QUIET_KEY);
+      if (v === 'off') return false;
+      if (v === 'on') return true;
+    } catch (_) {}
+    return true;
+  }
+  function setQuiet(on) {
+    try { kv.set(QUIET_KEY, on ? 'on' : 'off'); } catch (_) {}
+    syncQuietGlobal();
+    S.quiet = !!on;
+    emit(true);
+    return !!on;
+  }
+  function quietEnabled() { return readQuiet(); }
+  function syncQuietGlobal() {
+    try {
+      if (root.ArchiverQuiet && typeof root.ArchiverQuiet.setQuiet === 'function') root.ArchiverQuiet.setQuiet(readQuiet());
+    } catch (_) {}
+  }
+  syncQuietGlobal();
+
   /* The manifest key names everything that makes a stored artifact the one we
      mean: backend, model, runtime version and artifact revision. A runtime bump or
      a new publisher revision is therefore a new key, and the old entry is ignored. */
@@ -288,6 +319,7 @@
     durable: null,           // true when weights can be stored; false = this session only
     persist: 'unknown',      // 'granted' | 'denied' | 'unsupported' | 'unknown'
     auto: true,
+    quiet: true,             // 5.7: yield CPU to the interface while a model is loaded
     cancelled: false,        // a cancel stops automatic preparation for this page session
     cachedAt: 0,
     updatedAt: 0,
@@ -303,6 +335,7 @@
     var out = {};
     for (var k in S) if (Object.prototype.hasOwnProperty.call(S, k)) out[k] = S[k];
     out.auto = autoEnabled();
+    out.quiet = quietEnabled();
     out.storage = kv.kind;
     return out;
   }
@@ -1443,10 +1476,24 @@
     setPhase('failed', { backend: null, reason: '', error: { category: 'gpu', message: String(reason || 'The runtime stopped.') } });
   }
 
-  function release() {
+  /* 5.7: releasing an idle runtime (hidden tab, memory pressure, quiet-mode idle
+     timer) is not a failure. The phase says so, and the stored files are kept,
+     so the next question restarts the model without a download. */
+  function release(reason) {
     var old = handle;
     handle = null;
-    if (old && cfg.teardown) return Promise.resolve(cfg.teardown(old.backend, old.value)).catch(function () {});
+    if (!old) return Promise.resolve();
+    /* A deliberate unload is not a phase change: the caller (page exit, a clean
+       "release now") already knows why. A quiet-mode release says so. */
+    if (reason === 'idle' || reason === 'memory' || reason === 'hidden') setPhase('cached', {
+      reason: reason === 'hidden'
+        ? 'The model was released while this tab was in the background. It starts again from local files on your next question.'
+        : reason === 'memory'
+          ? 'The model was released to free memory. It starts again from local files on your next question.'
+          : 'The model was released after sitting idle. It starts again from local files on your next question.',
+      error: null, pct: 0, backend: null, model: null, modelId: null
+    });
+    if (cfg.teardown) return Promise.resolve(cfg.teardown(old.backend, old.value)).catch(function () {});
     return Promise.resolve();
   }
 
@@ -1526,6 +1573,9 @@
     root.addEventListener('pagehide', function (event) {
       if (!event.persisted && run) cancel('lifecycle');
     });
+    root.addEventListener('storage', function (event) {
+      if (event.key === QUIET_KEY) syncQuietGlobal();
+    });
     root.addEventListener('pageshow', function (event) {
       // Back from the back-forward cache: the runtime may have been frozen. Re-check
       // the stored files; a live runtime keeps its handle.
@@ -1584,6 +1634,11 @@
     pause: pause,
     retry: retry,
     setAuto: setAuto,
+    quiet: quietEnabled,
+    setQuiet: setQuiet,
+    quietDescription: function () {
+      try { return root.ArchiverQuiet ? root.ArchiverQuiet.describe() : ''; } catch (_) { return ''; }
+    },
     release: release,
     reportRuntimeLost: reportRuntimeLost,
     handle: function () { return handle; },
