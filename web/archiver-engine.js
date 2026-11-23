@@ -32,14 +32,14 @@
 
   /* One definition of the version, so the label in the sidebar, the persona, the
      self-description, the API and the tests cannot disagree with each other. */
-  const VERSION = '5.7';
+  const VERSION = '6.0';
   const NAME = 'Archiver ' + VERSION;
   /* Bump when the rules that decide whether a generated answer may be reused change.
      Cached answers carry the policy they were made under; any other policy is bypassed.
      5.7 bumps this because the rules changed: with WEB on, a fetched source now
      leads and a bundled card is an aside, so an answer stored under 5.5's rule
      (card first) must not be served again. */
-  const ANSWER_POLICY = 'grounding-5.7';
+  const ANSWER_POLICY = 'grounding-6.0';
 
   /* ======================================================================== */
   /* PART 1 — the corpus (instant, offline, no weights)                       */
@@ -106,6 +106,29 @@
   };
 
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  /* 6.0 — sentence splitter that every WebKit parses.
+     The old `split(/(?<=[.!?])\s+/)` needed lookbehind assertions, which WebKit
+     only shipped in Safari 16.4. On anything older the regex literal made the
+     entire engine file a SyntaxError, so the app never booted — not even the
+     instant local tools that never touch a model. Matching the terminator and
+     cutting around it needs no lookbehind and yields the same sentences. */
+  const sentencesOf = (s) => {
+    const out = [];
+    for (const line of String(s == null ? '' : s).split(/\n+/)) {
+      let start = 0;
+      const re = /[.!?]+(?:\s+|$)/g;
+      let m;
+      while ((m = re.exec(line)) !== null) {
+        const piece = line.slice(start, m.index + m[0].length).trim();
+        if (piece) out.push(piece);
+        start = m.index + m[0].length;
+      }
+      const tail = line.slice(start).trim();
+      if (tail) out.push(tail);
+    }
+    return out;
+  };
 
   /* ---- corpus ------------------------------------------------------------ */
 
@@ -815,7 +838,10 @@ const HELP = [
     if (about) return about;
 
     if (topic && /^(?:why|how|more|tell me more|go deeper|explain more|go on)[?.!]*$/i.test(t)) {
-      const parts = topic.a.split(/(?<=[.!?])\s+|\n+/).filter(Boolean);
+      /* 6.0 — no lookbehind: `(?<=[.!?])` is a parse-time SyntaxError on WebKit
+         before Safari 16.4, and a page that will not parse is a blank app. The
+         split-and-match pair below produces the same sentences. */
+      const parts = sentencesOf(topic.a);
       const candidates = /^(why|how)/i.test(t) ? parts.filter(p => /because|due to|led to|by |through|so that|result|caus|allow|enable/i.test(p)) : parts.slice(1);
       const extra = candidates.filter(p => !previousAnswer.includes(p)).slice(0, 2);
       if (extra.length) return { text: 'On **' + topic.q[0] + '**: ' + extra.join(' '), kind: 'conversation', score: 1 };

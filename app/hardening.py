@@ -1,7 +1,7 @@
 """Free-tier hardening: security headers, rate limits, body caps, concurrency.
 
 Everything here is in-memory and standard library only. It is written for a
-single Render free instance (~512 MB RAM, 0.1 vCPU, one process): state lives
+single small-instance host (~512 MB RAM, 0.1 vCPU, one process): state lives
 in small bounded dicts and disappears on restart, which is exactly what a
 spin-down does anyway.
 
@@ -162,7 +162,7 @@ def bucket_for(method: str, path: str) -> str | None:
 
 
 def client_key(scope: dict) -> str:
-    """Client IP. Render terminates TLS at a proxy and sets X-Forwarded-For;
+    """Client IP. The reverse proxy terminates TLS at a proxy and sets X-Forwarded-For;
     the first hop is the visitor. Falls back to the socket peer."""
     for name, value in scope.get("headers") or []:
         if name == b"x-forwarded-for":

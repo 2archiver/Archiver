@@ -15,7 +15,7 @@ def client(tmp_path, monkeypatch):
 
 
 def test_release_assets(client):
-    assert client.get("/api/health").json()["version"] == "5.7"
+    assert client.get("/api/health").json()["version"] == "6.0"
     for asset in ("archiver-comprehension.js", "archiver-engine.js", "archiver-worker.js",
                   "archiver-viewport.js", "archiver-download.js"):
         assert client.get("/static/" + asset).status_code == 200
@@ -23,8 +23,8 @@ def test_release_assets(client):
     assert 'maximum-scale=1' not in page
     assert 'id="autoAI"' not in page
     assert 'id="retryModel"' in page
-    # 5.7: the visible shell and browser search adapter match the engine release.
-    assert '<title>Archiver 5.7' in page
+    # 6.0: the visible shell and browser search adapter match the engine release.
+    assert '<title>Archiver 6' in page
     assert 'src="static/archiver-browser-search.js"' in page
     assert 'id="disclosureModel"' not in page
     # 5.1: settings apply as they change, so there is nothing to press.
@@ -208,7 +208,7 @@ def test_health_performs_no_outbound_fetch(client, monkeypatch):
     response = client.get("/api/health")
     assert response.status_code == 200
     assert response.json()["ok"] is True
-    assert response.json()["version"] == "5.7"
+    assert response.json()["version"] == "6.0"
     assert calls == []
 
 
@@ -254,10 +254,10 @@ def test_search_diag_includes_bing(client, monkeypatch):
     assert "bing" in body["providers"]
 
 
-def test_free_render_deployment_has_no_model_server():
+def test_no_render_yaml():
     from pathlib import Path
     root = Path(__file__).resolve().parents[1]
-    assert "plan: free" in (root / "render.yaml").read_text()
+    assert not (root / "render.yaml").exists()
     requirements = (root / "requirements.txt").read_text()
     assert all(name not in requirements for name in ("torch", "transformers", "llama"))
     engine = (root / "web/archiver-engine.js").read_text()
@@ -356,7 +356,7 @@ def test_docs_match_the_release():
     assert "## 5.5 — 2026-10-08" in changelog, changelog[:40]
     assert changelog.index("## 5.5 —") < changelog.index("## 5.3 —"), 'newest release leads'
     assert "1,561" in changelog
-    assert readme.startswith("# Archiver 5.7")
+    assert readme.startswith("# Archiver 6")
     # Current claims never say Archiver trained its own model. Historical
     # entries keep their wording; the README is the current statement.
     current = readme.split("## New in 5.3", 1)[0]

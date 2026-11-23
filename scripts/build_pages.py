@@ -49,19 +49,23 @@ ROOT_FILES = ("index.html", "manifest.json", "favicon.svg", "apple-touch-icon.pn
 # Injected into <head> of the built index.html only. Kept deliberately small;
 # the worker it registers ships as web/archiver-coi-sw.js. Contract (tested by
 # tests/pages.js in a VM with fake navigator/sessionStorage/location):
-#   * an isolated page (or one that cannot be isolated) never registers or reloads;
-#   * the service worker is registered at the app scope, then control is awaited
-#     with a bounded timeout (controllerchange, or an existing controller);
-#   * at most ONE reload per tab, of the EXACT current URL (query and hash kept),
-#     guarded by sessionStorage written BEFORE the reload;
-#   * if sessionStorage is denied, nothing is reloaded and the state says so;
-#   * window.__archiverIsolation records what happened for the app's status line;
-#   * on a browser that never exposes SharedArrayBuffer at all (iOS Safari
-#     before 15.2, very old WebKit), there is nothing to isolate *for*: the CPU
-#     runtime refuses to start there anyway, but search, the corpus and the
-#     interface are fine. Those browsers get `not-supported` and no reload, so
-#     the one-time reload cannot become a reload loop on a device that will
-#     never satisfy it.
+#   * an isolated page never registers or reloads;
+#   * a browser with no service worker, no secure context or no sessionStorage
+#     registers nothing, reloads nothing and says why;
+#   * a browser that cannot expose SharedArrayBuffer even when isolated gets
+#     `not-supported` and no reload, so the one-time reload cannot loop on a
+#     device the reload could never help;
+#   * the worker is registered at the app scope, then the page waits for it to be
+#     *activated* (or to already control this document) before reloading once,
+#     keeping the exact URL — query and hash included;
+#   * WebKit (Safari, and every browser on iOS, which are all WebKit) gets a much
+#     longer deadline than Chromium and does NOT spend its one reload when the
+#     worker is still starting. iOS Safari activates a new worker slowly, and a
+#     reload that arrives first lands on an uncontrolled page, is marked
+#     `reloaded`, and can never be isolated again in that tab — the "works on my
+#     laptop, not on my iPhone" report;
+#   * at most ONE automatic reload per tab, guarded by sessionStorage written
+#     BEFORE the reload; a timeout that did not reload keeps the one reload.
 COI_BOOTSTRAP = """<!-- pages-bootstrap: added by scripts/build_pages.py. GitHub Pages cannot send
      COOP/COEP headers, and the WebAssembly runtime needs a cross-origin-isolated
      document. The service worker synthesizes those headers; this script reloads
@@ -70,16 +74,19 @@ COI_BOOTSTRAP = """<!-- pages-bootstrap: added by scripts/build_pages.py. GitHub
 (function () {
   var KEY = 'archiver-coi';
   var WAIT_MS = 6000;
+  /* WebKit is slower to activate, claim and intercept, and it is where a wasted
+     reload costs the tab its only chance. Give it twice the room. */
+  var WEBKIT_WAIT_MS = 14000;
+  var DONE = 'reloaded';
   function set(state, reason) {
-    try { window.__archiverIsolation = { state: state, reason: reason }; } catch (_) {}
+    try { window.__archiverIsolation = { state: state, reason: reason, at: Date.now() }; } catch (_) {}
   }
   try {
     if (window.crossOriginIsolated === true) { set('isolated', 'native'); return; }
     if (!window.isSecureContext || !('serviceWorker' in navigator)) { set('unavailable', 'no-service-worker'); return; }
-    /* Nothing to isolate for: a browser that does not expose SharedArrayBuffer
-       on a secure page cannot use the CPU runtime whether or not it reloads, so
-       a reload would change nothing. Search, the corpus and the interface still
-       work. Say so instead of reloading once for nothing. */
+    /* Nothing to isolate for: a browser that cannot create shared memory on a
+       secure page cannot run the CPU runtime whether or not it reloads. Search,
+       the corpus and the interface still work. */
     if (typeof SharedArrayBuffer === 'undefined' &&
         typeof WebAssembly !== 'undefined' &&
         (function () {
@@ -92,24 +99,54 @@ COI_BOOTSTRAP = """<!-- pages-bootstrap: added by scripts/build_pages.py. GitHub
     var store = null;
     try { store = window.sessionStorage; store.getItem(KEY); } catch (_) { store = null; }
     if (!store) { set('unavailable', 'storage-denied'); return; }
-    if (store.getItem(KEY) === 'reloaded') { set('unavailable', 'not-isolated-after-reload'); return; }
+    if (store.getItem(KEY) === DONE) { set('unavailable', 'not-isolated-after-reload'); return; }
+    var ua = String(navigator.userAgent || '');
+    /* AppleWebKit, but not one of its Chromium relatives: Safari on macOS and
+       iOS, and every other browser on iOS, which all run WebKit. */
+    var webkit = /AppleWebKit/.test(ua) && !/Chrom(e|ium)|CriOS|Edg|OPR/i.test(ua);
+    var waitMs = webkit ? WEBKIT_WAIT_MS : WAIT_MS;
     var scope = new URL('.', document.baseURI);
     var swUrl = new URL('archiver-coi-sw.js', scope).href;
-    var reloaded = false;
-    var controlled = new Promise(function (resolve) {
-      if (navigator.serviceWorker.controller) { resolve(true); return; }
-      navigator.serviceWorker.addEventListener('controllerchange', function () { resolve(true); });
-    });
-    var bounded = new Promise(function (resolve) { setTimeout(function () { resolve(false); }, WAIT_MS); });
-    set('reloading', 'service-worker');
-    navigator.serviceWorker.register(swUrl, { scope: scope.pathname }).then(function () {
-      return Promise.race([controlled, bounded]);
-    }).then(function () {
-      if (reloaded) return;
-      reloaded = true;
-      try { store.setItem(KEY, 'reloaded'); } catch (_) { set('unavailable', 'storage-denied'); return; }
+    var finished = false;
+
+    function reloadOnce() {
+      if (finished) return;
+      finished = true;
+      try { store.setItem(KEY, DONE); } catch (_) { set('unavailable', 'storage-denied'); return; }
       location.reload();
-    }, function () { set('unavailable', 'sw-register-failed'); });
+    }
+    /* A worker that has activated will control the next navigation even before
+       it claims this document, so either of these makes the reload worthwhile. */
+    function ready(reg) {
+      if (navigator.serviceWorker.controller) return true;
+      return !!(reg && reg.active && reg.active.state === 'activated');
+    }
+
+    set('reloading', 'service-worker');
+    navigator.serviceWorker.register(swUrl, { scope: scope.pathname }).then(function (reg) {
+      var timer = setTimeout(function () {
+        if (finished) return;
+        if (ready(reg)) { reloadOnce(); return; }
+        finished = true;
+        /* WebKit keeps its one automatic reload for a worker that is actually
+           ready; the page says so and a manual reload tries again. */
+        set('unavailable', webkit ? 'worker-still-starting' : 'worker-not-ready');
+      }, waitMs);
+      var check = function () {
+        if (finished || !ready(reg)) return;
+        try { clearTimeout(timer); } catch (_) {}
+        reloadOnce();
+      };
+      navigator.serviceWorker.addEventListener('controllerchange', check);
+      if (reg) {
+        if (reg.active && reg.active.state !== 'activated') reg.active.addEventListener('statechange', check);
+        if (typeof reg.addEventListener === 'function') reg.addEventListener('updatefound', check);
+      }
+      check();
+    }, function () {
+      finished = true;
+      set('unavailable', 'sw-register-failed');
+    });
   } catch (_) { set('unavailable', 'bootstrap-error'); }
 })();
 </script>
@@ -177,7 +214,7 @@ def main() -> int:
         fail("web/archiver-coi-sw.js is missing")
     shutil.copy2(sw_src, out / "archiver-coi-sw.js")
 
-    # Inject the bootstrap into the head of the BUILT page only — the Render
+    # Inject the bootstrap into the head of the BUILT page only — the server
     # deploy already sends real COOP/COEP headers and must not change.
     idx_path = out / "index.html"
     idx = idx_path.read_text(encoding="utf-8")

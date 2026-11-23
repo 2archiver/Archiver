@@ -37,7 +37,7 @@
 (function (root) {
   'use strict';
 
-  var VERSION = '5.7';
+  var VERSION = '6.0';
   var MB = 1024 * 1024;
 
   /* Pinned runtimes. Files are versioned and served by app/main.py (VENDOR_ASSETS)
@@ -388,24 +388,36 @@
      across two stores. This backend is OPFS only, uses the same directory and file
      names as the runtime, so weights stored by 5.3 are adopted as they are.
      Safari/WebKit does not expose FileSystemFileHandle.createWritable on the main
-     thread, so writes fall back to a dedicated worker using createSyncAccessHandle(). */
+     thread, so writes fall back to a dedicated worker using createSyncAccessHandle().
+
+     6.0 — the capability test used to require `FileSystemFileHandle` to be a
+     *constructor on the global object*. WebKit does not reliably expose those
+     constructors even where the handles and their methods work (the OPFS guide
+     in docs/BROWSER-SUPPORT.md has the per-version table), so iPhone Safari was
+     told "browser storage is unavailable" and the ~430 MB model was re-encoded
+     into memory on every visit instead of being stored once. What matters is the
+     API surface, not the constructor: check `navigator.storage.getDirectory`
+     (both branches need it), then either a main-thread writable or a worker that
+     can host the sync-access writer. */
   function OPFSBackend() {}
 
   function hasMainWritable() {
-    return !!(root.FileSystemFileHandle && root.FileSystemFileHandle.prototype &&
-      typeof root.FileSystemFileHandle.prototype.createWritable === 'function');
+    var proto = root.FileSystemFileHandle && root.FileSystemFileHandle.prototype;
+    return !!(proto && typeof proto.createWritable === 'function');
   }
 
   function hasWorkerSyncAccess() {
-    return !!(root.FileSystemFileHandle && typeof root.Worker === 'function' &&
-      typeof root.Blob === 'function' && root.URL &&
-      typeof root.URL.createObjectURL === 'function');
+    return !!(typeof root.Worker === 'function' && typeof root.Blob === 'function' &&
+      root.URL && typeof root.URL.createObjectURL === 'function');
   }
 
   OPFSBackend.prototype.isSupported = function () {
     var nav = root.navigator;
-    return !!(nav && nav.storage && typeof nav.storage.getDirectory === 'function' &&
-      (hasMainWritable() || hasWorkerSyncAccess()));
+    if (!nav || !nav.storage || typeof nav.storage.getDirectory !== 'function') return false;
+    /* Where the main-thread writable is impossible (Safari), the sync worker is
+       the write path, so a worker-capable page is enough. The round-trip probe
+       in init() still has to pass before a single weight byte is stored. */
+    return hasMainWritable() || hasWorkerSyncAccess();
   };
 
   async function cacheDir() {
@@ -540,7 +552,10 @@
   };
 
   OPFSBackend.prototype.write = async function (key, stream) {
-    if (!hasMainWritable()) {
+    /* Safari has no main-thread writable; the sync worker is the writer there.
+       (The probe and this path share the same detection, so a page that adopts
+       OPFS can always write to it.) */
+    if (!hasMainWritable() || !root.FileSystemFileHandle) {
       return writeViaSyncWorker(key, stream);
     }
     var dir = await cacheDir();
@@ -700,6 +715,7 @@
     var payload = new Uint8Array(1024);
     for (var i = 0; i < payload.length; i++) payload[i] = (i * 31 + 7) & 255;
     try {
+      await cacheDir();
       await store.write(key, new Blob([payload]).stream());
       var back = await store.read(key);
       var bytes = back ? new Uint8Array(await back.arrayBuffer()) : null;

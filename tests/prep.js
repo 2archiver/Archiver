@@ -266,6 +266,14 @@ function hubFile(origin, url, bytes, extra) {
     assert.ok(!origin.opfs.has([...origin.opfs.keys()].find(k => /qwen2\.5-0\.5b-instruct-q4_0/.test(k) && !k.startsWith('__')) || '__none__'), 'no truncated final file');
   });
 
+  await test('a working main-thread writable is still preferred when the engine exposes one', async () => {
+    const origin = createOrigin();
+    const b = await createBrowser({ origin });
+    assert.equal(typeof b.ctx.FileSystemFileHandle.prototype.createWritable, 'function');
+    await b.Prep.init();
+    assert.equal(b.Prep.snapshot().durable, true);
+  });
+
   await test('the quota check refuses a download that would not fit, with a margin', async () => {
     const origin = createOrigin({ quota: 300 * 1024 + 5 * 1024 * 1024 });
     hubFile(origin, Q4_0, bytes);
@@ -612,6 +620,33 @@ function hubFile(origin, url, bytes, extra) {
     await b.Prep.prepareNow();
     assert.equal(b.Prep.snapshot().phase, 'ready');
     assert.equal(origin.fetchLog.filter(f => f.method === 'GET').length, fetchedFirst, 'reload adopts stored file without re-downloading');
+  });
+
+  /* 6.0 — iPhone Safari. WebKit does not reliably expose the FileSystem… handle
+     constructors on window even though the handles and createSyncAccessHandle
+     work. The probe used to require that constructor, so Safari was told
+     "browser storage is unavailable" and the model was re-downloaded into memory
+     on every visit. The detection must follow the API surface, not the global. */
+  await test('Safari without the FileSystemFileHandle global still stores the model in OPFS', async () => {
+    const origin = createOrigin();
+    hubFile(origin, Q4_0, bytes);
+    const a = await createBrowser({ origin, safariOPFS: true });
+    delete a.ctx.FileSystemFileHandle;
+    await a.Prep.init();
+    assert.equal(a.Prep.snapshot().storage, 'local');
+    assert.equal(a.Prep.snapshot().durable, true, 'OPFS is judged by navigator.storage.getDirectory + worker writes');
+    a.Prep.configure(runtimeHooks([]));
+    await a.Prep.prepareNow();
+    assert.equal(a.Prep.snapshot().phase, 'ready');
+    assert.ok(origin.opfs.size >= 1, 'the weights were stored once, not re-downloaded into memory');
+    const fetchedFirst = origin.fetchLog.filter(f => f.method === 'GET').length;
+    const b = await createBrowser({ origin, safariOPFS: true });
+    delete b.ctx.FileSystemFileHandle;
+    await b.Prep.init();
+    b.Prep.configure(runtimeHooks([]));
+    await b.Prep.prepareNow();
+    assert.equal(b.Prep.snapshot().phase, 'ready');
+    assert.equal(origin.fetchLog.filter(f => f.method === 'GET').length, fetchedFirst, 'and the next visit adopts them');
   });
 
   await test('storage denied: runtimeKit falls back to an in-memory backend instead of throwing', async () => {

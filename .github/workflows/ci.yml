@@ -1,5 +1,5 @@
-# CI for the Render free-tier target: lint, the full test suite, and a boot
-# check that starts the service exactly as Render does — ./run.sh with an
+# CI for the server target: lint, the full test suite, and a boot
+# check that starts the service just like production — ./run.sh with an
 # injected $PORT — then waits for the cheap /api/health.
 #
 # The boot job is the one that flakes on a cold GitHub runner (cold pip cache,

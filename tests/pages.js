@@ -88,7 +88,7 @@ check(engine.includes('quietThreads(') && prep.includes('ArchiverQuiet'),
   'engine and controller use the quiet-mode CPU policy');
 check(engine.includes('ArchiverBrowserSearch.search(query, limit, signal, onStatus)'),
   'engine: a static-host 404 falls back to browser search even if the module installed late');
-check(engine.includes("ANSWER_POLICY = 'grounding-5.7'"),
+check(engine.includes("ANSWER_POLICY = 'grounding-6.0'"),
   'engine: answers cached under the 5.5 grounding rule are not served again');
 check(!/cdn\.jsdelivr|unpkg\.com/.test(engine + prep), 'no CDN hosts in the engine or the controller');
 
@@ -107,6 +107,8 @@ check(!srcIdx.includes('archiver-coi-sw.js') && !srcIdx.includes('pages-bootstra
 check(!/location\.replace|location\.href\s*=/.test(bootstrapSource), 'the bootstrap never navigates to a rebuilt URL (query and hash are kept)');
 
 /* Run the injected script for real, against a fake browser. */
+const UA_IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
+const UA_CHROME = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36';
 function runBootstrap(options) {
   const opts = Object.assign({
     href: 'https://example.github.io/Archiver/?q=1#chat',
@@ -115,23 +117,34 @@ function runBootstrap(options) {
     hasServiceWorker: true,
     sessionDenied: false,
     controller: false,
-    controllerChangeAfterRegister: true,
+    userAgent: UA_CHROME,
+    /* When the fake worker activates: immediately, 'never', or a delay in ms. */
+    activate: 'now',
+    activateDelay: 0,
     registerRejects: false,
     preset: null
   }, options || {});
   const store = new Map(opts.preset ? [['archiver-coi', opts.preset]] : []);
   const calls = { register: [], reload: 0, replace: 0, assign: 0, timers: [] };
   const listeners = {};
+  const active = {
+    state: opts.activate === 'now' ? 'activated' : 'installing',
+    addEventListener(type, fn) { if (type === 'statechange') this._on = fn; }
+  };
   const sw = {
-    controller: opts.controller ? {} : null,
+    controller: opts.controller ? { scriptURL: 'https://example.github.io/Archiver/archiver-coi-sw.js' } : null,
     addEventListener(type, fn) { (listeners[type] = listeners[type] || []).push(fn); },
     register(url, reg) {
       calls.register.push({ url, scope: reg && reg.scope });
       if (opts.registerRejects) return Promise.reject(new Error('blocked'));
-      if (opts.controllerChangeAfterRegister) {
-        setTimeout(() => { sw.controller = {}; (listeners.controllerchange || []).forEach(fn => fn({})); }, 0);
-      }
-      return Promise.resolve({});
+      const activateLater = () => {
+        active.state = 'activated';
+        sw.controller = { scriptURL: 'https://example.github.io/Archiver/archiver-coi-sw.js' };
+        (listeners.controllerchange || []).forEach(fn => fn({}));
+      };
+      if (opts.activate === 'now') activateLater();
+      else if (opts.activate === 'later') setTimeout(activateLater, opts.activateDelay || 5);
+      return Promise.resolve({ active, addEventListener(type, fn) { if (type === 'updatefound') this._on = fn; } });
     }
   };
   const location = {
@@ -144,10 +157,16 @@ function runBootstrap(options) {
     isSecureContext: opts.secure,
     crossOriginIsolated: opts.crossOriginIsolated,
     URL,
-    setTimeout: (fn, ms) => { calls.timers.push(ms); return setTimeout(fn, 0); },
+    SharedArrayBuffer: function SharedArrayBuffer() {},
+    WebAssembly: { validate: () => true },
+    // Every wait is shortened, so a bounded timeout costs no test time.
+    setTimeout: (fn, ms) => { calls.timers.push(ms); return setTimeout(fn, ms >= 1000 ? 5 : ms); },
+    clearTimeout: (id) => clearTimeout(id),
     location,
     document: { baseURI: opts.href },
-    navigator: opts.hasServiceWorker ? { serviceWorker: sw } : {},
+    navigator: opts.hasServiceWorker
+      ? { userAgent: opts.userAgent, serviceWorker: sw }
+      : { userAgent: opts.userAgent },
     sessionStorage: opts.sessionDenied ? new Proxy({}, { get() { throw new Error('denied'); } }) : {
       getItem: (k) => (store.has(k) ? store.get(k) : null),
       setItem: (k, v) => store.set(k, String(v))
@@ -159,12 +178,13 @@ function runBootstrap(options) {
   vm.createContext(ctx);
   const script = bootstrapSource.replace(/^[\s\S]*?<script>/, '').replace(/<\/script>[\s\S]*$/, '');
   vm.runInContext(script, ctx);
-  return { win, calls, store, sw };
+  return { win, calls, store, sw, active };
 }
 
-const flush = () => new Promise(r => setTimeout(r, 20));
+const flush = () => new Promise(r => setTimeout(r, 40));
 
 const bootstrapChecked = (async () => {
+  /* ---- Chromium: fast path ---- */
   let run = runBootstrap();
   await flush();
   check(run.calls.register.length === 1, 'first visit: the service worker is registered once');
@@ -174,6 +194,22 @@ const bootstrapChecked = (async () => {
   check(run.calls.replace === 0 && run.calls.assign === 0, 'the reload keeps the exact URL: no replace, no assign');
   check(run.store.get('archiver-coi') === 'reloaded', 'the reload is recorded before it happens');
 
+  /* ---- iPhone Safari: a worker that activates slowly must not waste the reload ---- */
+  run = runBootstrap({ userAgent: UA_IPHONE, activate: 'later', activateDelay: 1 });
+  await flush();
+  check(run.calls.reload === 1, 'iPhone: the page reloads once the worker has activated');
+  check(run.store.get('archiver-coi') === 'reloaded', 'and only then is the reload recorded');
+  check(run.calls.timers.includes(14000), 'iPhone: the wait is the longer WebKit deadline, not the 6 s desktop one');
+
+  /* The bug this replaces: iOS fired controllerchange before the worker could
+     answer, the page reloaded un-isolated and marked itself done. */
+  run = runBootstrap({ userAgent: UA_IPHONE, activate: 'later', activateDelay: 30 });
+  await flush();
+  check(run.calls.reload === 0, 'iPhone: a worker that is still starting does not consume the one automatic reload');
+  check(run.store.get('archiver-coi') !== 'reloaded', 'and the reload stays available for the next visit');
+  check(run.win.__archiverIsolation.reason === 'worker-still-starting', 'the status line names the reason');
+
+  /* ---- after the one reload ---- */
   run = runBootstrap({ preset: 'reloaded' });
   await flush();
   check(run.calls.register.length === 0 && run.calls.reload === 0, 'after the one reload, a page that still is not isolated never loops');
@@ -190,10 +226,10 @@ const bootstrapChecked = (async () => {
   check(run.calls.register.length === 0 && run.calls.reload === 0, 'denied storage: no reload is attempted (the guard cannot be kept)');
   check(run.win.__archiverIsolation.state === 'unavailable', 'and the state reports it');
 
-  run = runBootstrap({ controllerChangeAfterRegister: false });
+  run = runBootstrap({ activate: 'never' });
   await flush();
-  check(run.calls.reload === 1 && run.calls.register.length === 1, 'a controller that never arrives is bounded: one reload, not a loop');
-  check(run.calls.timers.includes(6000), 'the wait for control has a bounded timeout');
+  check(run.calls.reload === 0, 'a worker that never activates is never papered over with a reload');
+  check(run.win.__archiverIsolation.reason === 'worker-not-ready', 'and the reason says the worker is not ready');
 
   run = runBootstrap({ registerRejects: true });
   await flush();
@@ -209,7 +245,8 @@ const bootstrapChecked = (async () => {
   await flush();
   check(run.calls.reload === 0, 'an insecure context is left alone');
 
-  run = runBootstrap({ controller: true, controllerChangeAfterRegister: false });
+  /* A page the worker already controls reloads once, so the worker serves it. */
+  run = runBootstrap({ controller: true, activate: 'never' });
   await flush();
   check(run.calls.reload === 1, 'a page already controlled still reloads once, so the worker takes effect for this document');
 

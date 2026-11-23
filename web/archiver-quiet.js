@@ -121,7 +121,7 @@
   var quiet = true;
 
   root.ArchiverQuiet = {
-    version: '5.7',
+    version: '6.0',
     QUIET_FRAME_MS: QUIET_FRAME_MS,
     QUIET_SLICE_RATIO: QUIET_SLICE_RATIO,
     createYielder: createYielder,
