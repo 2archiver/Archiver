@@ -2,7 +2,7 @@
 # Start Archiver. Usage: ./run.sh [port]
 set -euo pipefail
 cd "$(dirname "$0")"
-# Prefer an explicit argument, then the platform's $PORT (Render, Fly, Heroku…),
+# Prefer an explicit argument, then the platform's $PORT (Fly, Railway, etc.),
 # then 8000 for local use.
 PORT="${1:-${PORT:-8000}}"
 if [ -d .venv ]; then . .venv/bin/activate; fi

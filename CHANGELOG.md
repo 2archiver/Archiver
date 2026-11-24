@@ -1,3 +1,12 @@
+## 6.0 — 2026-11-23
+
+iPhone Safari (iOS 16.4+) & reliability release. Branded **Archiver 6** across the website; engine, preparation controller and shell cache are **6.0**.
+
+- **No regex lookbehind literals:** Replaced lookbehind splits in `web/archiver-comprehension.js` and `web/archiver-engine.js` with loop-based sentence splitting so Safari 16.0–16.3 does not throw a parse-time `SyntaxError` and 16.4+ stays clean.
+- **OPFS on Safari without global `FileSystemFileHandle`:** `web/archiver-prep.js` now detects OPFS via `navigator.storage.getDirectory` + worker sync-access capability instead of requiring the global `FileSystemFileHandle` constructor.
+- **Resilient COI bootstrap on WebKit:** `scripts/build_pages.py` now waits up to 14 s for Service Worker activation on WebKit and does not spend its one reload while the worker is still starting.
+- **Mobile UI & clipboard:** Scoped standalone `user-select: none` to chrome only, added inner scroll to the mobile sidebar, and added an `execCommand('copy')` fallback.
+
 ## 5.7 — 2026-11-13
 
 Search and performance release. Engine, preparation controller and shell cache are **Archiver 5.7**.

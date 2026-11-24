@@ -19,7 +19,7 @@ try {
 <meta name="apple-mobile-web-app-title" content="Archiver">
 <meta name="format-detection" content="telephone=no">
 <meta name="mobile-web-app-capable" content="yes">
-<title>Archiver 5.7 — Your everyday assistant</title>
+<title>Archiver 6 — Your everyday assistant</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
@@ -772,9 +772,7 @@ a:hover { text-decoration-color: var(--ink); }
 }
 @media (display-mode: standalone) {
   .topbar{ height: calc(56px + env(safe-area-inset-top)); }
-  body{ -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
-  #chatContainer, #chatThread{ -webkit-user-select: text; user-select: text; }
-  .input-textarea{ -webkit-user-select: text; user-select: text; }
+  .topbar, .sidebar, .composer-tools, button, .btn{ -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
 }
 
 
@@ -890,7 +888,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
 .kb-open .changelog-modal {
   max-height: calc(var(--viewport-height, 100dvh) - var(--kb-height, 0px) - 20px);
 }
-.kb-open .sidebar { height: var(--viewport-height, 100dvh); }
+.kb-open .sidebar { height: var(--viewport-height, 100dvh); max-height: var(--viewport-height, 100dvh); overflow-y: auto; -webkit-overflow-scrolling: touch; }
 
 /* With the keyboard up on a phone there is very little left. Spend it on the
    conversation: the runtime line and the shortcut hint lose first. */
@@ -1028,7 +1026,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
           </svg>
         </span>
       </span>
-      <span class="side-label">Archiver <span class="version-tag">5.7</span></span>
+      <span class="side-label">Archiver <span class="version-tag">6</span></span>
       <button class="side-x" id="sideClose" aria-label="Close menu" title="Close">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
@@ -1085,7 +1083,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
               <circle cx="32" cy="32" r="4" fill="#FFFFFF"/>
             </svg>
           </span>
-          <span class="model-name" id="modelLabel">Archiver <span class="version-tag">5.7</span></span>
+          <span class="model-name" id="modelLabel">Archiver <span class="version-tag">6</span></span>
           <div class="status-pill" id="topStatusPill" style="display:none !important;"><span class="dot"></span><span id="modelText">ready</span></div>
         </div>
       </div>
@@ -1245,8 +1243,8 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
         <legend>Updates</legend>
         <div class="update-row">
           <div class="update-meta">
-            <b>5.7</b><span>2026-11-13 · latest</span>
-            <p>Archiver 5.7 — search that works on Safari, Edge and github.io; a faster, quieter model on laptops; and a page that stays responsive while the model loads.</p>
+            <b>6</b><span>2026-11-23 · latest</span>
+            <p>Archiver 6 — iPhone Safari (iOS 16.4+) fixes: no regex lookbehind parse errors, OPFS sync-worker storage without global FileSystemFileHandle, resilient COI bootstrap, and mobile layout/clipboard fixes.</p>
           </div>
           <button class="btn sm" id="openChangelog" style="white-space:nowrap; flex-shrink:0;">View changelog →</button>
         </div>
@@ -1282,6 +1280,14 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     <div class="changelog-body">
       <div class="changelog-timeline">
         <div class="cl-entry" style="border-color:var(--accent);">
+          <div class="cl-head"><span class="cl-ver">6</span><span class="cl-date">2026-11-23</span></div>
+          <div class="cl-title">6 — iPhone Safari (iOS 16.4+) &amp; reliability</div>
+          <ul class="cl-list">
+            <li><b>iPhone Safari.</b> Removed regex lookbehind literals, fixed OPFS detection when <code>FileSystemFileHandle</code> is absent globally, and made the COI service-worker bootstrap patient on WebKit.</li>
+            <li><b>Mobile UI.</b> Scoped standalone <code>user-select: none</code> to chrome, added inner scroll to the mobile sidebar, and added an <code>execCommand('copy')</code> fallback.</li>
+          </ul>
+        </div>
+        <div class="cl-entry">
           <div class="cl-head"><span class="cl-ver">5.7</span><span class="cl-date">2026-11-13</span></div>
           <div class="cl-title">5.7 — search that works, laptops that stay usable</div>
           <div class="cl-body"><ul>
@@ -2333,7 +2339,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     $('#engineBlurb').textContent = disclose + '. Archiver did not train it; it runs privately in this browser and no third-party AI provider sees your prompts.';
     if ($('#modelLabel')) {
       const plain = (x) => String(x == null ? '' : x).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-      $('#modelLabel').innerHTML = 'Archiver <span class="version-tag">' + plain(st.appVersion || '5.7') + '</span>';
+      $('#modelLabel').innerHTML = 'Archiver <span class="version-tag">' + plain(st.appVersion || '6') + '</span>';
     }
 
     const size = p.bytesTotal ? (p.bytesTotal >= 1073741824 ? (p.bytesTotal / 1073741824).toFixed(1) + ' GB' : Math.round(p.bytesTotal / 1048576) + ' MB') : 'Shown when the download starts';
@@ -2662,10 +2668,26 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
 
     $('#chatThread').addEventListener('click', async e => {
       const copy = e.target.closest('[data-copy]');
+      const copyText = async (text) => {
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+          try { await navigator.clipboard.writeText(text); return; } catch (_) {}
+        }
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0;';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        ta.setSelectionRange(0, text.length);
+        const ok = document.execCommand && document.execCommand('copy');
+        ta.remove();
+        if (!ok) throw new Error('copy failed');
+      };
       if (copy) {
         const code = $('.code-body code', copy.closest('.code-block'));
         try {
-          await navigator.clipboard.writeText(code.textContent);
+          await copyText(code.textContent);
           copy.textContent = 'copied!';
           toast('Code copied', 'ok');
         } catch (_) { copy.textContent = 'failed'; }
@@ -2681,7 +2703,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
       if (act.dataset.act === 'copy-interp') {
         const c = act.closest('.interp-card');
         try {
-          await navigator.clipboard.writeText(c.innerText);
+          await copyText(c.innerText);
           act.textContent = 'copied!';
           toast('Interpretation copied', 'ok');
         } catch (_) { act.textContent = 'failed'; }
@@ -2691,7 +2713,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
       if (act.dataset.act === 'copy-msg') {
         const b = $('.msg-body', act.closest('.msg-row'));
         try {
-          await navigator.clipboard.writeText(b.textContent);
+          await copyText(b.textContent);
           toast('Copied', 'ok');
         } catch (_) { toast('Copy failed', 'err'); }
       }
@@ -2752,7 +2774,7 @@ button, a, input, textarea, select { touch-action: manipulation; -webkit-tap-hig
     $('#exportBtn').onclick = () => {
       if (!state.sessionId) { toast('No active session', 'err'); return; }
       const messages = LocalStore.getMessages(state.sessionId);
-      const text = '# Archiver 5 conversation\n\n' + messages.map(m => '## ' + (m.role === 'user' ? 'You' : 'Archiver') + '\n\n' + m.content).join('\n\n');
+      const text = '# Archiver 6 conversation\n\n' + messages.map(m => '## ' + (m.role === 'user' ? 'You' : 'Archiver') + '\n\n' + m.content).join('\n\n');
       window.ArchiverDownload.save(text, 'archiver-conversation.md', 'text/markdown;charset=utf-8');
     };
     $('#exportArchive').onclick = () => {

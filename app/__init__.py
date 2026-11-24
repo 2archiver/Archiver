@@ -1,3 +1,3 @@
 """Archiver package — a private chat app with no memory between chats."""
 
-__version__ = "5.7"
+__version__ = "6.0"

@@ -368,7 +368,7 @@ class MemoryStore:
     def created_at(self) -> float:
         """When this database file was first initialised (unix seconds).
 
-        Render's free tier has no persistent disk, so the database is recreated
+        Ephemeral hosts have no persistent disk, so the database is recreated
         on every redeploy or restart. Clients compare this stamp with the one
         they last saw to tell "server storage was reset" from "nothing here".
         """

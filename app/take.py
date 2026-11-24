@@ -2,7 +2,7 @@
 
 3.2 closed every web answer with a section headed "Additional Thoughts &
 Lateral Angles". Its text was chosen by keyword bucket: one paragraph for any
-query mentioning an influencer, one for anything mentioning Render, and a
+query mentioning an influencer, one for anything mentioning hosting, and a
 fallback — "ask who pays, what must stay on, and what the default is" — for
 everything else, Benito Mussolini included. The same sentences came back for
 every topic in a bucket, and the fallback was nonsense for most of them.
@@ -29,7 +29,7 @@ It also returns a one-line plan — what was read, what was found, how the answe
 will be built — so the search path shows its thinking like every other route.
 
 The second half of this module is page retrieval: the only place the service
-originates fetches to the open web, and therefore the place where the Render
+originates fetches to the open web, and therefore the place where the hosted
 free tier's metered *Service-Initiated* bandwidth is actually spent. Every
 outbound request from `search.py` goes through `fetch()` / `fetch_text()`:
 streamed under a hard byte ceiling, refused by content type before the body is
@@ -52,7 +52,7 @@ import httpx
 # --------------------------------------------------------------------------- #
 # Page retrieval — egress-guarded fetching
 #
-# Render's free tier meters *Service-Initiated* bandwidth against one shared
+# Ephemeral hosts meter *Service-Initiated* bandwidth against one shared
 # monthly allowance and throttles past it, so the rules below are budget rules,
 # not niceties: never read more than MAX_BODY_BYTES of any one response, never
 # download a body whose headers say it is not text, ask for gzip and store the

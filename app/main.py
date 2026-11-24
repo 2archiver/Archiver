@@ -549,7 +549,7 @@ async def lifespan(app: FastAPI):
         app.state.store.close()
 
 
-app = FastAPI(title="Archiver", version="5.7", lifespan=lifespan)
+app = FastAPI(title="Archiver", version="6.0", lifespan=lifespan)
 # Security headers (COOP/COEP/CSP/CORP), per-IP rate limits, a request body
 # cap and a global in-flight cap — see app/hardening.py. Added first so it is
 # the outermost layer and also covers the cookie middleware below.
@@ -671,7 +671,7 @@ async def ensure_user_cookie(request: Request, call_next):
     return response
 
 # Versioned, precompressed inference runtimes: no npm/build step and no model
-# inference on Render. Registered before the general /static mount. A runtime
+# inference on the server. Registered before the general /static mount. A runtime
 # version bump must update the engine URL, any worker import and this table
 # together, or the browser will ask for a file this server does not serve.
 VENDOR_ASSETS = {
@@ -1007,7 +1007,7 @@ async def distill_session(s: MemoryStore, c: dict, sid: str, user_id: str | None
 async def health(request: Request):
     """Liveness in one cheap JSON response.
 
-    This is Render's `healthCheckPath` and the UI's wake probe, so it must
+    This is the health-check endpoint and the UI's wake probe, so it must
     answer the moment uvicorn binds: no outbound fetch, no model touch, no
     reindex — only local counters. That is what lets a deploy go live as soon
     as the API is up, and what lets the frontend tell a waking instance
@@ -1016,9 +1016,9 @@ async def health(request: Request):
     """
     st = request.app.state
     return {
-        "ok": True, "app": "Archiver", "version": "5.7", "db": DB_PATH,
+        "ok": True, "app": "Archiver", "version": "6.0", "db": DB_PATH,
         "stats": store(request).stats(user_id=get_user_id(request)),
-        # Render free has no persistent disk: the DB is recreated on every
+        # Ephemeral hosts have no persistent disk: the DB is recreated on every
         # restart/redeploy. The browser compares db_created_at with the value
         # it last saw and shows "server storage was reset; your browser copy
         # is intact" instead of silently showing an empty archive.

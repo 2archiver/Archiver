@@ -3,7 +3,30 @@
 (function () {
   'use strict';
   const clean = s => String(s || '').replace(/\r/g, '').trim();
-  const sentences = s => clean(s).split(/(?<=[.!?])\s+|\n+/).map(clean).filter(Boolean);
+
+  /* 6.0 — sentence splitting without a lookbehind assertion.
+     `/(?<=[.!?])\s+/` is a *parse-time* SyntaxError on WebKit before Safari
+     16.4, so on an iPhone 14 that had not been updated past iOS 16.3 this whole
+     file failed to parse — and with it every text tool that depends on it.
+     Splitting by match keeps the same sentences without the assertion: the
+     terminator is consumed by the split, so the output is identical. */
+  function sentences(s) {
+    const text = clean(s);
+    const out = [];
+    for (const line of text.split(/\n+/)) {
+      let start = 0;
+      const re = /[.!?]+(?:\s+|$)/g;
+      let m;
+      while ((m = re.exec(line)) !== null) {
+        const piece = clean(line.slice(start, m.index + m[0].length));
+        if (piece) out.push(piece);
+        start = m.index + m[0].length;
+      }
+      const tail = clean(line.slice(start));
+      if (tail) out.push(tail);
+    }
+    return out.filter(Boolean);
+  }
   const words = s => (s.toLowerCase().match(/[\p{L}\p{N}]+/gu) || [])
     .filter(w => w.length > 2 && !/^(the|and|that|this|with|from|what|when|where|which|does|have|was|are|for|how|why)$/.test(w));
 

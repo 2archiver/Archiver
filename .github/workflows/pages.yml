@@ -23,7 +23,7 @@
 #   fails the run if it is not the app, so a replacement is red instead of
 #   silent.
 #
-# The Render deploy (render.yaml) serves the same files with the real backend
+# The server deploy serves the same files with the real backend
 # and is unaffected by this workflow.
 
 name: Pages
